@@ -112,6 +112,7 @@
 #include "optimizer/RecognizedCallTransformer.hpp"
 #include "optimizer/SwitchAnalyzer.hpp"
 #include "env/RegionProfiler.hpp"
+#include <antlr4-runtime.h>
 
 namespace TR { class AutomaticSymbol; }
 
