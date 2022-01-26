@@ -112,7 +112,6 @@
 #include "optimizer/RecognizedCallTransformer.hpp"
 #include "optimizer/SwitchAnalyzer.hpp"
 #include "env/RegionProfiler.hpp"
-#include <antlr4-runtime.h>
 
 namespace TR { class AutomaticSymbol; }
 
@@ -120,6 +119,8 @@ using namespace OMR;  // Note: used here only to avoid having to prepend all opt
 
 #define MAX_LOCAL_OPTS_ITERS 5
 
+
+extern void testMethod();
 const OptimizationStrategy localValuePropagationOpts[] =
    {
    { localCSE                             },
