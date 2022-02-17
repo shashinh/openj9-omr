@@ -2,21 +2,22 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <string>
 
 using namespace std;
 
 struct Ptg
 {
-    std::map<std::string, std::set<std::string>> varsMap;
+    std::map<int, std::set<std::string>> varsMap;
     std::map<std::string, std::set<std::string>> fieldsMap;
 
     std::string toString() {
         std::string res;
         res = res + "\tRoots: ";
-        std::map<string, std::set<string>>::iterator vIt = varsMap.begin();
+        std::map<int, std::set<string>>::iterator vIt = varsMap.begin();
         while (vIt != varsMap.end())
         {
-            res = res + vIt->first + ": ";
+            res = res + to_string(vIt->first) + ": ";
             //cout << vIt->first << ": ";
             auto i = vIt->second.begin();
             while (i != vIt->second.end())
@@ -30,7 +31,7 @@ struct Ptg
         res = res + "\n";
         res = res + "\tHeap: ";
 
-        std::map<string, std::set<string>>::iterator fIt = fieldsMap.begin();
+        std::map<std::string, std::set<string>>::iterator fIt = fieldsMap.begin();
         while (fIt != fieldsMap.end())
         {
             res = res + fIt->first + ": ";
@@ -51,7 +52,7 @@ struct Ptg
 
     void print()
     {
-        std::map<string, std::set<string>>::iterator vIt = varsMap.begin();
+        std::map<int, std::set<string>>::iterator vIt = varsMap.begin();
         while (vIt != varsMap.end())
         {
             cout << vIt->first << ": ";
@@ -66,7 +67,7 @@ struct Ptg
         }
         cout << endl;
 
-        std::map<string, std::set<string>>::iterator fIt = fieldsMap.begin();
+        std::map<std::string, std::set<string>>::iterator fIt = fieldsMap.begin();
         while (fIt != fieldsMap.end())
         {
             cout << fIt->first << ": ";

@@ -1276,12 +1276,6 @@ std::string getFormattedCurrentClassName(TR::Compilation *comp)
 
    return className.substr(0, classNameLength);
 }
-void verifyStaticMethodInfo(std::string className, std::string methodName, TR::CFG *cfg, TR::Compilation *comp)
-{
-   cout << "running verifyStaticMethodInfo for " << className << ":" << methodName << endl;
-
-
-}
 
 std::string getLoopInvariantStaticFileName(std::string className, std::string methodName)
 {
@@ -1309,11 +1303,243 @@ std::string getCallSiteInvariantStaticFileName(std::string className, std::strin
    return callSiteInvariantStaticFileName;
 }
 
+//check if ptg1 subsumes ptg2
 bool checkPTGSubsumes(Ptg ptg1, Ptg ptg2)
 {
    bool subsumes = true;
 
+   for (std::map<int, std::set<std::string> >::iterator it = ptg2.varsMap.begin(); it != ptg2.varsMap.end(); ++it)
+   {
+      int key = it->first;
+      std::set<std::string> set = it->second;
+
+      if (ptg1.varsMap.find(key) != ptg1.varsMap.end())
+      {
+         //the key is present, now verify the subsumes relation for the set as well
+         std::set<std::string> ptg1set = ptg1.varsMap.find(key)->second;
+
+         for (std::set<std::string>::iterator s = set.begin(); s != set.end(); ++s)
+         {
+            if (ptg1set.find(*s) == ptg1set.end())
+            {
+               subsumes = false;
+               return subsumes;
+            }
+         }
+      }
+   }
+
+   for (std::map<std::string, std::set<std::string>>::iterator it = ptg2.fieldsMap.begin(); it != ptg2.fieldsMap.end(); ++it)
+   {
+      std::string key = it->first;
+      std::set<std::string> set = it->second;
+
+      //ptg1 must contain this key, if not - fail validation
+      if (ptg1.fieldsMap.find(key) == ptg1.fieldsMap.end())
+      {
+//#ifdef RUNTIME_PTG_DEBUG
+         std::cout << "invariance verification failed" << endl;
+//#endif
+         subsumes = false;
+         return subsumes;
+      }
+      else
+      {
+         //the key is present, now verify the subsumes relation for the set as well
+         std::set<std::string> ptg1set = ptg1.fieldsMap.find(key)->second;
+
+         for (std::set<std::string>::iterator s = set.begin(); s != set.end(); ++s)
+         {
+            if (ptg1set.find(*s) == ptg1set.end())
+            {
+               subsumes = false;
+               return subsumes;
+            }
+         }
+      }
+   }
+
    return subsumes;
+
+}
+Ptg meetPTGs(Ptg ptg1, Ptg ptg2)
+{
+   Ptg res;
+   std::map<int, std::set<std::string>> varsMap;
+   std::map<std::string, std::set<std::string>> fieldsMap;
+
+   //merge the varsMap first
+   //1. add all the Roots from ptg1
+   auto vIt1 = ptg1.varsMap.begin();
+   while (vIt1 != ptg1.varsMap.end())
+   {
+      varsMap.insert(std::pair<int, std::set<std::string>>(vIt1->first, vIt1->second));
+      vIt1++;
+   }
+   //2. now merge in the Roots from ptg2
+
+
+   auto vIt2 = ptg2.varsMap.begin();
+   while (vIt2 != ptg2.varsMap.end())
+   {
+      if (varsMap.find(vIt2->first) == varsMap.end())
+      {
+         varsMap.insert(std::pair<int, std::set<std::string>>(vIt2->first, vIt2->second));
+      }
+      //obviously there's a chance that the var is already accounted for by ptg1's Roots, in this case
+      //merge the Roots set for that var
+      else
+      {
+         auto ptg1Set = varsMap.find(vIt2->first)->second;
+         auto ptg2Set = vIt2->second;
+         std::set<std::string> tempSet;
+         std::merge(ptg1Set.begin(), ptg1Set.end(), ptg2Set.begin(), ptg2Set.end(), std::inserter(tempSet, tempSet.begin()));
+
+         varsMap.erase(vIt2->first);
+         varsMap.insert(std::pair<int, std::set<std::string>>(vIt2->first, tempSet));
+      }
+
+      vIt2++;
+   }
+
+   //then the fieldsMap
+   //1. add all the Heap sets from ptg1
+   auto fIt1 = ptg1.fieldsMap.begin();
+   while (fIt1 != ptg1.fieldsMap.end())
+   {
+      fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fIt1->first, fIt1->second));
+      fIt1++;
+   }
+   //2. now merge in the Heap sets from ptg2
+
+   auto fIt2 = ptg2.fieldsMap.begin();
+   while (fIt2 != ptg2.fieldsMap.end())
+   {
+      if (fieldsMap.find(fIt2->first) == fieldsMap.end())
+      {
+         fieldsMap.insert(std::pair<string, std::set<std::string>>(fIt2->first, fIt2->second));
+      }
+      else
+      {
+         auto ptg1Set = fieldsMap.find(fIt2->first)->second;
+         auto ptg2Set = fIt2->second;
+         std::set<std::string> tempSet;
+         std::merge(ptg1Set.begin(), ptg1Set.end(), ptg2Set.begin(), ptg2Set.end(), std::inserter(tempSet, tempSet.begin()));
+
+         fieldsMap.erase(fIt2->first);
+         fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fIt2->first, tempSet));
+
+      }
+
+      fIt2++;
+   }
+
+   res.varsMap = varsMap;
+   res.fieldsMap = fieldsMap;
+   
+#ifdef RUNTIME_PTG_DEBUG
+   cout << "completed Meet operation, result: " << endl;
+   res.print();
+#endif
+
+
+   return res;
+}
+
+//returns the meet of the out-PTGs of all the predecessors of the requested block
+Ptg getPredecessorPTG(TR::Block *bl, std::map<int, Ptg> outPTGs)
+{
+   auto requestedBlockNumber = bl->getNumber();
+#ifdef RUNTIME_PTG_DEBUG
+   cout << "*computing the predecessor PTG for block " << requestedBlockNumber << endl;
+#endif
+
+   Ptg predMeetPTG;
+   for (TR::CFGEdgeList::iterator pred = bl->getPredecessors().begin(); pred != bl->getPredecessors().end(); ++pred)
+   {
+      TR::Block *predBlock = toBlock((*pred)->getFrom());
+      auto predBlockNumber = predBlock->getNumber();
+#ifdef RUNTIME_PTG_DEBUG
+      cout << "*checking predecessor block BB " << predBlockNumber << endl;
+#endif
+
+      if (outPTGs.find(predBlockNumber) != outPTGs.end())
+      {
+         Ptg outPTG = outPTGs.find(predBlockNumber)->second;
+         //Ptg temp;
+         predMeetPTG = meetPTGs(predMeetPTG, outPTG);
+      }
+   }
+
+   return predMeetPTG;
+}
+
+void processAllocation(TR::Node *node, Ptg basicBlockPtg, TR::Compilation *comp) {
+   //the node here is really a firstchild
+   int allocSymRef = node->getSymbolReference()->getReferenceNumber();
+
+   int bci = node->getByteCodeInfo().getByteCodeIndex();
+
+   if (basicBlockPtg.varsMap.find(allocSymRef) != basicBlockPtg.varsMap.end())
+   {
+      //there is already an entry against this bci
+      //std::vector<int> v = bbPTG.find(allocSymRef)->second;
+      std::set<std::string> s;
+      s.insert(to_string(bci));
+      basicBlockPtg.varsMap.erase(allocSymRef);
+      basicBlockPtg.varsMap.insert(std::pair<int, std::set<std::string>>(allocSymRef, s));
+   }
+   else
+   {
+      std::set<std::string> s;
+      s.insert(to_string(bci));
+      basicBlockPtg.varsMap.insert(std::pair<int, std::set<std::string>>(allocSymRef, s));
+   }
+
+}
+
+//recursively goes down the children of the node and returns the first "useful" child, else null if no useful children
+TR::Node * getUsefulNode(TR::Node * node) {
+   
+   if(node == NULL) return NULL;
+   else {
+      TR:::ILOpCode opCode = node->getOpCodeValue();
+      if(node->getOpCodeValue() == TR::treetop 
+            || node->getOpCodeValue() == TR::ResolveAndNULLCHK 
+            || node->getOpCodeValue == TR::ResolveCHK)
+      return getUsefulNode(node->getFirstChild());
+
+      else {
+         TR::Node * ret;
+         
+         if(opCode == TR::anew 
+            || opCode == TR::astore 
+            || opCode == TR::astorei 
+            || opCode == TR::Return 
+            || opCode == TR::areturn
+            || opCode == TR::aload
+            || opCode == TR::aloadi
+            || opCode == TR::call
+            || opCode == TR::calli
+            || opCode == TR::acall
+            || opCode == TR::calli) {
+            ret = node;
+         } else {
+            //TODO: Shashin: insert an assert failure here
+            ret = NULL;
+         }
+
+         return ret;
+
+      }
+   }
+}
+
+
+void verifyStaticMethodInfo(std::string className, std::string methodName, TR::CFG *cfg, TR::Compilation *comp)
+{
+   cout << "running verifyStaticMethodInfo for " << className << ":" << methodName << endl;
+
 
 }
 void performRuntimeVerification(TR::Compilation *comp)
