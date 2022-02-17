@@ -21,6 +21,10 @@
 
 #include "optimizer/Optimizer.hpp"
 
+#include <iostream>
+#include "ptgparser/structs.h"
+#include <queue>
+using namespace std;
 #include "optimizer/Optimizer_inlines.hpp"
 #include <limits.h>
 #include <stddef.h>
@@ -112,6 +116,8 @@
 #include "optimizer/RecognizedCallTransformer.hpp"
 #include "optimizer/SwitchAnalyzer.hpp"
 #include "env/RegionProfiler.hpp"
+
+static std::set<string> _runtimeVerifiedMethods;
 
 namespace TR { class AutomaticSymbol; }
 
@@ -1251,8 +1257,115 @@ static void breakForTesting(int index)
       }
    }
 
+extern std::map<string, Ptg> parsePTG(string staticFileName);
+
+std::string getFormattedCurrentMethodName(TR::Compilation *comp)
+{
+
+   int methodNameLength = comp->getMethodSymbol()->getMethod()->nameLength();
+   string methodName = comp->getMethodSymbol()->getMethod()->nameChars();
+
+   return methodName.substr(0, methodNameLength);
+}
+
+std::string getFormattedCurrentClassName(TR::Compilation *comp)
+{
+
+   int classNameLength = comp->getMethodSymbol()->getMethod()->classNameLength();
+   string className = comp->getMethodSymbol()->getMethod()->classNameChars();
+
+   return className.substr(0, classNameLength);
+}
+void verifyStaticMethodInfo(std::string className, std::string methodName, TR::CFG *cfg, TR::Compilation *comp)
+{
+   cout << "running verifyStaticMethodInfo for " << className << ":" << methodName << endl;
+
+
+}
+
+std::string getLoopInvariantStaticFileName(std::string className, std::string methodName)
+{
+   string loopInvariantStaticFileName = "loop-invariants-";
+   loopInvariantStaticFileName += className;
+   loopInvariantStaticFileName += ".";
+   loopInvariantStaticFileName += methodName;
+   loopInvariantStaticFileName += ".txt";
+
+   std::replace(loopInvariantStaticFileName.begin(), loopInvariantStaticFileName.end(), '/', '-');
+
+   return loopInvariantStaticFileName;
+}
+
+std::string getCallSiteInvariantStaticFileName(std::string className, std::string methodName)
+{
+
+   string callSiteInvariantStaticFileName = "callsite-invariants-";
+   callSiteInvariantStaticFileName += className;
+   callSiteInvariantStaticFileName += ".";
+   callSiteInvariantStaticFileName += methodName;
+   callSiteInvariantStaticFileName += ".txt";
+
+   std::replace(callSiteInvariantStaticFileName.begin(), callSiteInvariantStaticFileName.end(), '/', '-');
+   return callSiteInvariantStaticFileName;
+}
+
+bool checkPTGSubsumes(Ptg ptg1, Ptg ptg2)
+{
+   bool subsumes = true;
+
+   return subsumes;
+
+}
+void performRuntimeVerification(TR::Compilation *comp)
+{
+   std::string currentClassName = getFormattedCurrentClassName(comp);
+   std::string currentMethodName = getFormattedCurrentMethodName(comp);
+   std::string sig = currentClassName + "." + currentMethodName;
+   if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end())
+      return;
+   else
+      _runtimeVerifiedMethods.insert(sig);
+
+   //std::cout << "running performRuntimeVerification for " << currentMethodName << endl;
+
+   TR::CFG * cfg = comp->getFlowGraph();
+
+   //traceMsg(comp, "CFG for callee method %s\n", currentMethodName);
+   comp->dumpFlowGraph(cfg);
+   comp->dumpMethodTrees("from OMR::Optimizer::performRuntimeVerification");
+
+   //if (trace())
+   {
+      traceMsg(comp, "*****************************************************\n");
+      traceMsg(comp, "Beginning Runtime Verification for %s.%s\n", currentClassName.c_str(), currentMethodName.c_str());
+
+      //dump the current symbol table, to establish a baseline
+
+      TR::SymbolReferenceTable *tab = comp->getSymRefTab();
+      for (int i = tab->getIndexOfFirstSymRef(); i < tab->getNumSymRefs(); i++)
+      {
+
+         TR::SymbolReference *sym = tab->getSymRef(i);
+
+         if (sym != NULL && sym->getSymbol()->getType().isAddress())
+            traceMsg(comp, "Symref #%d - CPIndex %d, isTemporary: %d, isAuto: %d\n", sym->getReferenceNumber(), sym->getCPIndex(), sym->isTemporary(comp), sym->getSymbol()->isAuto());
+      }
+   }
+
+   //recursively invoke the verification algorithm (calls itself at each callsite to analyze the called method)
+   verifyStaticMethodInfo(currentClassName, currentMethodName, cfg, comp);
+
+   //if (trace())
+   {
+      traceMsg(comp, "*****************************************************");
+   }
+}
+
+
 int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimization, int32_t firstOptIndex, int32_t lastOptIndex, int32_t doTiming)
    {
+      performRuntimeVerification(comp());
+
    OMR::Optimizations optNum = optimization->_num;
    TR::OptimizationManager *manager = getOptimization(optNum);
    TR_ASSERT(manager != NULL, "Optimization manager should have been initialized for %s.",
