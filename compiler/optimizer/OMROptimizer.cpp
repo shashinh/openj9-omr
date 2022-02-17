@@ -1500,23 +1500,21 @@ void processAllocation(TR::Node *node, Ptg basicBlockPtg, TR::Compilation *comp)
 
 //recursively goes down the children of the node and returns the first "useful" child, else null if no useful children
 TR::Node * getUsefulNode(TR::Node * node) {
-   
-   if(node == NULL) return NULL;
+   TR::Node * ret = NULL;
+   if(node == NULL) return ret;
    else {
-      TR:::ILOpCode opCode = node->getOpCodeValue();
+      TR::ILOpCodes opCode = node->getOpCodeValue();
       //if the opcodes is one of the following, we need to dig deeper
-      if(node->getOpCodeValue() == TR::treetop 
-            || node->getOpCodeValue() == TR::ResolveAndNULLCHK 
-            || node->getOpCodeValue == TR::ResolveCHK
-            || node->getOpCodeValue == TR::compressedRefs
-            || node->getOpCodeValue == TR::awrtbar 
-            || node->getOpCodeValue == TR::awrtbari)
+      if(opCode == TR::treetop 
+            || opCode == TR::ResolveAndNULLCHK 
+            || opCode == TR::ResolveCHK
+            || opCode == TR::compressedRefs
+            || opCode == TR::awrtbar 
+            || opCode == TR::awrtbari)
       return getUsefulNode(node->getFirstChild());
 
       else {
          //these are the interesting nodes
-         TR::Node * ret;
-         
          if(opCode == TR::New
             || opCode == TR::astore 
             || opCode == TR::astorei 
@@ -1531,13 +1529,12 @@ TR::Node * getUsefulNode(TR::Node * node) {
             ret = node;
          } else {
             //TODO: Shashin: insert an assert failure here
-            ret = NULL;
          }
-
-         return ret;
 
       }
    }
+
+   return ret;
 }
 
 
@@ -1671,11 +1668,11 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
             while (vIt != staticLoopInvariantPTG.varsMap.end())
             {
                auto stackSlot = vIt->first;
-               auto symRef = to_string(stackSlotToSymRefMap.find(stoi(stackSlot))->second);
+               auto symRef = stackSlotToSymRefMap.find(stackSlot)->second;
                auto bciVals = vIt->second;
 
                currentBBPTG.varsMap.erase(symRef);
-               currentBBPTG.varsMap.insert(std::pair<std::string, std::set<std::string>>(symRef, bciVals));
+               currentBBPTG.varsMap.insert(std::pair<int, std::set<std::string>>(symRef, bciVals));
 
                vIt++;
             }
@@ -1703,22 +1700,22 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
 
          TR::Node * usefulNode = getUsefulNode(node);
          if(usefulNode != NULL){
-            TR::ILOpCode * opCode = usefulNode->getOpCode();
-            if(opCode->isNew()) {
+            TR::ILOpCode opCode = usefulNode->getOpCode();
+            if(opCode.isNew()) {
                processAllocation(node, currentBBPTG, comp);
-            } else if (opCode->isStore()) {
+            } else if (opCode.isStore()) {
                //processStore();
-            } else if (opCode->isLoad()) {
+            } else if (opCode.isLoad()) {
                //processLoad();
-            } else if (opCode->isCall()) {
+            } else if (opCode.isCall()) {
                //processCall();
-            } else if (opCode->isReturn()) {
+            } else if (opCode.isReturn()) {
                //processReturn;
             }
          }
 
 #ifdef RUNTIME_PTG_DEBUG
-         cout << "Current BB Ptg after processing node " << endl;
+         cout << "Current BB Ptg after processing node " << node->getNumber() << endl;
          currentBBPTG.print();
 #endif
 
@@ -1743,12 +1740,106 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
       cout << endl;
 #endif
 
+      for (TR::CFGEdgeList::iterator succ = currentBlock->getSuccessors().begin(); succ != currentBlock->getSuccessors().end(); ++succ)
+      {
+         TR::Block *bl = toBlock((*succ)->getTo());
+#ifdef RUNTIME_PTG_DEBUG
+         cout << "checking successor block " << bl->getNumber() << endl;
+#endif
+         if (visited.find(bl->getNumber()) == visited.end())
+         {
+#ifdef RUNTIME_PTG_DEBUG
+            cout << "**checking successor block " << bl->getNumber() << " into queue" << endl;
+#endif
+            successorQueue.push(bl);
+         } else {
+
+            //this successor block has been visited before, check for invariance.
+            auto predPTG = getPredecessorPTG(bl, outPTGs);
+            //perform a meet between predecessor PTG and the latest PTG
+            auto meetPTG = meetPTGs(predPTG, latestPTG);
+            //this predecessor-meet-PTG should match the block's current outgoing PTG
+            //TODO : why is getFirstRealTreeTop throwing an exception here?
+            int bci = -1;
+            try {
+               //TR_ASSERT_FATAL(true, "true hardcoded assert");
+               //TR_ASSERT_FATAL(bl->getEntry() && bl->getEntry()->getNextTreeTop(), "entry treetops are null");
+
+               cout << "attempting getFirstRealTreeTop, BB " << bl->getNumber() << endl;
+               bci = bl->getFirstRealTreeTop()->getNode()->getByteCodeInfo().getByteCodeIndex();
+            } catch (...){
+               cout << bl->getNumber();
+               cout << "there was an exception" << endl;
+            }
+            auto bciStr = to_string(bci);
+            Ptg ptgToCheckSubsumes;
+            //Ptg outPTG = outPTGs.find(bl->getNumber())->second;
+            
+            // if (staticLoopInvariants.find(bci) != staticLoopInvariants.end())
+            // {
+            //    ptgToCheckSubsumes = staticLoopInvariants.find(bci)->second;
+            // }
+            if (stackSlotMappedInvariantPTGs.find(bci) != stackSlotMappedInvariantPTGs.end())
+            {
+               ptgToCheckSubsumes = stackSlotMappedInvariantPTGs.find(bci)->second;
+            }
+            
+            else
+            {
+               ptgToCheckSubsumes = predPTG;
+            }
+
+            if (!checkPTGSubsumes(ptgToCheckSubsumes, meetPTG))
+            //if(!checkPTGSubsumes2(meetPTG, outPTG))
+            {
+               //if (trace())
+               //{
+                  traceMsg(comp, "Runtime Verification Results: verification failed, invariant does not hold for block %d\n", bl->getNumber());
+                  traceMsg(comp, "************************************************************************************************\n");
+               //}
+               return;
+            }
+            else
+            {
+               //if (trace())
+               //{
+                  traceMsg(comp, "Runtime Verification Results: success!\n");
+                  traceMsg(comp, "************************************************************************************************\n");
+               //}
+            }
+         }
+
+         
+      } // end for-loop iterating over BB successors
       
+      outPTGs.insert(std::pair<int, Ptg>(currentBlockNumber, latestPTG));
+
+    } // end while- iteration over successor BBs queue
+
+   //if(trace()){
+      traceMsg(comp, "Generated Points-To Maps\n");
+      for(auto it = ptgsAfter.begin(); it != ptgsAfter.end(); ++it) {
+         traceMsg(comp, "BCI %d:\n", it->first);
+         traceMsg(comp, it->second.toString().c_str());
+      }
+      traceMsg(comp, "************************************************************************************************\n");
+   //}
+   
+#ifdef RUNTIME_PTG_DEBUG
+   for (auto it = ptgsAfter.begin(); it != ptgsAfter.end(); ++it)
+   {
+      cout << "BCI " << it->first << ":" << endl
+           << "\t";
+      it->second.print();
+      cout << endl;
+   }
+#endif
 
 
 
 
 }
+
 void performRuntimeVerification(TR::Compilation *comp)
 {
    std::string currentClassName = getFormattedCurrentClassName(comp);
