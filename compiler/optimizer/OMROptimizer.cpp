@@ -1717,7 +1717,34 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
             }
          }
 
+#ifdef RUNTIME_PTG_DEBUG
+         cout << "Current BB Ptg after processing node " << endl;
+         currentBBPTG.print();
+#endif
+
+         ptgsAfter.insert(std::pair<int, Ptg>(bci, currentBBPTG));
+         latestPTG = currentBBPTG;
+
+
+      } //end for-loop iterating over treetops for the current BB
+
+      /*
+      * if we are here, we have reached the BBEnd of the current basic block, in this case we want to perform two activities:
+      * 1. add the successors of this block to the successor queue
+      * 2. associate the latest PTG as the out-PTG of the current block
+      */
+
+#ifdef RUNTIME_PTG_DEBUG
+      cout << "Visited CFG blocks : ";
+      for (auto it = visited.begin(); it != visited.end(); ++it)
+      {
+         cout << " " << *it;
       }
+      cout << endl;
+#endif
+
+      
+
 
 
 
@@ -1728,6 +1755,7 @@ void performRuntimeVerification(TR::Compilation *comp)
    std::string currentMethodName = getFormattedCurrentMethodName(comp);
    std::string sig = currentClassName + "." + currentMethodName;
    if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end())
+      //this method has already been analyzed
       return;
    else
       _runtimeVerifiedMethods.insert(sig);
