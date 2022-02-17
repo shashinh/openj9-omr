@@ -1504,15 +1504,20 @@ TR::Node * getUsefulNode(TR::Node * node) {
    if(node == NULL) return NULL;
    else {
       TR:::ILOpCode opCode = node->getOpCodeValue();
+      //if the opcodes is one of the following, we need to dig deeper
       if(node->getOpCodeValue() == TR::treetop 
             || node->getOpCodeValue() == TR::ResolveAndNULLCHK 
-            || node->getOpCodeValue == TR::ResolveCHK)
+            || node->getOpCodeValue == TR::ResolveCHK
+            || node->getOpCodeValue == TR::compressedRefs
+            || node->getOpCodeValue == TR::awrtbar 
+            || node->getOpCodeValue == TR::awrtbari)
       return getUsefulNode(node->getFirstChild());
 
       else {
+         //these are the interesting nodes
          TR::Node * ret;
          
-         if(opCode == TR::anew 
+         if(opCode == TR::New
             || opCode == TR::astore 
             || opCode == TR::astorei 
             || opCode == TR::Return 
@@ -1539,6 +1544,181 @@ TR::Node * getUsefulNode(TR::Node * node) {
 void verifyStaticMethodInfo(std::string className, std::string methodName, TR::CFG *cfg, TR::Compilation *comp)
 {
    cout << "running verifyStaticMethodInfo for " << className << ":" << methodName << endl;
+   auto staticLoopInvariantFileName = getLoopInvariantStaticFileName(className, methodName);
+   //read in the static dump for loop invariants
+   std::map<string, Ptg> staticLoopInvariants;
+   //staticLoopInvariants = parsePTG(staticLoopInvariantFileName);
+
+   //if (trace())
+   {
+      traceMsg(comp, "Attempted to read static loop invariant file \"%s\"\n", staticLoopInvariantFileName.c_str());
+   }
+
+   //maintain the PTG in a before-after format. Essentially, the flow function should transform the "before" to the "after"
+   std::map<int, Ptg> ptgsBefore;
+   std::map<int, Ptg> ptgsAfter;
+   //a convenience map to track the out-ptgs of each basic block. Makes propagation easier
+   std::map<int, Ptg> outPTGs;
+   std::map<int, Ptg> stackSlotMappedInvariantPTGs;
+
+   //fetch the CFG's start
+   TR::Block *startBlock = cfg->getStart()->asBlock();
+
+   //push the start block of the CFG to the queue
+   std::queue<TR::Block *> successorQueue;
+   successorQueue.push(startBlock);
+   //keep track of which basic blocks have been visited
+   std::set<int> visited;
+
+   Ptg latestPTG;
+
+   //a simple BFS traversal of the CFG, starting from the root
+   while (!successorQueue.empty())
+   {
+
+      TR::Block *currentBlock = successorQueue.front();
+      successorQueue.pop();
+
+      int currentBlockNumber = currentBlock->getNumber();
+
+#ifdef RUNTIME_PTG_DEBUG
+      cout << "now checking BB " << currentBlockNumber << endl;
+#endif
+
+      if (visited.find(currentBlockNumber) != visited.end())
+      {
+//this block has already been processed
+#ifdef RUNTIME_PTG_DEBUG
+         cout << "BB " << currentBlockNumber << " already visited" << endl;
+#endif
+         continue;
+      }
+      else
+      {
+         visited.insert(currentBlockNumber);
+      }
+
+      auto predecessorMeetPTG = getPredecessorPTG(currentBlock, outPTGs);
+
+      //TODO - this needs to be the "before" Ptg of the first bci in this block
+      latestPTG = predecessorMeetPTG;
+
+      TR::TreeTop *tt = currentBlock->getEntry();
+      
+      for (; tt; tt = tt->getNextRealTreeTop())
+      {
+
+         //a "local" PTG for the current basic block
+         //note that we don't need to worry about flow of control here, since it is linear.
+         Ptg currentBBPTG = latestPTG;
+
+         //TODO : can we not make this the bounds of the loop itself?
+         TR::Node *node = tt->getNode();
+         if (node->getOpCodeValue() == TR::BBStart)
+            continue;
+         else if (node->getOpCodeValue() == TR::BBEnd)
+            break;
+
+         int bci = node->getByteCodeInfo().getByteCodeIndex();
+
+
+
+         //check if there is a static PTG available for this bci
+         if (staticLoopInvariants.find(to_string(bci)) != staticLoopInvariants.end())
+         {
+#ifdef RUNTIME_PTG_DEBUG
+            cout << "found static loop invariant at bci " << bci << endl;
+#endif
+
+            auto staticLoopInvariantPTG = staticLoopInvariants.find(to_string(bci))->second;
+            staticLoopInvariantPTG.print();
+
+            //there is a static loop invariant PTG available at this bci
+            //so proceed to map it to the running PTG
+
+            //1. traverse the symref table to match the stack slots with their respective SymRefs.
+
+            TR::SymbolReferenceTable *tab = comp->getSymRefTab();
+            std::map<int, int> stackSlotToSymRefMap;
+            for (int i = tab->getIndexOfFirstSymRef(); i < tab->getNumSymRefs(); i++)
+            {
+
+               TR::SymbolReference *sym = tab->getSymRef(i);
+
+               //if (sym != NULL && !sym->isThisPointer() && sym->getSymbol()->getType().isAddress() && sym->getCPIndex() > 0) {
+               if (sym != NULL && sym->getSymbol()->getType().isAddress() && sym->getSymbol()->isAuto())
+               {
+                  stackSlotToSymRefMap.insert(std::pair<int, int>(sym->getCPIndex(), sym->getReferenceNumber()));
+               }
+            }
+
+#ifdef RUNTIME_PTG_DEBUG
+            auto it = stackSlotToSymRefMap.begin();
+            while (it != stackSlotToSymRefMap.end())
+            {
+               cout << it->first << "->" << it->second << endl;
+               it++;
+            }
+#endif
+
+//2. now map the static PTG to the running PTG
+#ifdef RUNTIME_PTG_DEBUG
+            cout << "**before mapping static to runtime\n";
+            currentBBPTG.print();
+#endif
+
+            auto vIt = staticLoopInvariantPTG.varsMap.begin();
+            while (vIt != staticLoopInvariantPTG.varsMap.end())
+            {
+               auto stackSlot = vIt->first;
+               auto symRef = to_string(stackSlotToSymRefMap.find(stoi(stackSlot))->second);
+               auto bciVals = vIt->second;
+
+               currentBBPTG.varsMap.erase(symRef);
+               currentBBPTG.varsMap.insert(std::pair<std::string, std::set<std::string>>(symRef, bciVals));
+
+               vIt++;
+            }
+
+            auto fIt = staticLoopInvariantPTG.fieldsMap.begin();
+            while (fIt != staticLoopInvariantPTG.fieldsMap.end())
+            {
+               auto fieldKey = fIt->first;
+               auto bciVals = fIt->second;
+
+               currentBBPTG.fieldsMap.erase(fieldKey);
+               currentBBPTG.fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fieldKey, bciVals));
+
+               fIt++;
+            }
+
+#ifdef RUNTIME_PTG_DEBUG
+            cout << "**after mapping static to runtime\n";
+            currentBBPTG.print();
+#endif
+            stackSlotMappedInvariantPTGs.insert(std::pair<int, Ptg>(bci, currentBBPTG));
+            //latestPTG = currentBBPTG;
+
+         } //end mapping of static invariants to stack slots
+
+         TR::Node * usefulNode = getUsefulNode(node);
+         if(usefulNode != NULL){
+            TR::ILOpCode * opCode = usefulNode->getOpCode();
+            if(opCode->isNew()) {
+               processAllocation(node, currentBBPTG, comp);
+            } else if (opCode->isStore()) {
+               //processStore();
+            } else if (opCode->isLoad()) {
+               //processLoad();
+            } else if (opCode->isCall()) {
+               //processCall();
+            } else if (opCode->isReturn()) {
+               //processReturn;
+            }
+         }
+
+      }
+
 
 
 }
