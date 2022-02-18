@@ -1475,6 +1475,7 @@ Ptg getPredecessorPTG(TR::Block *bl, std::map<int, Ptg> outPTGs)
 }
 
 void processAllocation(TR::Node *node, Ptg basicBlockPtg, TR::Compilation *comp) {
+   cout << "entered processAllocation" << endl;
    //the node here is really a firstchild
    int allocSymRef = node->getSymbolReference()->getReferenceNumber();
 
@@ -1495,8 +1496,8 @@ void processAllocation(TR::Node *node, Ptg basicBlockPtg, TR::Compilation *comp)
       s.insert(to_string(bci));
       basicBlockPtg.varsMap.insert(std::pair<int, std::set<std::string>>(allocSymRef, s));
    }
-
-}
+   cout << "exiting processAllocation" << endl;
+} 
 
 //recursively goes down the children of the node and returns the first "useful" child, else null if no useful children
 TR::Node * getUsefulNode(TR::Node * node) {
@@ -1597,11 +1598,13 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
 
       auto predecessorMeetPTG = getPredecessorPTG(currentBlock, outPTGs);
 
+      cout << "completed getPredecessorPTG" << endl;
+
       //TODO - this needs to be the "before" Ptg of the first bci in this block
       latestPTG = predecessorMeetPTG;
 
       TR::TreeTop *tt = currentBlock->getEntry();
-      
+      if(tt == NULL) return;
       for (; tt; tt = tt->getNextRealTreeTop())
       {
 
@@ -1761,16 +1764,15 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
             //this predecessor-meet-PTG should match the block's current outgoing PTG
             //TODO : why is getFirstRealTreeTop throwing an exception here?
             int bci = -1;
-            try {
-               //TR_ASSERT_FATAL(true, "true hardcoded assert");
-               //TR_ASSERT_FATAL(bl->getEntry() && bl->getEntry()->getNextTreeTop(), "entry treetops are null");
+            //TR_ASSERT_FATAL(true, "true hardcoded assert");
+            //TR_ASSERT_FATAL(bl->getEntry() && bl->getEntry()->getNextTreeTop(), "entry treetops are null");
 
-               cout << "attempting getFirstRealTreeTop, BB " << bl->getNumber() << endl;
+            cout << "attempting getFirstRealTreeTop, BB " << bl->getNumber() << endl;
+            if(bl->getEntry() && bl->getEntry()->getNextTreeTop()) {
                bci = bl->getFirstRealTreeTop()->getNode()->getByteCodeInfo().getByteCodeIndex();
-            } catch (...){
-               cout << bl->getNumber();
-               cout << "there was an exception" << endl;
             }
+            
+            cout << "finished attempt to getFirstRealTreeTop" << endl;
             auto bciStr = to_string(bci);
             Ptg ptgToCheckSubsumes;
             //Ptg outPTG = outPTGs.find(bl->getNumber())->second;
@@ -1782,6 +1784,7 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
             if (stackSlotMappedInvariantPTGs.find(bci) != stackSlotMappedInvariantPTGs.end())
             {
                ptgToCheckSubsumes = stackSlotMappedInvariantPTGs.find(bci)->second;
+               cout << "completed ptgToCheckSubsumes computation" << endl;
             }
             
             else
@@ -1807,15 +1810,18 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
                   traceMsg(comp, "************************************************************************************************\n");
                //}
             }
+            cout << "completed checkPTGSubsumes invocation" << endl;
          }
 
          
       } // end for-loop iterating over BB successors
-      
+      cout << "inserting to outptgs" << endl;
       outPTGs.insert(std::pair<int, Ptg>(currentBlockNumber, latestPTG));
+      cout << "completed inserting to outptgs" << endl;
 
     } // end while- iteration over successor BBs queue
 
+/*
    //if(trace()){
       traceMsg(comp, "Generated Points-To Maps\n");
       for(auto it = ptgsAfter.begin(); it != ptgsAfter.end(); ++it) {
@@ -1834,6 +1840,7 @@ void verifyStaticMethodInfo(std::string className, std::string methodName, TR::C
       cout << endl;
    }
 #endif
+*/
 
 
 
