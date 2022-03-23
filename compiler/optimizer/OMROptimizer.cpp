@@ -22,8 +22,10 @@
 #include "optimizer/Optimizer.hpp"
 
 #include <iostream>
-#include "ptgparser/structs.h"
+//#include "ptgparser/structs.h"
+#include "ptgparser/PointsToGraph.h"
 #include <queue>
+#include "il/ParameterSymbol.hpp"
 using namespace std;
 #include "optimizer/Optimizer_inlines.hpp"
 #include <limits.h>
@@ -116,6 +118,7 @@ using namespace std;
 #include "optimizer/RecognizedCallTransformer.hpp"
 #include "optimizer/SwitchAnalyzer.hpp"
 #include "env/RegionProfiler.hpp"
+//#include "il/ParameterSymbol.hpp"
 
 static std::set<string> _runtimeVerifiedMethods;
 
@@ -1257,7 +1260,7 @@ static void breakForTesting(int index)
       }
    }
 
-extern std::map<string, Ptg> parsePTG(string staticFileName);
+//extern std::map<string, Ptg> parsePTG(string staticFileName);
 
 std::string getFormattedCurrentMethodName(TR::Compilation *comp)
 {
@@ -1303,201 +1306,211 @@ std::string getCallSiteInvariantStaticFileName(std::string className, std::strin
    return callSiteInvariantStaticFileName;
 }
 
-//check if ptg1 subsumes ptg2
-bool checkPTGSubsumes(Ptg ptg1, Ptg ptg2)
-{
-   bool subsumes = true;
+// //check if ptg1 subsumes ptg2
+// bool checkPTGSubsumes(Ptg ptg1, Ptg ptg2)
+// {
+//    bool subsumes = true;
 
-   for (std::map<int, std::set<std::string> >::iterator it = ptg2.varsMap.begin(); it != ptg2.varsMap.end(); ++it)
-   {
-      int key = it->first;
-      std::set<std::string> set = it->second;
+//    for (std::map<int, std::set<std::string> >::iterator it = ptg2.varsMap.begin(); it != ptg2.varsMap.end(); ++it)
+//    {
+//       int key = it->first;
+//       std::set<std::string> set = it->second;
 
-      if (ptg1.varsMap.find(key) != ptg1.varsMap.end())
-      {
-         //the key is present, now verify the subsumes relation for the set as well
-         std::set<std::string> ptg1set = ptg1.varsMap.find(key)->second;
+//       if (ptg1.varsMap.find(key) != ptg1.varsMap.end())
+//       {
+//          //the key is present, now verify the subsumes relation for the set as well
+//          std::set<std::string> ptg1set = ptg1.varsMap.find(key)->second;
 
-         for (std::set<std::string>::iterator s = set.begin(); s != set.end(); ++s)
-         {
-            if (ptg1set.find(*s) == ptg1set.end())
-            {
-               subsumes = false;
-               return subsumes;
-            }
-         }
-      }
-   }
+//          for (std::set<std::string>::iterator s = set.begin(); s != set.end(); ++s)
+//          {
+//             if (ptg1set.find(*s) == ptg1set.end())
+//             {
+//                subsumes = false;
+//                return subsumes;
+//             }
+//          }
+//       }
+//    }
 
-   for (std::map<std::string, std::set<std::string>>::iterator it = ptg2.fieldsMap.begin(); it != ptg2.fieldsMap.end(); ++it)
-   {
-      std::string key = it->first;
-      std::set<std::string> set = it->second;
+//    for (std::map<std::string, std::set<std::string>>::iterator it = ptg2.fieldsMap.begin(); it != ptg2.fieldsMap.end(); ++it)
+//    {
+//       std::string key = it->first;
+//       std::set<std::string> set = it->second;
 
-      //ptg1 must contain this key, if not - fail validation
-      if (ptg1.fieldsMap.find(key) == ptg1.fieldsMap.end())
-      {
-//#ifdef RUNTIME_PTG_DEBUG
-         std::cout << "invariance verification failed" << endl;
-//#endif
-         subsumes = false;
-         return subsumes;
-      }
-      else
-      {
-         //the key is present, now verify the subsumes relation for the set as well
-         std::set<std::string> ptg1set = ptg1.fieldsMap.find(key)->second;
+//       //ptg1 must contain this key, if not - fail validation
+//       if (ptg1.fieldsMap.find(key) == ptg1.fieldsMap.end())
+//       {
+// //#ifdef RUNTIME_PTG_DEBUG
+//          std::cout << "invariance verification failed" << endl;
+// //#endif
+//          subsumes = false;
+//          return subsumes;
+//       }
+//       else
+//       {
+//          //the key is present, now verify the subsumes relation for the set as well
+//          std::set<std::string> ptg1set = ptg1.fieldsMap.find(key)->second;
 
-         for (std::set<std::string>::iterator s = set.begin(); s != set.end(); ++s)
-         {
-            if (ptg1set.find(*s) == ptg1set.end())
-            {
-               subsumes = false;
-               return subsumes;
-            }
-         }
-      }
-   }
+//          for (std::set<std::string>::iterator s = set.begin(); s != set.end(); ++s)
+//          {
+//             if (ptg1set.find(*s) == ptg1set.end())
+//             {
+//                subsumes = false;
+//                return subsumes;
+//             }
+//          }
+//       }
+//    }
 
-   return subsumes;
+//    return subsumes;
 
-}
-Ptg meetPTGs(Ptg ptg1, Ptg ptg2)
-{
-   Ptg res;
-   std::map<int, std::set<std::string>> varsMap;
-   std::map<std::string, std::set<std::string>> fieldsMap;
+// }
+// Ptg meetPTGs(Ptg ptg1, Ptg ptg2)
+// {
+//    Ptg res;
+//    std::map<int, std::set<std::string>> varsMap;
+//    std::map<std::string, std::set<std::string>> fieldsMap;
 
-   //merge the varsMap first
-   //1. add all the Roots from ptg1
-   auto vIt1 = ptg1.varsMap.begin();
-   while (vIt1 != ptg1.varsMap.end())
-   {
-      varsMap.insert(std::pair<int, std::set<std::string>>(vIt1->first, vIt1->second));
-      vIt1++;
-   }
-   //2. now merge in the Roots from ptg2
+//    //merge the varsMap first
+//    //1. add all the Roots from ptg1
+//    auto vIt1 = ptg1.varsMap.begin();
+//    while (vIt1 != ptg1.varsMap.end())
+//    {
+//       varsMap.insert(std::pair<int, std::set<std::string>>(vIt1->first, vIt1->second));
+//       vIt1++;
+//    }
+//    //2. now merge in the Roots from ptg2
 
 
-   auto vIt2 = ptg2.varsMap.begin();
-   while (vIt2 != ptg2.varsMap.end())
-   {
-      if (varsMap.find(vIt2->first) == varsMap.end())
-      {
-         varsMap.insert(std::pair<int, std::set<std::string>>(vIt2->first, vIt2->second));
-      }
-      //obviously there's a chance that the var is already accounted for by ptg1's Roots, in this case
-      //merge the Roots set for that var
-      else
-      {
-         auto ptg1Set = varsMap.find(vIt2->first)->second;
-         auto ptg2Set = vIt2->second;
-         std::set<std::string> tempSet;
-         std::merge(ptg1Set.begin(), ptg1Set.end(), ptg2Set.begin(), ptg2Set.end(), std::inserter(tempSet, tempSet.begin()));
+//    auto vIt2 = ptg2.varsMap.begin();
+//    while (vIt2 != ptg2.varsMap.end())
+//    {
+//       if (varsMap.find(vIt2->first) == varsMap.end())
+//       {
+//          varsMap.insert(std::pair<int, std::set<std::string>>(vIt2->first, vIt2->second));
+//       }
+//       //obviously there's a chance that the var is already accounted for by ptg1's Roots, in this case
+//       //merge the Roots set for that var
+//       else
+//       {
+//          auto ptg1Set = varsMap.find(vIt2->first)->second;
+//          auto ptg2Set = vIt2->second;
+//          std::set<std::string> tempSet;
+//          std::merge(ptg1Set.begin(), ptg1Set.end(), ptg2Set.begin(), ptg2Set.end(), std::inserter(tempSet, tempSet.begin()));
 
-         varsMap.erase(vIt2->first);
-         varsMap.insert(std::pair<int, std::set<std::string>>(vIt2->first, tempSet));
-      }
+//          varsMap.erase(vIt2->first);
+//          varsMap.insert(std::pair<int, std::set<std::string>>(vIt2->first, tempSet));
+//       }
 
-      vIt2++;
-   }
+//       vIt2++;
+//    }
 
-   //then the fieldsMap
-   //1. add all the Heap sets from ptg1
-   auto fIt1 = ptg1.fieldsMap.begin();
-   while (fIt1 != ptg1.fieldsMap.end())
-   {
-      fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fIt1->first, fIt1->second));
-      fIt1++;
-   }
-   //2. now merge in the Heap sets from ptg2
+//    //then the fieldsMap
+//    //1. add all the Heap sets from ptg1
+//    auto fIt1 = ptg1.fieldsMap.begin();
+//    while (fIt1 != ptg1.fieldsMap.end())
+//    {
+//       fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fIt1->first, fIt1->second));
+//       fIt1++;
+//    }
+//    //2. now merge in the Heap sets from ptg2
 
-   auto fIt2 = ptg2.fieldsMap.begin();
-   while (fIt2 != ptg2.fieldsMap.end())
-   {
-      if (fieldsMap.find(fIt2->first) == fieldsMap.end())
-      {
-         fieldsMap.insert(std::pair<string, std::set<std::string>>(fIt2->first, fIt2->second));
-      }
-      else
-      {
-         auto ptg1Set = fieldsMap.find(fIt2->first)->second;
-         auto ptg2Set = fIt2->second;
-         std::set<std::string> tempSet;
-         std::merge(ptg1Set.begin(), ptg1Set.end(), ptg2Set.begin(), ptg2Set.end(), std::inserter(tempSet, tempSet.begin()));
+//    auto fIt2 = ptg2.fieldsMap.begin();
+//    while (fIt2 != ptg2.fieldsMap.end())
+//    {
+//       if (fieldsMap.find(fIt2->first) == fieldsMap.end())
+//       {
+//          fieldsMap.insert(std::pair<string, std::set<std::string>>(fIt2->first, fIt2->second));
+//       }
+//       else
+//       {
+//          auto ptg1Set = fieldsMap.find(fIt2->first)->second;
+//          auto ptg2Set = fIt2->second;
+//          std::set<std::string> tempSet;
+//          std::merge(ptg1Set.begin(), ptg1Set.end(), ptg2Set.begin(), ptg2Set.end(), std::inserter(tempSet, tempSet.begin()));
 
-         fieldsMap.erase(fIt2->first);
-         fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fIt2->first, tempSet));
+//          fieldsMap.erase(fIt2->first);
+//          fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fIt2->first, tempSet));
 
-      }
+//       }
 
-      fIt2++;
-   }
+//       fIt2++;
+//    }
 
-   res.varsMap = varsMap;
-   res.fieldsMap = fieldsMap;
+//    res.varsMap = varsMap;
+//    res.fieldsMap = fieldsMap;
    
-#ifdef RUNTIME_PTG_DEBUG
-   cout << "completed Meet operation, result: " << endl;
-   res.print();
-#endif
+// #ifdef RUNTIME_PTG_DEBUG
+//    cout << "completed Meet operation, result: " << endl;
+//    res.print();
+// #endif
 
 
-   return res;
-}
+//    return res;
+// }
 
-//returns the meet of the out-PTGs of all the predecessors of the requested block
-Ptg getPredecessorPTG(TR::Block *bl, std::map<int, Ptg> outPTGs)
-{
-   auto requestedBlockNumber = bl->getNumber();
-#ifdef RUNTIME_PTG_DEBUG
-   cout << "*computing the predecessor PTG for block " << requestedBlockNumber << endl;
-#endif
+// //returns the meet of the out-PTGs of all the predecessors of the requested block
+// Ptg getPredecessorPTG(TR::Block *bl, std::map<int, Ptg> outPTGs)
+// {
+//    auto requestedBlockNumber = bl->getNumber();
+// #ifdef RUNTIME_PTG_DEBUG
+//    cout << "*computing the predecessor PTG for block " << requestedBlockNumber << endl;
+// #endif
 
-   Ptg predMeetPTG;
-   for (TR::CFGEdgeList::iterator pred = bl->getPredecessors().begin(); pred != bl->getPredecessors().end(); ++pred)
-   {
-      TR::Block *predBlock = toBlock((*pred)->getFrom());
-      auto predBlockNumber = predBlock->getNumber();
-#ifdef RUNTIME_PTG_DEBUG
-      cout << "*checking predecessor block BB " << predBlockNumber << endl;
-#endif
+//    Ptg predMeetPTG;
+//    for (TR::CFGEdgeList::iterator pred = bl->getPredecessors().begin(); pred != bl->getPredecessors().end(); ++pred)
+//    {
+//       TR::Block *predBlock = toBlock((*pred)->getFrom());
+//       auto predBlockNumber = predBlock->getNumber();
+// #ifdef RUNTIME_PTG_DEBUG
+//       cout << "*checking predecessor block BB " << predBlockNumber << endl;
+// #endif
 
-      if (outPTGs.find(predBlockNumber) != outPTGs.end())
-      {
-         Ptg outPTG = outPTGs.find(predBlockNumber)->second;
-         //Ptg temp;
-         predMeetPTG = meetPTGs(predMeetPTG, outPTG);
-      }
-   }
+//       if (outPTGs.find(predBlockNumber) != outPTGs.end())
+//       {
+//          Ptg outPTG = outPTGs.find(predBlockNumber)->second;
+//          //Ptg temp;
+//          predMeetPTG = meetPTGs(predMeetPTG, outPTG);
+//       }
+//    }
 
-   return predMeetPTG;
-}
+//    return predMeetPTG;
+// }
 
-void processAllocation(TR::Node *node, Ptg basicBlockPtg, TR::Compilation *comp) {
-   cout << "entered processAllocation" << endl;
-   //the node here is really a firstchild
-   int allocSymRef = node->getSymbolReference()->getReferenceNumber();
+// void processAllocation(TR::Node *node, Ptg basicBlockPtg, TR::Compilation *comp) {
+//    cout << "entered processAllocation" << endl;
+//    //the node here is really a firstchild
 
-   int bci = node->getByteCodeInfo().getByteCodeIndex();
+//    /* 
+//     * change this idiotic allocSymRef to the node number
+//     * the newly created object can be uniquely identified by the node number, instead of the 
+//     * symref (which could be reused multiple times, especially in case of pending push temps)
+//     */
 
-   if (basicBlockPtg.varsMap.find(allocSymRef) != basicBlockPtg.varsMap.end())
-   {
-      //there is already an entry against this bci
-      //std::vector<int> v = bbPTG.find(allocSymRef)->second;
-      std::set<std::string> s;
-      s.insert(to_string(bci));
-      basicBlockPtg.varsMap.erase(allocSymRef);
-      basicBlockPtg.varsMap.insert(std::pair<int, std::set<std::string>>(allocSymRef, s));
-   }
-   else
-   {
-      std::set<std::string> s;
-      s.insert(to_string(bci));
-      basicBlockPtg.varsMap.insert(std::pair<int, std::set<std::string>>(allocSymRef, s));
-   }
-   cout << "exiting processAllocation" << endl;
-} 
+//    std::string nodeNumber = node->getName(comp->getDebug());
+
+
+//    int allocSymRef = node->getSymbolReference()->getReferenceNumber();
+
+//    int bci = node->getByteCodeInfo().getByteCodeIndex();
+
+//    if (basicBlockPtg.varsMap.find(allocSymRef) != basicBlockPtg.varsMap.end())
+//    {
+//       //there is already an entry against this bci
+//       //std::vector<int> v = bbPTG.find(allocSymRef)->second;
+//       std::set<std::string> s;
+//       s.insert(to_string(bci));
+//       basicBlockPtg.varsMap.erase(allocSymRef);
+//       basicBlockPtg.varsMap.insert(std::pair<int, std::set<std::string>>(allocSymRef, s));
+//    }
+//    else
+//    {
+//       std::set<std::string> s;
+//       s.insert(to_string(bci));
+//       basicBlockPtg.varsMap.insert(std::pair<int, std::set<std::string>>(allocSymRef, s));
+//    }
+//    cout << "exiting processAllocation" << endl;
+// } 
 
 //recursively goes down the children of the node and returns the first "useful" child, else null if no useful children
 TR::Node * getUsefulNode(TR::Node * node) {
@@ -1539,312 +1552,395 @@ TR::Node * getUsefulNode(TR::Node * node) {
 }
 
 
-void verifyStaticMethodInfo(std::string className, std::string methodName, TR::CFG *cfg, TR::Compilation *comp)
-{
-   cout << "running verifyStaticMethodInfo for " << className << ":" << methodName << endl;
-   auto staticLoopInvariantFileName = getLoopInvariantStaticFileName(className, methodName);
-   //read in the static dump for loop invariants
-   std::map<string, Ptg> staticLoopInvariants;
-   //staticLoopInvariants = parsePTG(staticLoopInvariantFileName);
+//  void verifyStaticMethodInfo(std::string className, std::string methodName, TR::CFG *cfg, TR::Compilation *comp)
+// {
+//    cout << "running verifyStaticMethodInfo for " << className << ":" << methodName << endl;
+//    auto staticLoopInvariantFileName = getLoopInvariantStaticFileName(className, methodName);
+//    //read in the static dump for loop invariants
+//    std::map<string, Ptg> staticLoopInvariants;
+//    //staticLoopInvariants = parsePTG(staticLoopInvariantFileName);
 
-   //if (trace())
-   {
-      traceMsg(comp, "Attempted to read static loop invariant file \"%s\"\n", staticLoopInvariantFileName.c_str());
-   }
+//    //if (trace())
+//    {
+//       traceMsg(comp, "Attempted to read static loop invariant file \"%s\"\n", staticLoopInvariantFileName.c_str());
+//    }
 
-   //maintain the PTG in a before-after format. Essentially, the flow function should transform the "before" to the "after"
-   std::map<int, Ptg> ptgsBefore;
-   std::map<int, Ptg> ptgsAfter;
-   //a convenience map to track the out-ptgs of each basic block. Makes propagation easier
-   std::map<int, Ptg> outPTGs;
-   std::map<int, Ptg> stackSlotMappedInvariantPTGs;
+//    //maintain the PTG in a before-after format. Essentially, the flow function should transform the "before" to the "after"
+//    std::map<int, Ptg> ptgsBefore;
+//    std::map<int, Ptg> ptgsAfter;
+//    //a convenience map to track the out-ptgs of each basic block. Makes propagation easier
+//    std::map<int, Ptg> outPTGs;
+//    std::map<int, Ptg> stackSlotMappedInvariantPTGs;
 
-   //fetch the CFG's start
-   TR::Block *startBlock = cfg->getStart()->asBlock();
+//    //fetch the CFG's start
+//    TR::Block *startBlock = cfg->getStart()->asBlock();
 
-   //push the start block of the CFG to the queue
-   std::queue<TR::Block *> successorQueue;
-   successorQueue.push(startBlock);
-   //keep track of which basic blocks have been visited
-   std::set<int> visited;
+//    //push the start block of the CFG to the queue
+//    std::queue<TR::Block *> successorQueue;
+//    successorQueue.push(startBlock);
+//    //keep track of which basic blocks have been visited
+//    std::set<int> visited;
 
-   Ptg latestPTG;
+//    Ptg latestPTG;
 
-   //a simple BFS traversal of the CFG, starting from the root
-   while (!successorQueue.empty())
-   {
+//    //a simple BFS traversal of the CFG, starting from the root
+//    while (!successorQueue.empty())
+//    {
 
-      TR::Block *currentBlock = successorQueue.front();
-      successorQueue.pop();
+//       TR::Block *currentBlock = successorQueue.front();
+//       successorQueue.pop();
 
-      int currentBlockNumber = currentBlock->getNumber();
+//       int currentBlockNumber = currentBlock->getNumber();
 
-#ifdef RUNTIME_PTG_DEBUG
-      cout << "now checking BB " << currentBlockNumber << endl;
-#endif
+// #ifdef RUNTIME_PTG_DEBUG
+//       cout << "now checking BB " << currentBlockNumber << endl;
+// #endif
 
-      if (visited.find(currentBlockNumber) != visited.end())
-      {
-//this block has already been processed
-#ifdef RUNTIME_PTG_DEBUG
-         cout << "BB " << currentBlockNumber << " already visited" << endl;
-#endif
-         continue;
-      }
-      else
-      {
-         visited.insert(currentBlockNumber);
-      }
+//       if (visited.find(currentBlockNumber) != visited.end())
+//       {
+// //this block has already been processed
+// #ifdef RUNTIME_PTG_DEBUG
+//          cout << "BB " << currentBlockNumber << " already visited" << endl;
+// #endif
+//          continue;
+//       }
+//       else
+//       {
+//          visited.insert(currentBlockNumber);
+//       }
 
-      auto predecessorMeetPTG = getPredecessorPTG(currentBlock, outPTGs);
+//       auto predecessorMeetPTG = getPredecessorPTG(currentBlock, outPTGs);
 
-      cout << "completed getPredecessorPTG" << endl;
+//       cout << "completed getPredecessorPTG" << endl;
 
-      //TODO - this needs to be the "before" Ptg of the first bci in this block
-      latestPTG = predecessorMeetPTG;
+//       //TODO - this needs to be the "before" Ptg of the first bci in this block
+//       latestPTG = predecessorMeetPTG;
 
-      TR::TreeTop *tt = currentBlock->getEntry();
-      if(tt == NULL) return;
-      for (; tt; tt = tt->getNextRealTreeTop())
-      {
+//       TR::TreeTop *tt = currentBlock->getEntry();
+//       if(tt == NULL) return;
+//       for (; tt; tt = tt->getNextRealTreeTop())
+//       {
 
-         //a "local" PTG for the current basic block
-         //note that we don't need to worry about flow of control here, since it is linear.
-         Ptg currentBBPTG = latestPTG;
+//          //a "local" PTG for the current basic block
+//          //note that we don't need to worry about flow of control here, since it is linear.
+//          Ptg currentBBPTG = latestPTG;
 
-         //TODO : can we not make this the bounds of the loop itself?
-         TR::Node *node = tt->getNode();
-         if (node->getOpCodeValue() == TR::BBStart)
-            continue;
-         else if (node->getOpCodeValue() == TR::BBEnd)
-            break;
+//          //TODO : can we not make this the bounds of the loop itself?
+//          TR::Node *node = tt->getNode();
+//          if (node->getOpCodeValue() == TR::BBStart)
+//             continue;
+//          else if (node->getOpCodeValue() == TR::BBEnd)
+//             break;
 
-         int bci = node->getByteCodeInfo().getByteCodeIndex();
-
-
-
-         //check if there is a static PTG available for this bci
-         if (staticLoopInvariants.find(to_string(bci)) != staticLoopInvariants.end())
-         {
-#ifdef RUNTIME_PTG_DEBUG
-            cout << "found static loop invariant at bci " << bci << endl;
-#endif
-
-            auto staticLoopInvariantPTG = staticLoopInvariants.find(to_string(bci))->second;
-            staticLoopInvariantPTG.print();
-
-            //there is a static loop invariant PTG available at this bci
-            //so proceed to map it to the running PTG
-
-            //1. traverse the symref table to match the stack slots with their respective SymRefs.
-
-            TR::SymbolReferenceTable *tab = comp->getSymRefTab();
-            std::map<int, int> stackSlotToSymRefMap;
-            for (int i = tab->getIndexOfFirstSymRef(); i < tab->getNumSymRefs(); i++)
-            {
-
-               TR::SymbolReference *sym = tab->getSymRef(i);
-
-               //if (sym != NULL && !sym->isThisPointer() && sym->getSymbol()->getType().isAddress() && sym->getCPIndex() > 0) {
-               if (sym != NULL && sym->getSymbol()->getType().isAddress() && sym->getSymbol()->isAuto())
-               {
-                  stackSlotToSymRefMap.insert(std::pair<int, int>(sym->getCPIndex(), sym->getReferenceNumber()));
-               }
-            }
-
-#ifdef RUNTIME_PTG_DEBUG
-            auto it = stackSlotToSymRefMap.begin();
-            while (it != stackSlotToSymRefMap.end())
-            {
-               cout << it->first << "->" << it->second << endl;
-               it++;
-            }
-#endif
-
-//2. now map the static PTG to the running PTG
-#ifdef RUNTIME_PTG_DEBUG
-            cout << "**before mapping static to runtime\n";
-            currentBBPTG.print();
-#endif
-
-            auto vIt = staticLoopInvariantPTG.varsMap.begin();
-            while (vIt != staticLoopInvariantPTG.varsMap.end())
-            {
-               auto stackSlot = vIt->first;
-               auto symRef = stackSlotToSymRefMap.find(stackSlot)->second;
-               auto bciVals = vIt->second;
-
-               currentBBPTG.varsMap.erase(symRef);
-               currentBBPTG.varsMap.insert(std::pair<int, std::set<std::string>>(symRef, bciVals));
-
-               vIt++;
-            }
-
-            auto fIt = staticLoopInvariantPTG.fieldsMap.begin();
-            while (fIt != staticLoopInvariantPTG.fieldsMap.end())
-            {
-               auto fieldKey = fIt->first;
-               auto bciVals = fIt->second;
-
-               currentBBPTG.fieldsMap.erase(fieldKey);
-               currentBBPTG.fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fieldKey, bciVals));
-
-               fIt++;
-            }
-
-#ifdef RUNTIME_PTG_DEBUG
-            cout << "**after mapping static to runtime\n";
-            currentBBPTG.print();
-#endif
-            stackSlotMappedInvariantPTGs.insert(std::pair<int, Ptg>(bci, currentBBPTG));
-            //latestPTG = currentBBPTG;
-
-         } //end mapping of static invariants to stack slots
-
-         TR::Node * usefulNode = getUsefulNode(node);
-         if(usefulNode != NULL){
-            TR::ILOpCode opCode = usefulNode->getOpCode();
-            if(opCode.isNew()) {
-               processAllocation(node, currentBBPTG, comp);
-            } else if (opCode.isStore()) {
-               //processStore();
-            } else if (opCode.isLoad()) {
-               //processLoad();
-            } else if (opCode.isCall()) {
-               //processCall();
-            } else if (opCode.isReturn()) {
-               //processReturn;
-            }
-         }
-
-#ifdef RUNTIME_PTG_DEBUG
-         cout << "Current BB Ptg after processing node " << node->getNumber() << endl;
-         currentBBPTG.print();
-#endif
-
-         ptgsAfter.insert(std::pair<int, Ptg>(bci, currentBBPTG));
-         latestPTG = currentBBPTG;
+//          int bci = node->getByteCodeInfo().getByteCodeIndex();
 
 
-      } //end for-loop iterating over treetops for the current BB
 
-      /*
-      * if we are here, we have reached the BBEnd of the current basic block, in this case we want to perform two activities:
-      * 1. add the successors of this block to the successor queue
-      * 2. associate the latest PTG as the out-PTG of the current block
-      */
+//          //check if there is a static PTG available for this bci
+//          if (staticLoopInvariants.find(to_string(bci)) != staticLoopInvariants.end())
+//          {
+// #ifdef RUNTIME_PTG_DEBUG
+//             cout << "found static loop invariant at bci " << bci << endl;
+// #endif
 
-#ifdef RUNTIME_PTG_DEBUG
-      cout << "Visited CFG blocks : ";
-      for (auto it = visited.begin(); it != visited.end(); ++it)
-      {
-         cout << " " << *it;
-      }
-      cout << endl;
-#endif
+//             auto staticLoopInvariantPTG = staticLoopInvariants.find(to_string(bci))->second;
+//             staticLoopInvariantPTG.print();
 
-      for (TR::CFGEdgeList::iterator succ = currentBlock->getSuccessors().begin(); succ != currentBlock->getSuccessors().end(); ++succ)
-      {
-         TR::Block *bl = toBlock((*succ)->getTo());
-#ifdef RUNTIME_PTG_DEBUG
-         cout << "checking successor block " << bl->getNumber() << endl;
-#endif
-         if (visited.find(bl->getNumber()) == visited.end())
-         {
-#ifdef RUNTIME_PTG_DEBUG
-            cout << "**checking successor block " << bl->getNumber() << " into queue" << endl;
-#endif
-            successorQueue.push(bl);
-         } else {
+//             //there is a static loop invariant PTG available at this bci
+//             //so proceed to map it to the running PTG
 
-            //this successor block has been visited before, check for invariance.
-            auto predPTG = getPredecessorPTG(bl, outPTGs);
-            //perform a meet between predecessor PTG and the latest PTG
-            auto meetPTG = meetPTGs(predPTG, latestPTG);
-            //this predecessor-meet-PTG should match the block's current outgoing PTG
-            //TODO : why is getFirstRealTreeTop throwing an exception here?
-            int bci = -1;
-            //TR_ASSERT_FATAL(true, "true hardcoded assert");
-            //TR_ASSERT_FATAL(bl->getEntry() && bl->getEntry()->getNextTreeTop(), "entry treetops are null");
+//             //1. traverse the symref table to match the stack slots with their respective SymRefs.
 
-            cout << "attempting getFirstRealTreeTop, BB " << bl->getNumber() << endl;
-            if(bl->getEntry() && bl->getEntry()->getNextTreeTop()) {
-               bci = bl->getFirstRealTreeTop()->getNode()->getByteCodeInfo().getByteCodeIndex();
-            }
+//             TR::SymbolReferenceTable *tab = comp->getSymRefTab();
+//             std::map<int, int> stackSlotToSymRefMap;
+//             for (int i = tab->getIndexOfFirstSymRef(); i < tab->getNumSymRefs(); i++)
+//             {
+
+//                TR::SymbolReference *sym = tab->getSymRef(i);
+
+//                //if (sym != NULL && !sym->isThisPointer() && sym->getSymbol()->getType().isAddress() && sym->getCPIndex() > 0) {
+//                if (sym != NULL && sym->getSymbol()->getType().isAddress() && sym->getSymbol()->isAuto())
+//                {
+//                   stackSlotToSymRefMap.insert(std::pair<int, int>(sym->getCPIndex(), sym->getReferenceNumber()));
+//                }
+//             }
+
+// #ifdef RUNTIME_PTG_DEBUG
+//             auto it = stackSlotToSymRefMap.begin();
+//             while (it != stackSlotToSymRefMap.end())
+//             {
+//                cout << it->first << "->" << it->second << endl;
+//                it++;
+//             }
+// #endif
+
+// //2. now map the static PTG to the running PTG
+// #ifdef RUNTIME_PTG_DEBUG
+//             cout << "**before mapping static to runtime\n";
+//             currentBBPTG.print();
+// #endif
+
+//             auto vIt = staticLoopInvariantPTG.varsMap.begin();
+//             while (vIt != staticLoopInvariantPTG.varsMap.end())
+//             {
+//                auto stackSlot = vIt->first;
+//                auto symRef = stackSlotToSymRefMap.find(stackSlot)->second;
+//                auto bciVals = vIt->second;
+
+//                currentBBPTG.varsMap.erase(symRef);
+//                currentBBPTG.varsMap.insert(std::pair<int, std::set<std::string>>(symRef, bciVals));
+
+//                vIt++;
+//             }
+
+//             auto fIt = staticLoopInvariantPTG.fieldsMap.begin();
+//             while (fIt != staticLoopInvariantPTG.fieldsMap.end())
+//             {
+//                auto fieldKey = fIt->first;
+//                auto bciVals = fIt->second;
+
+//                currentBBPTG.fieldsMap.erase(fieldKey);
+//                currentBBPTG.fieldsMap.insert(std::pair<std::string, std::set<std::string>>(fieldKey, bciVals));
+
+//                fIt++;
+//             }
+
+// #ifdef RUNTIME_PTG_DEBUG
+//             cout << "**after mapping static to runtime\n";
+//             currentBBPTG.print();
+// #endif
+//             stackSlotMappedInvariantPTGs.insert(std::pair<int, Ptg>(bci, currentBBPTG));
+//             //latestPTG = currentBBPTG;
+
+//          } //end mapping of static invariants to stack slots
+
+//          TR::Node * usefulNode = getUsefulNode(node);
+//          if(usefulNode != NULL){
+//             TR::ILOpCode opCode = usefulNode->getOpCode();
+//             if(opCode.isNew()) {
+//                processAllocation(node, currentBBPTG, comp);
+//             } else if (opCode.isStore()) {
+//                //processStore();
+//             } else if (opCode.isLoad()) {
+//                //processLoad();
+//             } else if (opCode.isCall()) {
+//                //processCall();
+//             } else if (opCode.isReturn()) {
+//                //processReturn;
+//             }
+//          }
+
+// #ifdef RUNTIME_PTG_DEBUG
+//          cout << "Current BB Ptg after processing node " << node->getNumber() << endl;
+//          currentBBPTG.print();
+// #endif
+
+//          ptgsAfter.insert(std::pair<int, Ptg>(bci, currentBBPTG));
+//          latestPTG = currentBBPTG;
+
+
+//       } //end for-loop iterating over treetops for the current BB
+
+//       /*
+//       * if we are here, we have reached the BBEnd of the current basic block, in this case we want to perform two activities:
+//       * 1. add the successors of this block to the successor queue
+//       * 2. associate the latest PTG as the out-PTG of the current block
+//       */
+
+// #ifdef RUNTIME_PTG_DEBUG
+//       cout << "Visited CFG blocks : ";
+//       for (auto it = visited.begin(); it != visited.end(); ++it)
+//       {
+//          cout << " " << *it;
+//       }
+//       cout << endl;
+// #endif
+
+//       for (TR::CFGEdgeList::iterator succ = currentBlock->getSuccessors().begin(); succ != currentBlock->getSuccessors().end(); ++succ)
+//       {
+//          TR::Block *bl = toBlock((*succ)->getTo());
+// #ifdef RUNTIME_PTG_DEBUG
+//          cout << "checking successor block " << bl->getNumber() << endl;
+// #endif
+//          if (visited.find(bl->getNumber()) == visited.end())
+//          {
+// #ifdef RUNTIME_PTG_DEBUG
+//             cout << "**checking successor block " << bl->getNumber() << " into queue" << endl;
+// #endif
+//             successorQueue.push(bl);
+//          } else {
+
+//             //this successor block has been visited before, check for invariance.
+//             auto predPTG = getPredecessorPTG(bl, outPTGs);
+//             //perform a meet between predecessor PTG and the latest PTG
+//             auto meetPTG = meetPTGs(predPTG, latestPTG);
+//             //this predecessor-meet-PTG should match the block's current outgoing PTG
+//             //TODO : why is getFirstRealTreeTop throwing an exception here?
+//             int bci = -1;
+//             //TR_ASSERT_FATAL(true, "true hardcoded assert");
+//             //TR_ASSERT_FATAL(bl->getEntry() && bl->getEntry()->getNextTreeTop(), "entry treetops are null");
+
+//             cout << "attempting getFirstRealTreeTop, BB " << bl->getNumber() << endl;
+//             if(bl->getEntry() && bl->getEntry()->getNextTreeTop()) {
+//                bci = bl->getFirstRealTreeTop()->getNode()->getByteCodeInfo().getByteCodeIndex();
+//             }
             
-            cout << "finished attempt to getFirstRealTreeTop" << endl;
-            auto bciStr = to_string(bci);
-            Ptg ptgToCheckSubsumes;
-            //Ptg outPTG = outPTGs.find(bl->getNumber())->second;
+//             cout << "finished attempt to getFirstRealTreeTop" << endl;
+//             auto bciStr = to_string(bci);
+//             Ptg ptgToCheckSubsumes;
+//             //Ptg outPTG = outPTGs.find(bl->getNumber())->second;
             
-            // if (staticLoopInvariants.find(bci) != staticLoopInvariants.end())
-            // {
-            //    ptgToCheckSubsumes = staticLoopInvariants.find(bci)->second;
-            // }
-            if (stackSlotMappedInvariantPTGs.find(bci) != stackSlotMappedInvariantPTGs.end())
-            {
-               ptgToCheckSubsumes = stackSlotMappedInvariantPTGs.find(bci)->second;
-               cout << "completed ptgToCheckSubsumes computation" << endl;
-            }
+//             // if (staticLoopInvariants.find(bci) != staticLoopInvariants.end())
+//             // {
+//             //    ptgToCheckSubsumes = staticLoopInvariants.find(bci)->second;
+//             // }
+//             if (stackSlotMappedInvariantPTGs.find(bci) != stackSlotMappedInvariantPTGs.end())
+//             {
+//                ptgToCheckSubsumes = stackSlotMappedInvariantPTGs.find(bci)->second;
+//                cout << "completed ptgToCheckSubsumes computation" << endl;
+//             }
             
-            else
-            {
-               ptgToCheckSubsumes = predPTG;
-            }
+//             else
+//             {
+//                ptgToCheckSubsumes = predPTG;
+//             }
 
-            if (!checkPTGSubsumes(ptgToCheckSubsumes, meetPTG))
-            //if(!checkPTGSubsumes2(meetPTG, outPTG))
-            {
-               //if (trace())
-               //{
-                  traceMsg(comp, "Runtime Verification Results: verification failed, invariant does not hold for block %d\n", bl->getNumber());
-                  traceMsg(comp, "************************************************************************************************\n");
-               //}
-               return;
-            }
-            else
-            {
-               //if (trace())
-               //{
-                  traceMsg(comp, "Runtime Verification Results: success!\n");
-                  traceMsg(comp, "************************************************************************************************\n");
-               //}
-            }
-            cout << "completed checkPTGSubsumes invocation" << endl;
-         }
+//             if (!checkPTGSubsumes(ptgToCheckSubsumes, meetPTG))
+//             //if(!checkPTGSubsumes2(meetPTG, outPTG))
+//             {
+//                //if (trace())
+//                //{
+//                   traceMsg(comp, "Runtime Verification Results: verification failed, invariant does not hold for block %d\n", bl->getNumber());
+//                   traceMsg(comp, "************************************************************************************************\n");
+//                //}
+//                return;
+//             }
+//             else
+//             {
+//                //if (trace())
+//                //{
+//                   traceMsg(comp, "Runtime Verification Results: success!\n");
+//                   traceMsg(comp, "************************************************************************************************\n");
+//                //}
+//             }
+//             cout << "completed checkPTGSubsumes invocation" << endl;
+//          }
 
          
-      } // end for-loop iterating over BB successors
-      cout << "inserting to outptgs" << endl;
-      outPTGs.insert(std::pair<int, Ptg>(currentBlockNumber, latestPTG));
-      cout << "completed inserting to outptgs" << endl;
+//       } // end for-loop iterating over BB successors
+//       cout << "inserting to outptgs" << endl;
+//       outPTGs.insert(std::pair<int, Ptg>(currentBlockNumber, latestPTG));
+//       cout << "completed inserting to outptgs" << endl;
 
-    } // end while- iteration over successor BBs queue
+//     } // end while- iteration over successor BBs queue
 
-/*
-   //if(trace()){
-      traceMsg(comp, "Generated Points-To Maps\n");
-      for(auto it = ptgsAfter.begin(); it != ptgsAfter.end(); ++it) {
-         traceMsg(comp, "BCI %d:\n", it->first);
-         traceMsg(comp, it->second.toString().c_str());
-      }
-      traceMsg(comp, "************************************************************************************************\n");
-   //}
+// /*
+//    //if(trace()){
+//       traceMsg(comp, "Generated Points-To Maps\n");
+//       for(auto it = ptgsAfter.begin(); it != ptgsAfter.end(); ++it) {
+//          traceMsg(comp, "BCI %d:\n", it->first);
+//          traceMsg(comp, it->second.toString().c_str());
+//       }
+//       traceMsg(comp, "************************************************************************************************\n");
+//    //}
    
-#ifdef RUNTIME_PTG_DEBUG
-   for (auto it = ptgsAfter.begin(); it != ptgsAfter.end(); ++it)
-   {
-      cout << "BCI " << it->first << ":" << endl
-           << "\t";
-      it->second.print();
-      cout << endl;
+// #ifdef RUNTIME_PTG_DEBUG
+//    for (auto it = ptgsAfter.begin(); it != ptgsAfter.end(); ++it)
+//    {
+//       cout << "BCI " << it->first << ":" << endl
+//            << "\t";
+//       it->second.print();
+//       cout << endl;
+//    }
+// #endif
+// */
+
+
+
+
+// }
+
+void performRuntimeVerification2(TR::Compilation *comp) {
+   std::string currentClassName = getFormattedCurrentClassName(comp);
+   std::string currentMethodName = getFormattedCurrentMethodName(comp);
+   std::string sig = currentClassName + "." + currentMethodName;
+   if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end())
+      //this method has already been analyzed
+      return;
+   else
+      _runtimeVerifiedMethods.insert(sig);
+
+   //std::cout << "running performRuntimeVerification for " << currentMethodName << endl;
+
+   TR::CFG * cfg = comp->getFlowGraph();
+
+   //traceMsg(comp, "CFG for callee method %s\n", currentMethodName);
+   comp->dumpFlowGraph(cfg);
+   comp->dumpMethodTrees("from OMR::Optimizer::performRuntimeVerification");
+
+   //recursively invoke the verification algorithm (calls itself at each callsite to analyze the called method)
+   //verifyStaticMethodInfo(currentClassName, currentMethodName, cfg, comp);
+
+   
+
+}
+
+//the default values here imply that verify() has been invoked by the JIT-C and not the runtime verification algorithm
+StaticPtg verifyStaticMethodInfo2( TR::Compilation *comp, std::string className = NULL, std::string methodName = NULL, 
+                                    TR::CFG *cfg = NULL, bool isInvokedByJITC = true) {
+
+   StaticPtg out;
+
+   cout << "isInvokedByJITC is " << isInvokedByJITC << endl;
+
+   cout << "invokeing verifyStaticMethodInfo2" << endl;
+
+      TR::ResolvedMethodSymbol * methodSym = comp->getMethodSymbol();
+
+   //maintain the PTG in a before-after format. Essentially, the flow function should transform the "before" to the "after"
+   std::map<int, StaticPtg> ptgsBefore;
+   std::map<int, StaticPtg> ptgsAfter;
+   //a convenience map to track the out-ptgs of each basic block. Makes propagation easier
+   std::map<int, StaticPtg> outPTGs;
+   std::map<int, StaticPtg> stackSlotMappedInvariantPTGs;
+
+
+      static const bool performVerify = feGetEnv("TR_PerformRuntimeVerify") != NULL;
+      cout << "performVerify is set !" << endl;
+
+
+
+   if(isInvokedByJITC) {
+      //verify has been invoked by the JIT-C - so we need to assume that the incoming arguments are all BOT
+
+         ListIterator<TR::ParameterSymbol> parms(&methodSym->getParameterList());
+          int parmCount = 0;
+         // TR::ParameterSymbol *p = parms.getFirst();
+
+         // for( ; p ; p = parms.getNext()) {
+         //    if(p) {
+         //       std::cout << "offset : "  << p->getOffset() << " name : " << p->getName() << " data type :" << p->getDataType() << endl;
+         //       parmCount++;
+         //    }
+         // }
+
+         cout << "there were " << parmCount << " parameters" << endl;
+
+         TR_MethodParameterIterator * parmIterator = methodSym->getMethod()->getParameterIterator(*comp);
+         // for( ; pl)
+
+   } else {
+      // verify() was invoked by the verification algorithm, so all the required data points should be available.
    }
-#endif
-*/
 
+   return out;
 
+}
 
+StaticPtg top() {
+   StaticPtg ptg;
 
+   return ptg;
 }
 
 void performRuntimeVerification(TR::Compilation *comp)
@@ -1885,7 +1981,7 @@ void performRuntimeVerification(TR::Compilation *comp)
    }
 
    //recursively invoke the verification algorithm (calls itself at each callsite to analyze the called method)
-   verifyStaticMethodInfo(currentClassName, currentMethodName, cfg, comp);
+   //verifyStaticMethodInfo(currentClassName, currentMethodName, cfg, comp);
 
    //if (trace())
    {
@@ -1896,7 +1992,32 @@ void performRuntimeVerification(TR::Compilation *comp)
 
 int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimization, int32_t firstOptIndex, int32_t lastOptIndex, int32_t doTiming)
    {
-      performRuntimeVerification(comp());
+      //performRuntimeVerification(comp());
+      //verifyStaticMethodInfo2(comp());
+      bool performRuntimeVerify = feGetEnv("TR_PerformRuntimeVerify") != NULL;
+      if(performRuntimeVerify) {
+            cout << "running performOptimization for method " << comp()->getMethodSymbol()->getMethod()->nameChars() << endl;
+               comp()->dumpMethodTrees("Trees before ", "runtime verification", getMethodSymbol());;
+
+               PointsToGraph ptg;
+
+               ptg.getPointsToSet(99);
+
+               TR::ResolvedMethodSymbol * methodSymbol = comp()->getMethodSymbol();
+         ListIterator<TR::ParameterSymbol>   paramIterator(&(methodSymbol->getParameterList()));
+         TR::SymbolReference                 *symRef;
+         for (TR::ParameterSymbol *paramCursor = paramIterator.getFirst(); paramCursor != NULL; paramCursor = paramIterator.getNext())
+            {
+               //param at getSlot == 0 is the this-pointer
+               symRef = methodSymbol->getParmSymRef(paramCursor->getSlot());
+               int32_t symRefNumber = symRef->getReferenceNumber();
+
+               cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
+
+
+
+            }
+      }
 
    OMR::Optimizations optNum = optimization->_num;
    TR::OptimizationManager *manager = getOptimization(optNum);

@@ -1,8 +1,9 @@
 
-// Generated from demo/test1/PTG.g4 by ANTLR 4.9.2
+// Generated from PTG.g4 by ANTLR 4.9.2
 
 
 #include "PTGListener.h"
+#include "PTGVisitor.h"
 
 #include "PTGParser.h"
 
@@ -70,6 +71,14 @@ void PTGParser::PtgContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitPtg(this);
 }
 
+
+antlrcpp::Any PTGParser::PtgContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitPtg(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::PtgContext* PTGParser::ptg() {
   PtgContext *_localctx = _tracker.createInstance<PtgContext>(_ctx, getState());
   enterRule(_localctx, 0, PTGParser::RulePtg);
@@ -84,29 +93,27 @@ PTGParser::PtgContext* PTGParser::ptg() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(28);
+    setState(36);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
-    if (_la == PTGParser::NUMS
-
-    || _la == PTGParser::ALL) {
-      setState(20);
+    if (_la == PTGParser::NUMS) {
+      setState(28);
       entry();
-      setState(25);
+      setState(33);
       _errHandler->sync(this);
       _la = _input->LA(1);
       while (_la == PTGParser::T__0) {
-        setState(21);
+        setState(29);
         match(PTGParser::T__0);
-        setState(22);
+        setState(30);
         entry();
-        setState(27);
+        setState(35);
         _errHandler->sync(this);
         _la = _input->LA(1);
       }
     }
-    setState(30);
+    setState(38);
     _la = _input->LA(1);
     if (!(_la == PTGParser::EOF
 
@@ -163,6 +170,14 @@ void PTGParser::EntryContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitEntry(this);
 }
 
+
+antlrcpp::Any PTGParser::EntryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitEntry(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::EntryContext* PTGParser::entry() {
   EntryContext *_localctx = _tracker.createInstance<EntryContext>(_ctx, getState());
   enterRule(_localctx, 2, PTGParser::RuleEntry);
@@ -177,26 +192,26 @@ PTGParser::EntryContext* PTGParser::entry() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(32);
+    setState(40);
     bciKey();
-    setState(33);
-    match(PTGParser::T__1);
-    setState(34);
-    match(PTGParser::T__2);
-    setState(35);
-    vars();
-    setState(36);
-    match(PTGParser::T__3);
     setState(41);
+    match(PTGParser::T__1);
+    setState(42);
+    match(PTGParser::T__2);
+    setState(43);
+    vars();
+    setState(44);
+    match(PTGParser::T__3);
+    setState(49);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if (_la == PTGParser::T__2) {
-      setState(37);
+      setState(45);
       match(PTGParser::T__2);
-      setState(38);
+      setState(46);
       fields();
-      setState(39);
+      setState(47);
       match(PTGParser::T__3);
     }
    
@@ -241,6 +256,14 @@ void PTGParser::VarsContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitVars(this);
 }
 
+
+antlrcpp::Any PTGParser::VarsContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitVars(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::VarsContext* PTGParser::vars() {
   VarsContext *_localctx = _tracker.createInstance<VarsContext>(_ctx, getState());
   enterRule(_localctx, 4, PTGParser::RuleVars);
@@ -255,24 +278,22 @@ PTGParser::VarsContext* PTGParser::vars() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(51);
+    setState(59);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
-    if (_la == PTGParser::NUMS
-
-    || _la == PTGParser::ALL) {
-      setState(43);
+    if (_la == PTGParser::NUMS) {
+      setState(51);
       varentry();
-      setState(48);
+      setState(56);
       _errHandler->sync(this);
       _la = _input->LA(1);
       while (_la == PTGParser::T__4) {
-        setState(44);
+        setState(52);
         match(PTGParser::T__4);
-        setState(45);
+        setState(53);
         varentry();
-        setState(50);
+        setState(58);
         _errHandler->sync(this);
         _la = _input->LA(1);
       }
@@ -298,12 +319,12 @@ PTGParser::BciKeyContext* PTGParser::VarentryContext::bciKey() {
   return getRuleContext<PTGParser::BciKeyContext>(0);
 }
 
-std::vector<PTGParser::BciValContext *> PTGParser::VarentryContext::bciVal() {
-  return getRuleContexts<PTGParser::BciValContext>();
+std::vector<PTGParser::CiBciEntryContext *> PTGParser::VarentryContext::ciBciEntry() {
+  return getRuleContexts<PTGParser::CiBciEntryContext>();
 }
 
-PTGParser::BciValContext* PTGParser::VarentryContext::bciVal(size_t i) {
-  return getRuleContext<PTGParser::BciValContext>(i);
+PTGParser::CiBciEntryContext* PTGParser::VarentryContext::ciBciEntry(size_t i) {
+  return getRuleContext<PTGParser::CiBciEntryContext>(i);
 }
 
 
@@ -323,6 +344,14 @@ void PTGParser::VarentryContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitVarentry(this);
 }
 
+
+antlrcpp::Any PTGParser::VarentryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitVarentry(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::VarentryContext* PTGParser::varentry() {
   VarentryContext *_localctx = _tracker.createInstance<VarentryContext>(_ctx, getState());
   enterRule(_localctx, 6, PTGParser::RuleVarentry);
@@ -337,23 +366,23 @@ PTGParser::VarentryContext* PTGParser::varentry() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(53);
+    setState(61);
     bciKey();
-    setState(54);
+    setState(62);
     match(PTGParser::T__1);
 
-    setState(55);
-    bciVal();
-    setState(60);
+    setState(63);
+    ciBciEntry();
+    setState(68);
     _errHandler->sync(this);
     _la = _input->LA(1);
     while (_la == PTGParser::T__5) {
-      setState(56);
+      setState(64);
       match(PTGParser::T__5);
 
-      setState(57);
-      bciVal();
-      setState(62);
+      setState(65);
+      ciBciEntry();
+      setState(70);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
@@ -399,6 +428,14 @@ void PTGParser::FieldsContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitFields(this);
 }
 
+
+antlrcpp::Any PTGParser::FieldsContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitFields(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::FieldsContext* PTGParser::fields() {
   FieldsContext *_localctx = _tracker.createInstance<FieldsContext>(_ctx, getState());
   enterRule(_localctx, 8, PTGParser::RuleFields);
@@ -413,22 +450,22 @@ PTGParser::FieldsContext* PTGParser::fields() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(71);
+    setState(79);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if (_la == PTGParser::NUMS) {
-      setState(63);
+      setState(71);
       fieldentry();
-      setState(68);
+      setState(76);
       _errHandler->sync(this);
       _la = _input->LA(1);
       while (_la == PTGParser::T__4) {
-        setState(64);
+        setState(72);
         match(PTGParser::T__4);
-        setState(65);
+        setState(73);
         fieldentry();
-        setState(70);
+        setState(78);
         _errHandler->sync(this);
         _la = _input->LA(1);
       }
@@ -450,20 +487,16 @@ PTGParser::FieldentryContext::FieldentryContext(ParserRuleContext *parent, size_
   : ParserRuleContext(parent, invokingState) {
 }
 
-PTGParser::BciKeyFieldContext* PTGParser::FieldentryContext::bciKeyField() {
-  return getRuleContext<PTGParser::BciKeyFieldContext>(0);
+PTGParser::BciKeyContext* PTGParser::FieldentryContext::bciKey() {
+  return getRuleContext<PTGParser::BciKeyContext>(0);
 }
 
-PTGParser::FieldContext* PTGParser::FieldentryContext::field() {
-  return getRuleContext<PTGParser::FieldContext>(0);
+std::vector<PTGParser::FieldContext *> PTGParser::FieldentryContext::field() {
+  return getRuleContexts<PTGParser::FieldContext>();
 }
 
-std::vector<PTGParser::BciValContext *> PTGParser::FieldentryContext::bciVal() {
-  return getRuleContexts<PTGParser::BciValContext>();
-}
-
-PTGParser::BciValContext* PTGParser::FieldentryContext::bciVal(size_t i) {
-  return getRuleContext<PTGParser::BciValContext>(i);
+PTGParser::FieldContext* PTGParser::FieldentryContext::field(size_t i) {
+  return getRuleContext<PTGParser::FieldContext>(i);
 }
 
 
@@ -483,6 +516,14 @@ void PTGParser::FieldentryContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitFieldentry(this);
 }
 
+
+antlrcpp::Any PTGParser::FieldentryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitFieldentry(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::FieldentryContext* PTGParser::fieldentry() {
   FieldentryContext *_localctx = _tracker.createInstance<FieldentryContext>(_ctx, getState());
   enterRule(_localctx, 10, PTGParser::RuleFieldentry);
@@ -497,82 +538,29 @@ PTGParser::FieldentryContext* PTGParser::fieldentry() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(73);
-    bciKeyField();
-    setState(74);
-    match(PTGParser::T__6);
-    setState(75);
-    field();
-    setState(76);
-    match(PTGParser::T__1);
-
-    setState(77);
-    bciVal();
+    setState(81);
+    bciKey();
     setState(82);
+    match(PTGParser::T__2);
+
+    setState(83);
+    field();
+
+    setState(88);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (_la == PTGParser::T__5) {
-      setState(78);
-      match(PTGParser::T__5);
-      setState(79);
-      bciVal();
+    while (_la == PTGParser::T__4) {
       setState(84);
+      match(PTGParser::T__4);
+
+      setState(85);
+      field();
+      setState(90);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
-   
-  }
-  catch (RecognitionException &e) {
-    _errHandler->reportError(this, e);
-    _localctx->exception = std::current_exception();
-    _errHandler->recover(this, _localctx->exception);
-  }
-
-  return _localctx;
-}
-
-//----------------- BciKeyFieldContext ------------------------------------------------------------------
-
-PTGParser::BciKeyFieldContext::BciKeyFieldContext(ParserRuleContext *parent, size_t invokingState)
-  : ParserRuleContext(parent, invokingState) {
-}
-
-tree::TerminalNode* PTGParser::BciKeyFieldContext::NUMS() {
-  return getToken(PTGParser::NUMS, 0);
-}
-
-
-size_t PTGParser::BciKeyFieldContext::getRuleIndex() const {
-  return PTGParser::RuleBciKeyField;
-}
-
-void PTGParser::BciKeyFieldContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PTGListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBciKeyField(this);
-}
-
-void PTGParser::BciKeyFieldContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PTGListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBciKeyField(this);
-}
-
-PTGParser::BciKeyFieldContext* PTGParser::bciKeyField() {
-  BciKeyFieldContext *_localctx = _tracker.createInstance<BciKeyFieldContext>(_ctx, getState());
-  enterRule(_localctx, 12, PTGParser::RuleBciKeyField);
-
-#if __cplusplus > 201703L
-  auto onExit = finally([=, this] {
-#else
-  auto onExit = finally([=] {
-#endif
-    exitRule();
-  });
-  try {
-    enterOuterAlt(_localctx, 1);
-    setState(85);
-    match(PTGParser::NUMS);
+    setState(91);
+    match(PTGParser::T__3);
    
   }
   catch (RecognitionException &e) {
@@ -590,8 +578,16 @@ PTGParser::FieldContext::FieldContext(ParserRuleContext *parent, size_t invoking
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* PTGParser::FieldContext::ALPHAS() {
-  return getToken(PTGParser::ALPHAS, 0);
+PTGParser::FieldKeyContext* PTGParser::FieldContext::fieldKey() {
+  return getRuleContext<PTGParser::FieldKeyContext>(0);
+}
+
+std::vector<PTGParser::CiBciEntryContext *> PTGParser::FieldContext::ciBciEntry() {
+  return getRuleContexts<PTGParser::CiBciEntryContext>();
+}
+
+PTGParser::CiBciEntryContext* PTGParser::FieldContext::ciBciEntry(size_t i) {
+  return getRuleContext<PTGParser::CiBciEntryContext>(i);
 }
 
 
@@ -611,9 +607,18 @@ void PTGParser::FieldContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitField(this);
 }
 
+
+antlrcpp::Any PTGParser::FieldContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitField(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::FieldContext* PTGParser::field() {
   FieldContext *_localctx = _tracker.createInstance<FieldContext>(_ctx, getState());
-  enterRule(_localctx, 14, PTGParser::RuleField);
+  enterRule(_localctx, 12, PTGParser::RuleField);
+  size_t _la = 0;
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -624,8 +629,290 @@ PTGParser::FieldContext* PTGParser::field() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(87);
-    match(PTGParser::ALPHAS);
+    setState(93);
+    fieldKey();
+    setState(94);
+    match(PTGParser::T__1);
+
+    setState(95);
+    ciBciEntry();
+    setState(100);
+    _errHandler->sync(this);
+    _la = _input->LA(1);
+    while (_la == PTGParser::T__5) {
+      setState(96);
+      match(PTGParser::T__5);
+
+      setState(97);
+      ciBciEntry();
+      setState(102);
+      _errHandler->sync(this);
+      _la = _input->LA(1);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- CiBciEntryContext ------------------------------------------------------------------
+
+PTGParser::CiBciEntryContext::CiBciEntryContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+PTGParser::CiEntriesContext* PTGParser::CiBciEntryContext::ciEntries() {
+  return getRuleContext<PTGParser::CiEntriesContext>(0);
+}
+
+tree::TerminalNode* PTGParser::CiBciEntryContext::STRING() {
+  return getToken(PTGParser::STRING, 0);
+}
+
+tree::TerminalNode* PTGParser::CiBciEntryContext::CONST() {
+  return getToken(PTGParser::CONST, 0);
+}
+
+tree::TerminalNode* PTGParser::CiBciEntryContext::GLOBAL() {
+  return getToken(PTGParser::GLOBAL, 0);
+}
+
+tree::TerminalNode* PTGParser::CiBciEntryContext::NIL() {
+  return getToken(PTGParser::NIL, 0);
+}
+
+
+size_t PTGParser::CiBciEntryContext::getRuleIndex() const {
+  return PTGParser::RuleCiBciEntry;
+}
+
+void PTGParser::CiBciEntryContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterCiBciEntry(this);
+}
+
+void PTGParser::CiBciEntryContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitCiBciEntry(this);
+}
+
+
+antlrcpp::Any PTGParser::CiBciEntryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitCiBciEntry(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+PTGParser::CiBciEntryContext* PTGParser::ciBciEntry() {
+  CiBciEntryContext *_localctx = _tracker.createInstance<CiBciEntryContext>(_ctx, getState());
+  enterRule(_localctx, 14, PTGParser::RuleCiBciEntry);
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    setState(108);
+    _errHandler->sync(this);
+    switch (_input->LA(1)) {
+      case PTGParser::NUMS: {
+        enterOuterAlt(_localctx, 1);
+        setState(103);
+        ciEntries();
+        break;
+      }
+
+      case PTGParser::STRING: {
+        enterOuterAlt(_localctx, 2);
+        setState(104);
+        match(PTGParser::STRING);
+        break;
+      }
+
+      case PTGParser::CONST: {
+        enterOuterAlt(_localctx, 3);
+        setState(105);
+        match(PTGParser::CONST);
+        break;
+      }
+
+      case PTGParser::GLOBAL: {
+        enterOuterAlt(_localctx, 4);
+        setState(106);
+        match(PTGParser::GLOBAL);
+        break;
+      }
+
+      case PTGParser::NIL: {
+        enterOuterAlt(_localctx, 5);
+        setState(107);
+        match(PTGParser::NIL);
+        break;
+      }
+
+    default:
+      throw NoViableAltException(this);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- CiEntriesContext ------------------------------------------------------------------
+
+PTGParser::CiEntriesContext::CiEntriesContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+PTGParser::CallerIndexContext* PTGParser::CiEntriesContext::callerIndex() {
+  return getRuleContext<PTGParser::CallerIndexContext>(0);
+}
+
+std::vector<PTGParser::BciValContext *> PTGParser::CiEntriesContext::bciVal() {
+  return getRuleContexts<PTGParser::BciValContext>();
+}
+
+PTGParser::BciValContext* PTGParser::CiEntriesContext::bciVal(size_t i) {
+  return getRuleContext<PTGParser::BciValContext>(i);
+}
+
+
+size_t PTGParser::CiEntriesContext::getRuleIndex() const {
+  return PTGParser::RuleCiEntries;
+}
+
+void PTGParser::CiEntriesContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterCiEntries(this);
+}
+
+void PTGParser::CiEntriesContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitCiEntries(this);
+}
+
+
+antlrcpp::Any PTGParser::CiEntriesContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitCiEntries(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+PTGParser::CiEntriesContext* PTGParser::ciEntries() {
+  CiEntriesContext *_localctx = _tracker.createInstance<CiEntriesContext>(_ctx, getState());
+  enterRule(_localctx, 16, PTGParser::RuleCiEntries);
+  size_t _la = 0;
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(110);
+    callerIndex();
+    setState(111);
+    match(PTGParser::T__6);
+
+    setState(112);
+    bciVal();
+    setState(117);
+    _errHandler->sync(this);
+    _la = _input->LA(1);
+    while (_la == PTGParser::T__7) {
+      setState(113);
+      match(PTGParser::T__7);
+
+      setState(114);
+      bciVal();
+      setState(119);
+      _errHandler->sync(this);
+      _la = _input->LA(1);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- CallerIndexContext ------------------------------------------------------------------
+
+PTGParser::CallerIndexContext::CallerIndexContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* PTGParser::CallerIndexContext::NUMS() {
+  return getToken(PTGParser::NUMS, 0);
+}
+
+
+size_t PTGParser::CallerIndexContext::getRuleIndex() const {
+  return PTGParser::RuleCallerIndex;
+}
+
+void PTGParser::CallerIndexContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterCallerIndex(this);
+}
+
+void PTGParser::CallerIndexContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitCallerIndex(this);
+}
+
+
+antlrcpp::Any PTGParser::CallerIndexContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitCallerIndex(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+PTGParser::CallerIndexContext* PTGParser::callerIndex() {
+  CallerIndexContext *_localctx = _tracker.createInstance<CallerIndexContext>(_ctx, getState());
+  enterRule(_localctx, 18, PTGParser::RuleCallerIndex);
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(120);
+    match(PTGParser::NUMS);
    
   }
   catch (RecognitionException &e) {
@@ -641,10 +928,6 @@ PTGParser::FieldContext* PTGParser::field() {
 
 PTGParser::BciKeyContext::BciKeyContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
-}
-
-tree::TerminalNode* PTGParser::BciKeyContext::ALL() {
-  return getToken(PTGParser::ALL, 0);
 }
 
 tree::TerminalNode* PTGParser::BciKeyContext::NUMS() {
@@ -668,9 +951,82 @@ void PTGParser::BciKeyContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitBciKey(this);
 }
 
+
+antlrcpp::Any PTGParser::BciKeyContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitBciKey(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::BciKeyContext* PTGParser::bciKey() {
   BciKeyContext *_localctx = _tracker.createInstance<BciKeyContext>(_ctx, getState());
-  enterRule(_localctx, 16, PTGParser::RuleBciKey);
+  enterRule(_localctx, 20, PTGParser::RuleBciKey);
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(122);
+    match(PTGParser::NUMS);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- BciKey2Context ------------------------------------------------------------------
+
+PTGParser::BciKey2Context::BciKey2Context(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* PTGParser::BciKey2Context::ALL() {
+  return getToken(PTGParser::ALL, 0);
+}
+
+tree::TerminalNode* PTGParser::BciKey2Context::NUMS() {
+  return getToken(PTGParser::NUMS, 0);
+}
+
+
+size_t PTGParser::BciKey2Context::getRuleIndex() const {
+  return PTGParser::RuleBciKey2;
+}
+
+void PTGParser::BciKey2Context::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterBciKey2(this);
+}
+
+void PTGParser::BciKey2Context::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitBciKey2(this);
+}
+
+
+antlrcpp::Any PTGParser::BciKey2Context::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitBciKey2(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+PTGParser::BciKey2Context* PTGParser::bciKey2() {
+  BciKey2Context *_localctx = _tracker.createInstance<BciKey2Context>(_ctx, getState());
+  enterRule(_localctx, 22, PTGParser::RuleBciKey2);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -682,7 +1038,7 @@ PTGParser::BciKeyContext* PTGParser::bciKey() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(89);
+    setState(124);
     _la = _input->LA(1);
     if (!(_la == PTGParser::NUMS
 
@@ -735,9 +1091,17 @@ void PTGParser::BciValContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitBciVal(this);
 }
 
+
+antlrcpp::Any PTGParser::BciValContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitBciVal(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 PTGParser::BciValContext* PTGParser::bciVal() {
   BciValContext *_localctx = _tracker.createInstance<BciValContext>(_ctx, getState());
-  enterRule(_localctx, 18, PTGParser::RuleBciVal);
+  enterRule(_localctx, 24, PTGParser::RuleBciVal);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -749,7 +1113,7 @@ PTGParser::BciValContext* PTGParser::bciVal() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(91);
+    setState(126);
     _la = _input->LA(1);
     if (!(_la == PTGParser::NIL
 
@@ -771,6 +1135,67 @@ PTGParser::BciValContext* PTGParser::bciVal() {
   return _localctx;
 }
 
+//----------------- FieldKeyContext ------------------------------------------------------------------
+
+PTGParser::FieldKeyContext::FieldKeyContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* PTGParser::FieldKeyContext::ALPHAS() {
+  return getToken(PTGParser::ALPHAS, 0);
+}
+
+
+size_t PTGParser::FieldKeyContext::getRuleIndex() const {
+  return PTGParser::RuleFieldKey;
+}
+
+void PTGParser::FieldKeyContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterFieldKey(this);
+}
+
+void PTGParser::FieldKeyContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<PTGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitFieldKey(this);
+}
+
+
+antlrcpp::Any PTGParser::FieldKeyContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+    return parserVisitor->visitFieldKey(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+PTGParser::FieldKeyContext* PTGParser::fieldKey() {
+  FieldKeyContext *_localctx = _tracker.createInstance<FieldKeyContext>(_ctx, getState());
+  enterRule(_localctx, 26, PTGParser::RuleFieldKey);
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(128);
+    match(PTGParser::ALPHAS);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
 // Static vars and initialization.
 std::vector<dfa::DFA> PTGParser::_decisionToDFA;
 atn::PredictionContextCache PTGParser::_sharedContextCache;
@@ -780,16 +1205,18 @@ atn::ATN PTGParser::_atn;
 std::vector<uint16_t> PTGParser::_serializedATN;
 
 std::vector<std::string> PTGParser::_ruleNames = {
-  "ptg", "entry", "vars", "varentry", "fields", "fieldentry", "bciKeyField", 
-  "field", "bciKey", "bciVal"
+  "ptg", "entry", "vars", "varentry", "fields", "fieldentry", "field", "ciBciEntry", 
+  "ciEntries", "callerIndex", "bciKey", "bciKey2", "bciVal", "fieldKey"
 };
 
 std::vector<std::string> PTGParser::_literalNames = {
-  "", "';'", "':'", "'('", "')'", "','", "' '", "'.'", "'n'"
+  "", "';'", "':'", "'('", "')'", "','", "' '", "'-'", "'.'", "'N'", "'S'", 
+  "'C'", "'G'"
 };
 
 std::vector<std::string> PTGParser::_symbolicNames = {
-  "", "", "", "", "", "", "", "", "NIL", "NUMS", "ALPHAS", "NEWLINE", "ALL"
+  "", "", "", "", "", "", "", "", "", "NIL", "STRING", "CONST", "GLOBAL", 
+  "NUMS", "ALPHAS", "NEWLINE", "ALL"
 };
 
 dfa::Vocabulary PTGParser::_vocabulary(_literalNames, _symbolicNames);
@@ -812,68 +1239,94 @@ PTGParser::Initializer::Initializer() {
 
   static const uint16_t serializedATNSegment0[] = {
     0x3, 0x608b, 0xa72a, 0x8133, 0xb9ed, 0x417c, 0x3be7, 0x7786, 0x5964, 
-       0x3, 0xe, 0x60, 0x4, 0x2, 0x9, 0x2, 0x4, 0x3, 0x9, 0x3, 0x4, 0x4, 
+       0x3, 0x12, 0x85, 0x4, 0x2, 0x9, 0x2, 0x4, 0x3, 0x9, 0x3, 0x4, 0x4, 
        0x9, 0x4, 0x4, 0x5, 0x9, 0x5, 0x4, 0x6, 0x9, 0x6, 0x4, 0x7, 0x9, 
        0x7, 0x4, 0x8, 0x9, 0x8, 0x4, 0x9, 0x9, 0x9, 0x4, 0xa, 0x9, 0xa, 
-       0x4, 0xb, 0x9, 0xb, 0x3, 0x2, 0x3, 0x2, 0x3, 0x2, 0x7, 0x2, 0x1a, 
-       0xa, 0x2, 0xc, 0x2, 0xe, 0x2, 0x1d, 0xb, 0x2, 0x5, 0x2, 0x1f, 0xa, 
-       0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 
-       0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x5, 0x3, 0x2c, 
-       0xa, 0x3, 0x3, 0x4, 0x3, 0x4, 0x3, 0x4, 0x7, 0x4, 0x31, 0xa, 0x4, 
-       0xc, 0x4, 0xe, 0x4, 0x34, 0xb, 0x4, 0x5, 0x4, 0x36, 0xa, 0x4, 0x3, 
-       0x5, 0x3, 0x5, 0x3, 0x5, 0x3, 0x5, 0x3, 0x5, 0x7, 0x5, 0x3d, 0xa, 
-       0x5, 0xc, 0x5, 0xe, 0x5, 0x40, 0xb, 0x5, 0x3, 0x6, 0x3, 0x6, 0x3, 
-       0x6, 0x7, 0x6, 0x45, 0xa, 0x6, 0xc, 0x6, 0xe, 0x6, 0x48, 0xb, 0x6, 
-       0x5, 0x6, 0x4a, 0xa, 0x6, 0x3, 0x7, 0x3, 0x7, 0x3, 0x7, 0x3, 0x7, 
-       0x3, 0x7, 0x3, 0x7, 0x3, 0x7, 0x7, 0x7, 0x53, 0xa, 0x7, 0xc, 0x7, 
-       0xe, 0x7, 0x56, 0xb, 0x7, 0x3, 0x8, 0x3, 0x8, 0x3, 0x9, 0x3, 0x9, 
-       0x3, 0xa, 0x3, 0xa, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 0x2, 0x2, 0xc, 
-       0x2, 0x4, 0x6, 0x8, 0xa, 0xc, 0xe, 0x10, 0x12, 0x14, 0x2, 0x5, 0x3, 
-       0x3, 0xd, 0xd, 0x4, 0x2, 0xb, 0xb, 0xe, 0xe, 0x3, 0x2, 0xa, 0xb, 
-       0x2, 0x5e, 0x2, 0x1e, 0x3, 0x2, 0x2, 0x2, 0x4, 0x22, 0x3, 0x2, 0x2, 
-       0x2, 0x6, 0x35, 0x3, 0x2, 0x2, 0x2, 0x8, 0x37, 0x3, 0x2, 0x2, 0x2, 
-       0xa, 0x49, 0x3, 0x2, 0x2, 0x2, 0xc, 0x4b, 0x3, 0x2, 0x2, 0x2, 0xe, 
-       0x57, 0x3, 0x2, 0x2, 0x2, 0x10, 0x59, 0x3, 0x2, 0x2, 0x2, 0x12, 0x5b, 
-       0x3, 0x2, 0x2, 0x2, 0x14, 0x5d, 0x3, 0x2, 0x2, 0x2, 0x16, 0x1b, 0x5, 
-       0x4, 0x3, 0x2, 0x17, 0x18, 0x7, 0x3, 0x2, 0x2, 0x18, 0x1a, 0x5, 0x4, 
-       0x3, 0x2, 0x19, 0x17, 0x3, 0x2, 0x2, 0x2, 0x1a, 0x1d, 0x3, 0x2, 0x2, 
-       0x2, 0x1b, 0x19, 0x3, 0x2, 0x2, 0x2, 0x1b, 0x1c, 0x3, 0x2, 0x2, 0x2, 
-       0x1c, 0x1f, 0x3, 0x2, 0x2, 0x2, 0x1d, 0x1b, 0x3, 0x2, 0x2, 0x2, 0x1e, 
-       0x16, 0x3, 0x2, 0x2, 0x2, 0x1e, 0x1f, 0x3, 0x2, 0x2, 0x2, 0x1f, 0x20, 
-       0x3, 0x2, 0x2, 0x2, 0x20, 0x21, 0x9, 0x2, 0x2, 0x2, 0x21, 0x3, 0x3, 
-       0x2, 0x2, 0x2, 0x22, 0x23, 0x5, 0x12, 0xa, 0x2, 0x23, 0x24, 0x7, 
-       0x4, 0x2, 0x2, 0x24, 0x25, 0x7, 0x5, 0x2, 0x2, 0x25, 0x26, 0x5, 0x6, 
-       0x4, 0x2, 0x26, 0x2b, 0x7, 0x6, 0x2, 0x2, 0x27, 0x28, 0x7, 0x5, 0x2, 
-       0x2, 0x28, 0x29, 0x5, 0xa, 0x6, 0x2, 0x29, 0x2a, 0x7, 0x6, 0x2, 0x2, 
-       0x2a, 0x2c, 0x3, 0x2, 0x2, 0x2, 0x2b, 0x27, 0x3, 0x2, 0x2, 0x2, 0x2b, 
-       0x2c, 0x3, 0x2, 0x2, 0x2, 0x2c, 0x5, 0x3, 0x2, 0x2, 0x2, 0x2d, 0x32, 
-       0x5, 0x8, 0x5, 0x2, 0x2e, 0x2f, 0x7, 0x7, 0x2, 0x2, 0x2f, 0x31, 0x5, 
-       0x8, 0x5, 0x2, 0x30, 0x2e, 0x3, 0x2, 0x2, 0x2, 0x31, 0x34, 0x3, 0x2, 
-       0x2, 0x2, 0x32, 0x30, 0x3, 0x2, 0x2, 0x2, 0x32, 0x33, 0x3, 0x2, 0x2, 
-       0x2, 0x33, 0x36, 0x3, 0x2, 0x2, 0x2, 0x34, 0x32, 0x3, 0x2, 0x2, 0x2, 
-       0x35, 0x2d, 0x3, 0x2, 0x2, 0x2, 0x35, 0x36, 0x3, 0x2, 0x2, 0x2, 0x36, 
-       0x7, 0x3, 0x2, 0x2, 0x2, 0x37, 0x38, 0x5, 0x12, 0xa, 0x2, 0x38, 0x39, 
-       0x7, 0x4, 0x2, 0x2, 0x39, 0x3e, 0x5, 0x14, 0xb, 0x2, 0x3a, 0x3b, 
-       0x7, 0x8, 0x2, 0x2, 0x3b, 0x3d, 0x5, 0x14, 0xb, 0x2, 0x3c, 0x3a, 
-       0x3, 0x2, 0x2, 0x2, 0x3d, 0x40, 0x3, 0x2, 0x2, 0x2, 0x3e, 0x3c, 0x3, 
-       0x2, 0x2, 0x2, 0x3e, 0x3f, 0x3, 0x2, 0x2, 0x2, 0x3f, 0x9, 0x3, 0x2, 
-       0x2, 0x2, 0x40, 0x3e, 0x3, 0x2, 0x2, 0x2, 0x41, 0x46, 0x5, 0xc, 0x7, 
-       0x2, 0x42, 0x43, 0x7, 0x7, 0x2, 0x2, 0x43, 0x45, 0x5, 0xc, 0x7, 0x2, 
-       0x44, 0x42, 0x3, 0x2, 0x2, 0x2, 0x45, 0x48, 0x3, 0x2, 0x2, 0x2, 0x46, 
-       0x44, 0x3, 0x2, 0x2, 0x2, 0x46, 0x47, 0x3, 0x2, 0x2, 0x2, 0x47, 0x4a, 
-       0x3, 0x2, 0x2, 0x2, 0x48, 0x46, 0x3, 0x2, 0x2, 0x2, 0x49, 0x41, 0x3, 
-       0x2, 0x2, 0x2, 0x49, 0x4a, 0x3, 0x2, 0x2, 0x2, 0x4a, 0xb, 0x3, 0x2, 
-       0x2, 0x2, 0x4b, 0x4c, 0x5, 0xe, 0x8, 0x2, 0x4c, 0x4d, 0x7, 0x9, 0x2, 
-       0x2, 0x4d, 0x4e, 0x5, 0x10, 0x9, 0x2, 0x4e, 0x4f, 0x7, 0x4, 0x2, 
-       0x2, 0x4f, 0x54, 0x5, 0x14, 0xb, 0x2, 0x50, 0x51, 0x7, 0x8, 0x2, 
-       0x2, 0x51, 0x53, 0x5, 0x14, 0xb, 0x2, 0x52, 0x50, 0x3, 0x2, 0x2, 
-       0x2, 0x53, 0x56, 0x3, 0x2, 0x2, 0x2, 0x54, 0x52, 0x3, 0x2, 0x2, 0x2, 
-       0x54, 0x55, 0x3, 0x2, 0x2, 0x2, 0x55, 0xd, 0x3, 0x2, 0x2, 0x2, 0x56, 
-       0x54, 0x3, 0x2, 0x2, 0x2, 0x57, 0x58, 0x7, 0xb, 0x2, 0x2, 0x58, 0xf, 
-       0x3, 0x2, 0x2, 0x2, 0x59, 0x5a, 0x7, 0xc, 0x2, 0x2, 0x5a, 0x11, 0x3, 
-       0x2, 0x2, 0x2, 0x5b, 0x5c, 0x9, 0x3, 0x2, 0x2, 0x5c, 0x13, 0x3, 0x2, 
-       0x2, 0x2, 0x5d, 0x5e, 0x9, 0x4, 0x2, 0x2, 0x5e, 0x15, 0x3, 0x2, 0x2, 
-       0x2, 0xb, 0x1b, 0x1e, 0x2b, 0x32, 0x35, 0x3e, 0x46, 0x49, 0x54, 
+       0x4, 0xb, 0x9, 0xb, 0x4, 0xc, 0x9, 0xc, 0x4, 0xd, 0x9, 0xd, 0x4, 
+       0xe, 0x9, 0xe, 0x4, 0xf, 0x9, 0xf, 0x3, 0x2, 0x3, 0x2, 0x3, 0x2, 
+       0x7, 0x2, 0x22, 0xa, 0x2, 0xc, 0x2, 0xe, 0x2, 0x25, 0xb, 0x2, 0x5, 
+       0x2, 0x27, 0xa, 0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 0x3, 0x3, 0x3, 0x3, 
+       0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 
+       0x5, 0x3, 0x34, 0xa, 0x3, 0x3, 0x4, 0x3, 0x4, 0x3, 0x4, 0x7, 0x4, 
+       0x39, 0xa, 0x4, 0xc, 0x4, 0xe, 0x4, 0x3c, 0xb, 0x4, 0x5, 0x4, 0x3e, 
+       0xa, 0x4, 0x3, 0x5, 0x3, 0x5, 0x3, 0x5, 0x3, 0x5, 0x3, 0x5, 0x7, 
+       0x5, 0x45, 0xa, 0x5, 0xc, 0x5, 0xe, 0x5, 0x48, 0xb, 0x5, 0x3, 0x6, 
+       0x3, 0x6, 0x3, 0x6, 0x7, 0x6, 0x4d, 0xa, 0x6, 0xc, 0x6, 0xe, 0x6, 
+       0x50, 0xb, 0x6, 0x5, 0x6, 0x52, 0xa, 0x6, 0x3, 0x7, 0x3, 0x7, 0x3, 
+       0x7, 0x3, 0x7, 0x3, 0x7, 0x7, 0x7, 0x59, 0xa, 0x7, 0xc, 0x7, 0xe, 
+       0x7, 0x5c, 0xb, 0x7, 0x3, 0x7, 0x3, 0x7, 0x3, 0x8, 0x3, 0x8, 0x3, 
+       0x8, 0x3, 0x8, 0x3, 0x8, 0x7, 0x8, 0x65, 0xa, 0x8, 0xc, 0x8, 0xe, 
+       0x8, 0x68, 0xb, 0x8, 0x3, 0x9, 0x3, 0x9, 0x3, 0x9, 0x3, 0x9, 0x3, 
+       0x9, 0x5, 0x9, 0x6f, 0xa, 0x9, 0x3, 0xa, 0x3, 0xa, 0x3, 0xa, 0x3, 
+       0xa, 0x3, 0xa, 0x7, 0xa, 0x76, 0xa, 0xa, 0xc, 0xa, 0xe, 0xa, 0x79, 
+       0xb, 0xa, 0x3, 0xb, 0x3, 0xb, 0x3, 0xc, 0x3, 0xc, 0x3, 0xd, 0x3, 
+       0xd, 0x3, 0xe, 0x3, 0xe, 0x3, 0xf, 0x3, 0xf, 0x3, 0xf, 0x2, 0x2, 
+       0x10, 0x2, 0x4, 0x6, 0x8, 0xa, 0xc, 0xe, 0x10, 0x12, 0x14, 0x16, 
+       0x18, 0x1a, 0x1c, 0x2, 0x5, 0x3, 0x3, 0x11, 0x11, 0x4, 0x2, 0xf, 
+       0xf, 0x12, 0x12, 0x4, 0x2, 0xb, 0xb, 0xf, 0xf, 0x2, 0x85, 0x2, 0x26, 
+       0x3, 0x2, 0x2, 0x2, 0x4, 0x2a, 0x3, 0x2, 0x2, 0x2, 0x6, 0x3d, 0x3, 
+       0x2, 0x2, 0x2, 0x8, 0x3f, 0x3, 0x2, 0x2, 0x2, 0xa, 0x51, 0x3, 0x2, 
+       0x2, 0x2, 0xc, 0x53, 0x3, 0x2, 0x2, 0x2, 0xe, 0x5f, 0x3, 0x2, 0x2, 
+       0x2, 0x10, 0x6e, 0x3, 0x2, 0x2, 0x2, 0x12, 0x70, 0x3, 0x2, 0x2, 0x2, 
+       0x14, 0x7a, 0x3, 0x2, 0x2, 0x2, 0x16, 0x7c, 0x3, 0x2, 0x2, 0x2, 0x18, 
+       0x7e, 0x3, 0x2, 0x2, 0x2, 0x1a, 0x80, 0x3, 0x2, 0x2, 0x2, 0x1c, 0x82, 
+       0x3, 0x2, 0x2, 0x2, 0x1e, 0x23, 0x5, 0x4, 0x3, 0x2, 0x1f, 0x20, 0x7, 
+       0x3, 0x2, 0x2, 0x20, 0x22, 0x5, 0x4, 0x3, 0x2, 0x21, 0x1f, 0x3, 0x2, 
+       0x2, 0x2, 0x22, 0x25, 0x3, 0x2, 0x2, 0x2, 0x23, 0x21, 0x3, 0x2, 0x2, 
+       0x2, 0x23, 0x24, 0x3, 0x2, 0x2, 0x2, 0x24, 0x27, 0x3, 0x2, 0x2, 0x2, 
+       0x25, 0x23, 0x3, 0x2, 0x2, 0x2, 0x26, 0x1e, 0x3, 0x2, 0x2, 0x2, 0x26, 
+       0x27, 0x3, 0x2, 0x2, 0x2, 0x27, 0x28, 0x3, 0x2, 0x2, 0x2, 0x28, 0x29, 
+       0x9, 0x2, 0x2, 0x2, 0x29, 0x3, 0x3, 0x2, 0x2, 0x2, 0x2a, 0x2b, 0x5, 
+       0x16, 0xc, 0x2, 0x2b, 0x2c, 0x7, 0x4, 0x2, 0x2, 0x2c, 0x2d, 0x7, 
+       0x5, 0x2, 0x2, 0x2d, 0x2e, 0x5, 0x6, 0x4, 0x2, 0x2e, 0x33, 0x7, 0x6, 
+       0x2, 0x2, 0x2f, 0x30, 0x7, 0x5, 0x2, 0x2, 0x30, 0x31, 0x5, 0xa, 0x6, 
+       0x2, 0x31, 0x32, 0x7, 0x6, 0x2, 0x2, 0x32, 0x34, 0x3, 0x2, 0x2, 0x2, 
+       0x33, 0x2f, 0x3, 0x2, 0x2, 0x2, 0x33, 0x34, 0x3, 0x2, 0x2, 0x2, 0x34, 
+       0x5, 0x3, 0x2, 0x2, 0x2, 0x35, 0x3a, 0x5, 0x8, 0x5, 0x2, 0x36, 0x37, 
+       0x7, 0x7, 0x2, 0x2, 0x37, 0x39, 0x5, 0x8, 0x5, 0x2, 0x38, 0x36, 0x3, 
+       0x2, 0x2, 0x2, 0x39, 0x3c, 0x3, 0x2, 0x2, 0x2, 0x3a, 0x38, 0x3, 0x2, 
+       0x2, 0x2, 0x3a, 0x3b, 0x3, 0x2, 0x2, 0x2, 0x3b, 0x3e, 0x3, 0x2, 0x2, 
+       0x2, 0x3c, 0x3a, 0x3, 0x2, 0x2, 0x2, 0x3d, 0x35, 0x3, 0x2, 0x2, 0x2, 
+       0x3d, 0x3e, 0x3, 0x2, 0x2, 0x2, 0x3e, 0x7, 0x3, 0x2, 0x2, 0x2, 0x3f, 
+       0x40, 0x5, 0x16, 0xc, 0x2, 0x40, 0x41, 0x7, 0x4, 0x2, 0x2, 0x41, 
+       0x46, 0x5, 0x10, 0x9, 0x2, 0x42, 0x43, 0x7, 0x8, 0x2, 0x2, 0x43, 
+       0x45, 0x5, 0x10, 0x9, 0x2, 0x44, 0x42, 0x3, 0x2, 0x2, 0x2, 0x45, 
+       0x48, 0x3, 0x2, 0x2, 0x2, 0x46, 0x44, 0x3, 0x2, 0x2, 0x2, 0x46, 0x47, 
+       0x3, 0x2, 0x2, 0x2, 0x47, 0x9, 0x3, 0x2, 0x2, 0x2, 0x48, 0x46, 0x3, 
+       0x2, 0x2, 0x2, 0x49, 0x4e, 0x5, 0xc, 0x7, 0x2, 0x4a, 0x4b, 0x7, 0x7, 
+       0x2, 0x2, 0x4b, 0x4d, 0x5, 0xc, 0x7, 0x2, 0x4c, 0x4a, 0x3, 0x2, 0x2, 
+       0x2, 0x4d, 0x50, 0x3, 0x2, 0x2, 0x2, 0x4e, 0x4c, 0x3, 0x2, 0x2, 0x2, 
+       0x4e, 0x4f, 0x3, 0x2, 0x2, 0x2, 0x4f, 0x52, 0x3, 0x2, 0x2, 0x2, 0x50, 
+       0x4e, 0x3, 0x2, 0x2, 0x2, 0x51, 0x49, 0x3, 0x2, 0x2, 0x2, 0x51, 0x52, 
+       0x3, 0x2, 0x2, 0x2, 0x52, 0xb, 0x3, 0x2, 0x2, 0x2, 0x53, 0x54, 0x5, 
+       0x16, 0xc, 0x2, 0x54, 0x55, 0x7, 0x5, 0x2, 0x2, 0x55, 0x5a, 0x5, 
+       0xe, 0x8, 0x2, 0x56, 0x57, 0x7, 0x7, 0x2, 0x2, 0x57, 0x59, 0x5, 0xe, 
+       0x8, 0x2, 0x58, 0x56, 0x3, 0x2, 0x2, 0x2, 0x59, 0x5c, 0x3, 0x2, 0x2, 
+       0x2, 0x5a, 0x58, 0x3, 0x2, 0x2, 0x2, 0x5a, 0x5b, 0x3, 0x2, 0x2, 0x2, 
+       0x5b, 0x5d, 0x3, 0x2, 0x2, 0x2, 0x5c, 0x5a, 0x3, 0x2, 0x2, 0x2, 0x5d, 
+       0x5e, 0x7, 0x6, 0x2, 0x2, 0x5e, 0xd, 0x3, 0x2, 0x2, 0x2, 0x5f, 0x60, 
+       0x5, 0x1c, 0xf, 0x2, 0x60, 0x61, 0x7, 0x4, 0x2, 0x2, 0x61, 0x66, 
+       0x5, 0x10, 0x9, 0x2, 0x62, 0x63, 0x7, 0x8, 0x2, 0x2, 0x63, 0x65, 
+       0x5, 0x10, 0x9, 0x2, 0x64, 0x62, 0x3, 0x2, 0x2, 0x2, 0x65, 0x68, 
+       0x3, 0x2, 0x2, 0x2, 0x66, 0x64, 0x3, 0x2, 0x2, 0x2, 0x66, 0x67, 0x3, 
+       0x2, 0x2, 0x2, 0x67, 0xf, 0x3, 0x2, 0x2, 0x2, 0x68, 0x66, 0x3, 0x2, 
+       0x2, 0x2, 0x69, 0x6f, 0x5, 0x12, 0xa, 0x2, 0x6a, 0x6f, 0x7, 0xc, 
+       0x2, 0x2, 0x6b, 0x6f, 0x7, 0xd, 0x2, 0x2, 0x6c, 0x6f, 0x7, 0xe, 0x2, 
+       0x2, 0x6d, 0x6f, 0x7, 0xb, 0x2, 0x2, 0x6e, 0x69, 0x3, 0x2, 0x2, 0x2, 
+       0x6e, 0x6a, 0x3, 0x2, 0x2, 0x2, 0x6e, 0x6b, 0x3, 0x2, 0x2, 0x2, 0x6e, 
+       0x6c, 0x3, 0x2, 0x2, 0x2, 0x6e, 0x6d, 0x3, 0x2, 0x2, 0x2, 0x6f, 0x11, 
+       0x3, 0x2, 0x2, 0x2, 0x70, 0x71, 0x5, 0x14, 0xb, 0x2, 0x71, 0x72, 
+       0x7, 0x9, 0x2, 0x2, 0x72, 0x77, 0x5, 0x1a, 0xe, 0x2, 0x73, 0x74, 
+       0x7, 0xa, 0x2, 0x2, 0x74, 0x76, 0x5, 0x1a, 0xe, 0x2, 0x75, 0x73, 
+       0x3, 0x2, 0x2, 0x2, 0x76, 0x79, 0x3, 0x2, 0x2, 0x2, 0x77, 0x75, 0x3, 
+       0x2, 0x2, 0x2, 0x77, 0x78, 0x3, 0x2, 0x2, 0x2, 0x78, 0x13, 0x3, 0x2, 
+       0x2, 0x2, 0x79, 0x77, 0x3, 0x2, 0x2, 0x2, 0x7a, 0x7b, 0x7, 0xf, 0x2, 
+       0x2, 0x7b, 0x15, 0x3, 0x2, 0x2, 0x2, 0x7c, 0x7d, 0x7, 0xf, 0x2, 0x2, 
+       0x7d, 0x17, 0x3, 0x2, 0x2, 0x2, 0x7e, 0x7f, 0x9, 0x3, 0x2, 0x2, 0x7f, 
+       0x19, 0x3, 0x2, 0x2, 0x2, 0x80, 0x81, 0x9, 0x4, 0x2, 0x2, 0x81, 0x1b, 
+       0x3, 0x2, 0x2, 0x2, 0x82, 0x83, 0x7, 0x10, 0x2, 0x2, 0x83, 0x1d, 
+       0x3, 0x2, 0x2, 0x2, 0xe, 0x23, 0x26, 0x33, 0x3a, 0x3d, 0x46, 0x4e, 
+       0x51, 0x5a, 0x66, 0x6e, 0x77, 
   };
 
   _serializedATN.insert(_serializedATN.end(), serializedATNSegment0,

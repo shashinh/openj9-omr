@@ -13,15 +13,13 @@ class  PTGParser : public antlr4::Parser {
 public:
   enum {
     T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
-    T__7 = 8, NIL = 9, STRING = 10, CONST = 11, GLOBAL = 12, NUMS = 13, 
-    ALPHAS = 14, NEWLINE = 15, ALL = 16
+    NIL = 8, NUMS = 9, ALPHAS = 10, NEWLINE = 11, ALL = 12
   };
 
   enum {
     RulePtg = 0, RuleEntry = 1, RuleVars = 2, RuleVarentry = 3, RuleFields = 4, 
-    RuleFieldentry = 5, RuleField = 6, RuleCiBciEntry = 7, RuleCiEntries = 8, 
-    RuleCallerIndex = 9, RuleBciKey = 10, RuleBciKey2 = 11, RuleBciVal = 12, 
-    RuleFieldKey = 13
+    RuleFieldentry = 5, RuleCiBciEntry = 6, RuleCallerIndex = 7, RuleBciKey = 8, 
+    RuleBciVal = 9, RuleBciKeyField = 10, RuleField = 11
   };
 
   explicit PTGParser(antlr4::TokenStream *input);
@@ -40,14 +38,12 @@ public:
   class VarentryContext;
   class FieldsContext;
   class FieldentryContext;
-  class FieldContext;
   class CiBciEntryContext;
-  class CiEntriesContext;
   class CallerIndexContext;
   class BciKeyContext;
-  class BciKey2Context;
   class BciValContext;
-  class FieldKeyContext; 
+  class BciKeyFieldContext;
+  class FieldContext; 
 
   class  PtgContext : public antlr4::ParserRuleContext {
   public:
@@ -58,8 +54,6 @@ public:
     std::vector<EntryContext *> entry();
     EntryContext* entry(size_t i);
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -75,8 +69,6 @@ public:
     VarsContext *vars();
     FieldsContext *fields();
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -91,8 +83,6 @@ public:
     std::vector<VarentryContext *> varentry();
     VarentryContext* varentry(size_t i);
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -108,8 +98,6 @@ public:
     std::vector<CiBciEntryContext *> ciBciEntry();
     CiBciEntryContext* ciBciEntry(size_t i);
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -124,8 +112,6 @@ public:
     std::vector<FieldentryContext *> fieldentry();
     FieldentryContext* fieldentry(size_t i);
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -137,12 +123,11 @@ public:
   public:
     FieldentryContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    BciKeyContext *bciKey();
-    std::vector<FieldContext *> field();
-    FieldContext* field(size_t i);
+    BciKeyFieldContext *bciKeyField();
+    FieldContext *field();
+    std::vector<BciValContext *> bciVal();
+    BciValContext* bciVal(size_t i);
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -150,35 +135,12 @@ public:
 
   FieldentryContext* fieldentry();
 
-  class  FieldContext : public antlr4::ParserRuleContext {
-  public:
-    FieldContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    FieldKeyContext *fieldKey();
-    std::vector<CiBciEntryContext *> ciBciEntry();
-    CiBciEntryContext* ciBciEntry(size_t i);
-
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
-
-    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  FieldContext* field();
-
   class  CiBciEntryContext : public antlr4::ParserRuleContext {
   public:
     CiBciEntryContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    CiEntriesContext *ciEntries();
-    antlr4::tree::TerminalNode *STRING();
-    antlr4::tree::TerminalNode *CONST();
-    antlr4::tree::TerminalNode *GLOBAL();
     antlr4::tree::TerminalNode *NIL();
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -186,31 +148,12 @@ public:
 
   CiBciEntryContext* ciBciEntry();
 
-  class  CiEntriesContext : public antlr4::ParserRuleContext {
-  public:
-    CiEntriesContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    CallerIndexContext *callerIndex();
-    std::vector<BciValContext *> bciVal();
-    BciValContext* bciVal(size_t i);
-
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
-
-    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  CiEntriesContext* ciEntries();
-
   class  CallerIndexContext : public antlr4::ParserRuleContext {
   public:
     CallerIndexContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *NUMS();
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -222,32 +165,15 @@ public:
   public:
     BciKeyContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *ALL();
     antlr4::tree::TerminalNode *NUMS();
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
   };
 
   BciKeyContext* bciKey();
-
-  class  BciKey2Context : public antlr4::ParserRuleContext {
-  public:
-    BciKey2Context(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *ALL();
-    antlr4::tree::TerminalNode *NUMS();
-
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
-
-    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  BciKey2Context* bciKey2();
 
   class  BciValContext : public antlr4::ParserRuleContext {
   public:
@@ -256,8 +182,6 @@ public:
     antlr4::tree::TerminalNode *NUMS();
     antlr4::tree::TerminalNode *NIL();
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
@@ -265,20 +189,31 @@ public:
 
   BciValContext* bciVal();
 
-  class  FieldKeyContext : public antlr4::ParserRuleContext {
+  class  BciKeyFieldContext : public antlr4::ParserRuleContext {
   public:
-    FieldKeyContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    BciKeyFieldContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *ALPHAS();
+    antlr4::tree::TerminalNode *NUMS();
 
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
   };
 
-  FieldKeyContext* fieldKey();
+  BciKeyFieldContext* bciKeyField();
+
+  class  FieldContext : public antlr4::ParserRuleContext {
+  public:
+    FieldContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *ALPHAS();
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  FieldContext* field();
 
 
 private:

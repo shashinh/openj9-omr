@@ -5,15 +5,26 @@ ptg: (entry ( ';' entry)* )? (NEWLINE | EOF);
 entry: bciKey ':' '(' vars   ')' ('(' fields ')')?;
 
 vars: (varentry (',' varentry)*)?;
-varentry : bciKey ':' ( (bciVal) (' ' (bciVal))*);
-fields: (fieldentry (',' fieldentry)*)?;
-fieldentry : bciKeyField '.' field ':' ( (bciVal) (' ' bciVal)*);
+varentry : bciKey ':' ( (ciBciEntry) (' ' (ciBciEntry))*);
 
-bciKeyField: NUMS;
-field : ALPHAS;
-bciKey: ALL | NUMS;
+fields: (fieldentry (',' fieldentry)*)?;
+fieldentry : bciKey '('  (field) ((',' (field))*) ')';
+
+field : fieldKey ':'  (ciBciEntry) (' ' (ciBciEntry))*;
+
+ciBciEntry: ciEntries | STRING | CONST | GLOBAL | NIL;
+
+ciEntries: callerIndex '-' ( (bciVal)('.' (bciVal))*);
+
+callerIndex : NUMS;
+bciKey : NUMS;
 bciVal : NUMS | NIL;
-NIL : 'n';
+fieldKey: ALPHAS;
+
+NIL : 'N';
+STRING: 'S';
+CONST: 'C';
+GLOBAL: 'G';
 NUMS: [0-9]+;
 ALPHAS: [A-Za-z]+;
 NEWLINE: [\r\n]+;

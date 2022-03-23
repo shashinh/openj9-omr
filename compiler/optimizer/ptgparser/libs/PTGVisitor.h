@@ -31,21 +31,17 @@ public:
 
     virtual antlrcpp::Any visitFieldentry(PTGParser::FieldentryContext *context) = 0;
 
-    virtual antlrcpp::Any visitField(PTGParser::FieldContext *context) = 0;
-
     virtual antlrcpp::Any visitCiBciEntry(PTGParser::CiBciEntryContext *context) = 0;
-
-    virtual antlrcpp::Any visitCiEntries(PTGParser::CiEntriesContext *context) = 0;
 
     virtual antlrcpp::Any visitCallerIndex(PTGParser::CallerIndexContext *context) = 0;
 
     virtual antlrcpp::Any visitBciKey(PTGParser::BciKeyContext *context) = 0;
 
-    virtual antlrcpp::Any visitBciKey2(PTGParser::BciKey2Context *context) = 0;
-
     virtual antlrcpp::Any visitBciVal(PTGParser::BciValContext *context) = 0;
 
-    virtual antlrcpp::Any visitFieldKey(PTGParser::FieldKeyContext *context) = 0;
+    virtual antlrcpp::Any visitBciKeyField(PTGParser::BciKeyFieldContext *context) = 0;
+
+    virtual antlrcpp::Any visitField(PTGParser::FieldContext *context) = 0;
 
 
 };

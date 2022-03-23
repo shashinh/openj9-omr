@@ -13,8 +13,7 @@ class  PTGLexer : public antlr4::Lexer {
 public:
   enum {
     T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
-    T__7 = 8, NIL = 9, STRING = 10, CONST = 11, GLOBAL = 12, NUMS = 13, 
-    ALPHAS = 14, NEWLINE = 15, ALL = 16
+    NIL = 8, NUMS = 9, ALPHAS = 10, NEWLINE = 11, ALL = 12
   };
 
   explicit PTGLexer(antlr4::CharStream *input);
