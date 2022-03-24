@@ -2639,6 +2639,7 @@ TR::Register *OMR::Power::TreeEvaluator::awrtbarEvaluator(TR::Node *node, TR::Co
    return TR::TreeEvaluator::astoreEvaluator(node, cg);
    }
 
+//SHASHIN: REVIEW
 TR::Register *OMR::Power::TreeEvaluator::awrtbariEvaluator(TR::Node *node, TR::CodeGenerator *cg)
    {
    // The wrtbar IL op represents a store with side effects.
