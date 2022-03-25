@@ -21,6 +21,8 @@ class PointsToGraph {
         void dump();
         string getRhoString();
         string getSigmaString();
-        bool equals(PointsToGraph other);
+        bool equals(PointsToGraph &other);
+
+        PointsToGraph * meet(PointsToGraph &other);
         
 };

@@ -1951,11 +1951,11 @@ int processStore(PointsToGraph * in, TR::Node *node, std::map<int, int> &evaluat
    if(_runtimeVerifierDiagnostics) cout << "the store node has " << node->getNumChildren() << " child nodes, its sym ref is " 
                                                                              << node->getSymbolReference()->getReferenceNumber() << endl;
    //TODO: assert(node->getNumChildren() == 1);
-   TR_ASSERT_FATAL(node->getNumChildren() != 1, "we assumed that astore always has a single child");
+   TR_ASSERT_FATAL(node->getNumChildren() == 1, "we assumed that astore always has a single child");
    
    //look at the child of the astore - if it is not evaluated, evaluate it
    TR::Node *childNode = node->getFirstChild();
-   TR_ASSERT_FATAL(childNode == NULL, "we assumed that the astore's child is non-null");
+   TR_ASSERT_FATAL(childNode != NULL, "we assumed that the astore's child is non-null");
    int childNodeIndex = childNode->getGlobalIndex();
    
    if(evaluatedNodeValues.find(childNodeIndex) != evaluatedNodeValues.end()) {
