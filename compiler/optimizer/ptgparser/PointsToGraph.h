@@ -25,6 +25,14 @@ class PointsToGraph {
 
         PointsToGraph * meet(PointsToGraph &other);
 
+        //assign a single bci to the points-to set of a symRef
         void assign(int symRef, int bci);
+        //assign a collection of bcis to the points-to set of a symRef
+        void assign(int symRef, vector<int> bcis);
+
+        //assign a single bci to the points-to set of a field
+        void assign(int bci, string field, int bciToAssign);
+        //assign a collection of bcis to the points-to set of a field
+        void assign(int bci, string field, vector <int> bcisToAssign);
         
 };

@@ -111,6 +111,21 @@ void PointsToGraph::assign(int symRef, int bci) {
     entries.push_back(entry);
     cout << "inserting at symref " << symRef << endl;
     //rho.insert(std::pair <int, vector<Entry> > (symRef, entries));
-    rho.insert(std::pair <int, vector <Entry> > (std::pair <int, vector <Entry> > (symRef, entries)));
+    //rho.insert(std::pair <int, vector <Entry> > (std::pair <int, vector <Entry> > (symRef, entries)));
+    rho[symRef] = entries;
     //rho.insert(std::pair <int, vector <Entry> > (std::pair <int, vector <Entry> >(symRef, pointsToSet)));
+}
+
+void PointsToGraph::assign(int symRef, vector<int> bcis){
+    for(auto bci : bcis) {
+        assign(symRef, bci);
+    }
+}
+
+void PointsToGraph::assign(int bci, string field, int bciToAssign){
+ 
+}
+
+void PointsToGraph::assign(int bci, string field, vector<int> bcisToAssign){
+ 
 }

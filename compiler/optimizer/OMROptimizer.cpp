@@ -124,6 +124,7 @@ using namespace std;
 static std::set<string> _runtimeVerifiedMethods;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation * _runtimeVerifierComp;
+#define IFDIAGPRINT if(_runtimeVerifierDiagnostics) cout
 
 namespace TR
 {
@@ -1550,6 +1551,8 @@ std::string getCallSiteInvariantStaticFileName(std::string className, std::strin
 // recursively goes down the children of the node and returns the first "useful" child, else null if no useful children
 TR::Node *getUsefulNode(TR::Node *node)
 {
+   IFDIAGPRINT << "checking node n" << node->getGlobalIndex() << "n for a useful node" << endl;
+
    TR::Node *ret = NULL;
    if (node == NULL)
       return ret;
@@ -1565,6 +1568,7 @@ TR::Node *getUsefulNode(TR::Node *node)
          // these are the interesting nodes
          if (opCode == TR::New || opCode == TR::astore || opCode == TR::astorei || opCode == TR::Return || opCode == TR::areturn || opCode == TR::aload || opCode == TR::aloadi || opCode == TR::call || opCode == TR::calli || opCode == TR::acall || opCode == TR::calli)
          {
+            IFDIAGPRINT << "found useful node at n" << node->getGlobalIndex() << "n" << endl;
             ret = node;
          }
          else
@@ -1907,6 +1911,7 @@ void printRuntimeVerifierDiagnostic(string message)
       cout << message;
 }
 
+
 // Sets all method parameters to BOT
 int bottomizeParameters(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
 {
@@ -1940,7 +1945,7 @@ PointsToGraph * getPredecessorMeet(TR::Block *bl, std::map<int, PointsToGraph> b
  * applies the points-to analysis flow function for an allocation statement
  * - we need to store away the bci at which the object is being created, against the respective node
  */
-int processAllocation(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, int> &evaluatedNodeValues, int visitCount) {
+int processAllocation(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, vector <int> > &evaluatedNodeValues, int visitCount) {
    int ret = 0;
    int nodeGlobalIndex = node->getGlobalIndex();
    if(_runtimeVerifierDiagnostics) cout << "the allocation is at node " << nodeGlobalIndex << endl;
@@ -1950,9 +1955,12 @@ int processAllocation(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, i
    if(node->getVisitCount() < visitCount) {
       node->setVisitCount(visitCount);
 
-      evaluatedNodeValues.insert(std::pair <TR::Node *, int> (node, node->getByteCodeIndex()));
+      int allocationBCI = node->getByteCodeIndex();
+      vector<int> evaluatedNodeValue;
+      evaluatedNodeValue.push_back(allocationBCI);
+      evaluatedNodeValues.insert(std::pair <TR::Node *, vector<int> > (node, evaluatedNodeValue));
 
-      if(_runtimeVerifierDiagnostics) cout << "evaluated an allocation node n" << nodeGlobalIndex << "n, object @bci " << node->getByteCodeIndex() << endl;
+      if(_runtimeVerifierDiagnostics) cout << "evaluated an allocation node n" << nodeGlobalIndex << "n, object @bci " << allocationBCI << endl;
    } else {
       //we may need to error here.
    }
@@ -1960,9 +1968,9 @@ int processAllocation(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, i
    return ret;
 }
 
-int processStore(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, int> &evaluatedNodeValues, int visitCount) {
+int processStore(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, vector <int> > &evaluatedNodeValues, int visitCount) {
 
-   if(_runtimeVerifierDiagnostics) cout << "the store node has " << node->getNumChildren() << " child nodes, its sym ref is " 
+   IFDIAGPRINT << "the store node has " << node->getNumChildren() << " child nodes, its sym ref is " 
                                                                              << node->getSymbolReference()->getReferenceNumber() << endl;
    //TODO: assert(node->getNumChildren() == 1);
    TR_ASSERT_FATAL(node->getNumChildren() == 1, "we assumed that astore always has a single child");
@@ -1979,11 +1987,13 @@ int processStore(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, int> &
    // }
 
    if(childNode->getVisitCount() < visitCount) {
-      cout << childNode->getGlobalIndex() << " visted first time" << endl;
+      if(_runtimeVerifierDiagnostics) cout << childNode->getGlobalIndex() << " visted first time" << endl;
+      //think of evaluating the node here
+
    } else {
       cout << childNode->getGlobalIndex() << " visited already" << endl;
-      int evaluatedBCI = evaluatedNodeValues.find(childNode)->second;
-      in->assign(node->getSymbolReference()->getReferenceNumber(), evaluatedBCI);
+      vector<int> evaluatedNodeValue = evaluatedNodeValues.find(childNode)->second;
+      in->assign(node->getSymbolReference()->getReferenceNumber(), evaluatedNodeValue);
       if(_runtimeVerifierDiagnostics) in->print();
    }
 
@@ -2022,7 +2032,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
    // not technically needed. We can look to see if this block has an Out-PTG
    //set<int> visitedBlocks;
-   std::map<TR::Node *, int> evaluatedNodeValues;
+   std::map<TR::Node *, vector<int> > evaluatedNodeValues;
 
    while (!workList.empty())
    {
@@ -2048,6 +2058,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          for (; tt; tt = tt->getNextRealTreeTop())
          {
             TR::Node *node = tt->getNode();
+            IFDIAGPRINT << "*** now processing node n" << node->getGlobalIndex() << "n, with opcode " << node->getOpCode().getName() << endl;
             //unfortunately it appears that the Start and End nodes are also valid treetops.
             //TODO: is there a way around this check?
             if (node->getOpCodeValue() == TR::BBStart)
@@ -2083,6 +2094,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                if(opCode.isNew()) {
                   //as it turns out - we don't need to explicitly handle allocation statements!
                   //if(_runtimeVerifierDiagnostics) cout << "found an allocation node at BCI " << nodeBCI << endl;
+                  IFDIAGPRINT << "allocation node at n" << usefulNode->getGlobalIndex() << "n" << endl;
                   processAllocation(localRunningPTG, usefulNode, evaluatedNodeValues, visitCount);
                } else if (opCode.isStore()) {
                   if(_runtimeVerifierDiagnostics) cout << "found a store node at Index " << usefulNode->getGlobalIndex() << endl;
@@ -2185,6 +2197,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
 
 void performRuntimeVerification(TR::Compilation *comp)
 {
+   
    std::string currentClassName = getFormattedCurrentClassName(comp);
    std::string currentMethodName = getFormattedCurrentMethodName(comp);
    std::string sig = currentClassName + "." + currentMethodName;
@@ -2235,6 +2248,8 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
    if (performRuntimeVerify)
    {
       if(!_runtimeVerifierComp) _runtimeVerifierComp = comp();
+
+      comp()->dumpMethodTrees("Trees before performRuntimeVerification");
       comp()->incVisitCount();
       // when invoked from the JIT, best we can do is supply the compilation object
       verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
