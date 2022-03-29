@@ -99,3 +99,18 @@ bool equals(PointsToGraph other) {
 
     return equals;
 }
+
+void PointsToGraph::assign(int symRef, int bci) {
+    printRho();
+    
+    Entry entry;
+    entry.bci = bci;
+    entry.caller = 99;
+    entry.type = Reference;
+    vector<Entry> entries;
+    entries.push_back(entry);
+    cout << "inserting at symref " << symRef << endl;
+    //rho.insert(std::pair <int, vector<Entry> > (symRef, entries));
+    rho.insert(std::pair <int, vector <Entry> > (std::pair <int, vector <Entry> > (symRef, entries)));
+    //rho.insert(std::pair <int, vector <Entry> > (std::pair <int, vector <Entry> >(symRef, pointsToSet)));
+}

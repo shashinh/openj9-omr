@@ -24,5 +24,7 @@ class PointsToGraph {
         bool equals(PointsToGraph &other);
 
         PointsToGraph * meet(PointsToGraph &other);
+
+        void assign(int symRef, int bci);
         
 };

@@ -1931,22 +1931,36 @@ int bottomizeParameters(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *i
  * Returns the meet of the out-PTGs of all predecessor blocks
  */
 PointsToGraph * getPredecessorMeet(TR::Block *bl, std::map<int, PointsToGraph> basicBlockOuts) {
-   PointsToGraph * predecessorMeet;
+   PointsToGraph * predecessorMeet = new PointsToGraph();
 
    return predecessorMeet;
 }
 
 /*
  * applies the points-to analysis flow function for an allocation statement
+ * - we need to store away the bci at which the object is being created, against the respective node
  */
-int processAllocation(PointsToGraph * in, TR::Node *node) {
+int processAllocation(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, int> &evaluatedNodeValues, int visitCount) {
    int ret = 0;
    int nodeGlobalIndex = node->getGlobalIndex();
    if(_runtimeVerifierDiagnostics) cout << "the allocation is at node " << nodeGlobalIndex << endl;
+
+   //TR_ASSERT_FATAL(evaluatedNodeValues.find(node) == evaluatedNodeValues.end(), "we assumed that allocation nodes are never re-processed!");
+
+   if(node->getVisitCount() < visitCount) {
+      node->setVisitCount(visitCount);
+
+      evaluatedNodeValues.insert(std::pair <TR::Node *, int> (node, node->getByteCodeIndex()));
+
+      if(_runtimeVerifierDiagnostics) cout << "evaluated an allocation node n" << nodeGlobalIndex << "n, object @bci " << node->getByteCodeIndex() << endl;
+   } else {
+      //we may need to error here.
+   }
+
    return ret;
 }
 
-int processStore(PointsToGraph * in, TR::Node *node, std::map<int, int> &evaluatedNodeValues) {
+int processStore(PointsToGraph * in, TR::Node *node, std::map<TR::Node *, int> &evaluatedNodeValues, int visitCount) {
 
    if(_runtimeVerifierDiagnostics) cout << "the store node has " << node->getNumChildren() << " child nodes, its sym ref is " 
                                                                              << node->getSymbolReference()->getReferenceNumber() << endl;
@@ -1958,10 +1972,19 @@ int processStore(PointsToGraph * in, TR::Node *node, std::map<int, int> &evaluat
    TR_ASSERT_FATAL(childNode != NULL, "we assumed that the astore's child is non-null");
    int childNodeIndex = childNode->getGlobalIndex();
    
-   if(evaluatedNodeValues.find(childNodeIndex) != evaluatedNodeValues.end()) {
-      //the node's been evaluated before
+   // if(evaluatedNodeValues.find(childNode) != evaluatedNodeValues.end()) {
+   //    //the node's been evaluated before
+   // } else {
+   //    //the node's not been evaluated, do it now
+   // }
+
+   if(childNode->getVisitCount() < visitCount) {
+      cout << childNode->getGlobalIndex() << " visted first time" << endl;
    } else {
-      //the node's not been evaluated, do it now
+      cout << childNode->getGlobalIndex() << " visited already" << endl;
+      int evaluatedBCI = evaluatedNodeValues.find(childNode)->second;
+      in->assign(node->getSymbolReference()->getReferenceNumber(), evaluatedBCI);
+      if(_runtimeVerifierDiagnostics) in->print();
    }
 
 
@@ -1971,8 +1994,9 @@ int processStore(PointsToGraph * in, TR::Node *node, std::map<int, int> &evaluat
 /*
  * Runs Points-To Analysis for the method represented by the supplied resolved method symbol.
  */
-PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::ResolvedMethodSymbol *methodSymbol)
+PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::ResolvedMethodSymbol *methodSymbol, int visitCount)
 {
+   if(_runtimeVerifierDiagnostics) inFlow->print();
    PointsToGraph *outFlow;
 
    outFlow = new PointsToGraph();
@@ -1998,7 +2022,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
    // not technically needed. We can look to see if this block has an Out-PTG
    //set<int> visitedBlocks;
-   std::map<int, int> evaluatedNodeValues;
+   std::map<TR::Node *, int> evaluatedNodeValues;
 
    while (!workList.empty())
    {
@@ -2033,19 +2057,36 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
             int nodeBCI = node->getByteCodeInfo().getByteCodeIndex();
 
+            //update the node's visit count, if it is less than the current visit count;
+            // if(node->getVisitCount() < visitCount) {
+            //    node->setVisitCount(visitCount);
+            //    cout << node->getGlobalIndex() << " visited first time" << endl;
+            // } else {
+            //    //this node has already been visited before!
+            //    cout << node->getGlobalIndex() << " visited already!" << endl;
+            //    continue;
+            // }
+
             //TODO: map the static loop invariant (if any) here.
 
             //lets see if there is a useful program instruction in this tree node
             TR::Node * usefulNode = getUsefulNode(node);
             if(usefulNode != NULL){
                TR::ILOpCode opCode = usefulNode->getOpCode();
+               // if(usefulNode->getVisitCount() < visitCount) {
+               //    usefulNode->setVisitCount(visitCount);
+               //    cout << "node n" << usefulNode->getGlobalIndex() << "n visited first time" << endl;
+               // } else {
+               //    cout << "node n" << usefulNode->getGlobalIndex() << "n visited already" << endl;
+               //    continue;
+               // }
                if(opCode.isNew()) {
                   //as it turns out - we don't need to explicitly handle allocation statements!
-                  //processAllocation(localRunningPTG, usefulNode);
                   //if(_runtimeVerifierDiagnostics) cout << "found an allocation node at BCI " << nodeBCI << endl;
+                  processAllocation(localRunningPTG, usefulNode, evaluatedNodeValues, visitCount);
                } else if (opCode.isStore()) {
                   if(_runtimeVerifierDiagnostics) cout << "found a store node at Index " << usefulNode->getGlobalIndex() << endl;
-                  processStore(localRunningPTG, usefulNode, evaluatedNodeValues);
+                  processStore(localRunningPTG, usefulNode, evaluatedNodeValues, visitCount);
                } else if (opCode.isLoad()) {
                   //processLoad();
                } else if (opCode.isCall()) {
@@ -2076,7 +2117,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 }
 
 // the default values here imply that verify() has been invoked by the JIT-C and not the runtime verification algorithm
-PointsToGraph *verifyStaticMethodInfo(TR::Compilation *comp = NULL, TR::ResolvedMethodSymbol *methodSymbol = NULL,
+PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NULL, TR::ResolvedMethodSymbol *methodSymbol = NULL,
                                       std::string className = "", std::string methodName = "", PointsToGraph *inFlow = NULL, bool isInvokedByJITC = true)
 {
 
@@ -2108,7 +2149,6 @@ PointsToGraph *verifyStaticMethodInfo(TR::Compilation *comp = NULL, TR::Resolved
       // a convenience map to track the out-ptgs of each basic block. Makes propagation easier. The key is the basic block number
       std::map<int, PointsToGraph> outPTGs;
       std::map<int, PointsToGraph> stackSlotMappedInvariantPTGs;
-
       // if the analysis is invoked by the JIT-C, all the relevant information will be available on the compilation object
       if (isInvokedByJITC)
       {
@@ -2130,7 +2170,7 @@ PointsToGraph *verifyStaticMethodInfo(TR::Compilation *comp = NULL, TR::Resolved
          //TODO: is there any housekeeping unique to this scenario?
       }
 
-      outFlow = performRuntimePointsToAnalysis(inFlow, methodSymbol);
+      outFlow = performRuntimePointsToAnalysis(inFlow, methodSymbol, visitCount);
    }
 
 
@@ -2195,8 +2235,9 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
    if (performRuntimeVerify)
    {
       if(!_runtimeVerifierComp) _runtimeVerifierComp = comp();
+      comp()->incVisitCount();
       // when invoked from the JIT, best we can do is supply the compilation object
-      verifyStaticMethodInfo(comp(), comp()->getMethodSymbol());
+      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
    }
 
 
