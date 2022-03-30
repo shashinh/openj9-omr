@@ -26,6 +26,10 @@ vector <Entry> PointsToGraph::getPointsToSet(int bci, string field) {
     return res;
 }
 
+vector<int> PointsToGraph::getArgPointsToSet(int argIndex) {
+    return args[argIndex];
+}
+
 int PointsToGraph::summarize(Entry *entry) {
     return 0;
 }
@@ -124,8 +128,43 @@ void PointsToGraph::assign(int symRef, vector<int> bcis){
 
 void PointsToGraph::assign(int bci, string field, int bciToAssign){
  
+    Entry entry;
+    entry.bci = bciToAssign;
+    entry.caller = 99;
+    entry.type = Reference;
+    vector<Entry> entries;
+    entries.push_back(entry);
+
+    map <string, vector <Entry> > fieldsMap = sigma[bci];
+    fieldsMap[field] = entries;
+    sigma[bci] = fieldsMap;
 }
 
 void PointsToGraph::assign(int bci, string field, vector<int> bcisToAssign){
+    for(int bciToAssign : bcisToAssign) {
+        assign(bci, field, bciToAssign);
+    }
  
+}
+
+void PointsToGraph::extend(int symRef, int bci){
+    vector<Entry> entries = rho[symRef];
+    Entry entry;
+    entry.bci = bci;
+    entry.caller = 99;
+    entry.type = Reference;
+
+    entries.push_back(entry);
+
+    rho[symRef] = entries;
+}
+
+void PointsToGraph::extend(int symRef, vector<int> bcis){
+    for(auto bci : bcis) {
+        extend(symRef, bci);
+    }
+}
+
+void PointsToGraph::setArg(int argIndex, vector<int> values) {
+    args[argIndex] = values;
 }

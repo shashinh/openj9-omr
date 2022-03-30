@@ -4,11 +4,16 @@ using namespace std;
 
 class PointsToGraph {
     private:
+        //TOOD: why did I make this a vector instead of a set?
         std::map <int, std::vector<Entry> > rho;
         std::map <int, std::map <string, vector <Entry> > > sigma;
+        //this is a hack
+        std::map <int, std::vector<Entry> > args;
         int summarize(Entry * entry);
         string getHeader();
     public:
+        void setArg(int argIndex, vector<int> values);
+        vector<int> getArgPointsToSet(int argIndex);
         vector<Entry> getPointsToSet (int symRef);
         vector<Entry> getPointsToSet (int bci, string field);
         int assignBot (int symRef);
@@ -34,5 +39,10 @@ class PointsToGraph {
         void assign(int bci, string field, int bciToAssign);
         //assign a collection of bcis to the points-to set of a field
         void assign(int bci, string field, vector <int> bcisToAssign);
+
+        //weak updates
+        void extend(int symRef, int bci);
+        //weak updates
+        void extend(int symRef, vector<int> bcis);
         
 };
