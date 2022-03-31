@@ -8,7 +8,7 @@ class PointsToGraph {
         std::map <int, std::vector<Entry> > rho;
         std::map <int, std::map <string, vector <Entry> > > sigma;
         //this is a hack
-        std::map <int, std::vector<Entry> > args;
+        std::map <int, std::vector<int> > args;
         int summarize(Entry * entry);
         string getHeader();
     public:
