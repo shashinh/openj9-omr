@@ -1560,7 +1560,7 @@ TR::Node *getUsefulNode(TR::Node *node)
    {
       TR::ILOpCodes opCode = node->getOpCodeValue();
       // if the opcodes is one of the following, we need to dig deeper
-      if (opCode == TR::treetop || opCode == TR::ResolveAndNULLCHK || opCode == TR::ResolveCHK || opCode == TR::compressedRefs || opCode == TR::awrtbar || opCode == TR::awrtbari)
+      if (opCode == TR::treetop || opCode == TR::ResolveAndNULLCHK || opCode == TR::ResolveCHK || opCode == TR::compressedRefs)
          return getUsefulNode(node->getFirstChild());
 
       else
@@ -2091,7 +2091,7 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
          in->assign(storeSymRef, evaluatedValues);
          // TODO: do astore's need an evaluated value? can there be pointers to astore nodes?
 
-         if(_runtimeVerifierDiagnostics) in->print();
+         //if(_runtimeVerifierDiagnostics) in->print();
          break;
       }
       case TR::aload:
@@ -2105,6 +2105,64 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
             evaluatedValues.push_back(entry.bci);
          }
          break;
+      }
+
+      case TR::aloadi:
+      {
+         //take a look at this
+         // #ifdef J9_PROJECT_SPECIFIC
+         //    if (node->getSymbolReference() == comp->getSymRefTab()->findVftSymbolRef())
+         //       TR::TreeEvaluator::generateVFTMaskInstruction(node, reg, cg);
+         // #endif
+
+         //and also
+
+               // // also handles aloadi
+               // TR::Register *
+               // OMR::ARM64::TreeEvaluator::aloadEvaluator(TR::Node *node, TR::CodeGenerator *cg)
+
+
+         //lets do this !
+
+         TR::SymbolReference *symRef = usefulNode->getSymbolReference();
+         bool isUnresolved = symRef->isUnresolved();
+         IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
+
+         bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
+         IFDIAGPRINT << "isShadow = " << isShadow << endl;
+
+         int cpIndex = symRef->getCPIndex();
+         IFDIAGPRINT << "cp index = " << cpIndex << endl;
+
+         if(!isUnresolved && isShadow && cpIndex > 0) {
+            cout << "I May be a field load!" << endl;
+
+            int32_t len;
+            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(
+               usefulNode->getSymbolReference()->getCPIndex(), len);
+
+            cout << "the field is " << fieldName << endl;
+
+         // now fetch the receiver object
+         TR::Node *valueNode = usefulNode->getFirstChild();
+         vector<int> values = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount);
+
+         // now the evaluated value of the ardbari will be the points to set for the receiver(s) and field (from sigma)
+         for (int receiverBCI : values)
+         {
+            vector<Entry> pointsToSet = in->getPointsToSet(receiverBCI, fieldName);
+            for (Entry entry : pointsToSet)
+            {
+               evaluatedValues.push_back(entry.bci);
+            }
+         }
+
+
+         }
+         else cout << "I may be a VFT load :(" << endl;
+
+         break;
+
       }
       case TR::awrtbari:
       {
@@ -2124,13 +2182,17 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
 
             // fetch the field being written to
             // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
-            const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-            char *field = strtok((char *)fieldSig, ". ");
-            field = strtok(NULL, ". ");
+            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+            // char *field = strtok((char *)fieldSig, ". ");
+            // field = strtok(NULL, ". ");
+
+            int32_t len;
+            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(
+                                                                                                      usefulNode->getSymbolReference()->getCPIndex(), len);
 
             for (int receiverBCI : receiverNodeVals)
             {
-               in->assign(receiverBCI, field, valueNodeVals);
+               in->assign(receiverBCI, fieldName, valueNodeVals);
             }
          }
          else
@@ -2381,6 +2443,11 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
             //if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
             evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount);
+
+            localRunningPTG->print();
+
+            //lets store away the running ptg as the out of the current bci
+            outs[nodeBCI] = new PointsToGraph(*localRunningPTG);
 
             
 

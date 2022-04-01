@@ -50,8 +50,7 @@ int PointsToGraph::assignBot (int symRef) {
 
 string PointsToGraph::getRhoString() {
     string res;
-    res.append(getHeader());
-    
+    res.append("RHO:\n");
     auto varIterator = rho.begin();
     while(varIterator != rho.end()) {
         res.append("\n");
@@ -65,13 +64,44 @@ string PointsToGraph::getRhoString() {
         varIterator++;
     }
 
-    res.append(getHeader());
+    res.append("\n");
     return res;
 }
 
+string PointsToGraph::getSigmaString() {
+    string res;
+    res.append("SIGMA:\n");
+
+    std::map <int, std::map <string, vector <Entry> > >::iterator sigmaIterator = sigma.begin();
+    while(sigmaIterator != sigma.end()) {
+        res.append("\n");
+        int bci = sigmaIterator->first;
+        res.append(to_string(bci)).append(": ");
+        map <string, vector <Entry> > fieldMap = sigmaIterator->second;
+        map <string, vector <Entry> >::iterator fieldIterator = fieldMap.begin();
+        while(fieldIterator != fieldMap.end()) {
+            string field = fieldIterator->first;
+            res.append("\n\t").append(field).append(": ");
+            vector<Entry> pointsToSet = fieldIterator->second;
+            for(auto i : pointsToSet) {
+                res.append(i.getString()).append(" ");
+            }
+            res.append("\n");
+            fieldIterator++;
+        }
+
+        sigmaIterator++;        
+    }
+    
+    res.append("\n");
+
+    return res;
+}
 void PointsToGraph::print() {
+    cout << getHeader();
     printRho();
     printSigma();
+    cout << getHeader();
 }
 
 void PointsToGraph::printRho() {
@@ -79,6 +109,7 @@ void PointsToGraph::printRho() {
 }
 
 void PointsToGraph::printSigma() {
+    cout << getSigmaString();
 
 }
 
