@@ -1924,7 +1924,7 @@ void printRuntimeVerifierDiagnostic(string message)
 }
 
 
-// Sets all method parameters to BOT
+// Sets all method parameters to BOT, including the this parameter
 int bottomizeParameters(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
 {
    ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
