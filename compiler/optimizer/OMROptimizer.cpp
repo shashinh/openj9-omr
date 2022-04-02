@@ -2298,7 +2298,14 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
          //create a copy of the in PTG to pass in to the called method
          PointsToGraph * callSiteFlow = new PointsToGraph(*in);
 
+         //kill off the args from the calling method
          callSiteFlow->killArgs();
+
+         //kill off the locals of the calling method
+         //callSiteFlow->killRho();
+
+         //kill off the return of the calling method
+         //callSiteFlow->killReturn();
 
          //a convenience map to hold the points to sets of the arguments, to be passed into the called method
          //key is the argument index
