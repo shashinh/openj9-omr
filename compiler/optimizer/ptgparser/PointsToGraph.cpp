@@ -97,10 +97,32 @@ string PointsToGraph::getSigmaString() {
 
     return res;
 }
+
+string PointsToGraph::getArgsString(){
+    string res;
+    res.append("ARGS:\n");
+    auto varIterator = args.begin();
+    while(varIterator != args.end()) {
+        res.append("\n");
+        int symRef = varIterator->first;
+        res.append(to_string(symRef)).append(": ");
+        auto pointsToSet = varIterator->second;
+        for(auto i : pointsToSet) {
+            res.append(to_string(i)).append(" ");
+        }
+        res.append("\n");
+        varIterator++;
+    }
+
+    res.append("\n");
+    return res;
+
+}
 void PointsToGraph::print() {
     cout << getHeader();
     printRho();
     printSigma();
+    printArgs();
     cout << getHeader();
 }
 
@@ -198,4 +220,16 @@ void PointsToGraph::extend(int symRef, vector<int> bcis){
 
 void PointsToGraph::setArg(int argIndex, vector<int> values) {
     args[argIndex] = values;
+}
+
+void PointsToGraph::killArgs() {
+    args.clear(); 
+}
+
+PointsToGraph::PointsToGraph() {
+    
+}
+
+void PointsToGraph::printArgs() {
+    cout << getArgsString();
 }

@@ -2293,44 +2293,43 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       case TR::acall:
       case TR::call:
       case TR::vcall: {
-      //    //these are non-instance calls - handle in exactly the same way, minus the 'this' parm
+         //these are non-instance calls - handle in exactly the same way, minus the 'this' parm
 
-      //    //create a copy of the in PTG to pass in to the called method
-      //    PointsToGraph * callSiteFlow = new PointsToGraph(*in);
+         //create a copy of the in PTG to pass in to the called method
+         PointsToGraph * callSiteFlow = new PointsToGraph(*in);
 
-      //    //a convenience map to hold the points to sets of the arguments, to be passed into the called method
-      //    //key is the argument index
+         callSiteFlow->killArgs();
 
-      //    //the first child of an instance call node is the receiver (i.e. the 'this' pointer)
-      //    TR::Node *receiverNode = usefulNode->getFirstChild();
-      //    vector<int> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount);
-      //    callSiteFlow->setArg(THISVAR, receiverVals);
+         //a convenience map to hold the points to sets of the arguments, to be passed into the called method
+         //key is the argument index
 
-      //    //the remaining children correspond to the rest of the arguments
-      //    int numChildren = usefulNode->getNumChildren();
-      //    for(int i = 1; i < numChildren; i++) {
-      //       TR::Node *argNode = usefulNode->getChild(i);
-      //       //there is no harm in leaving this as-is, but think about optimizing away the non-address args
-      //       vector<int> argNodeVals = evaluateNode(in,argNode, evaluatedNodeValues, visitCount);
+         //the remaining children correspond to the rest of the arguments
+         int numChildren = usefulNode->getNumChildren();
+         for(int i = 0; i < numChildren; i++) {
+            TR::Node *argNode = usefulNode->getChild(i);
+            //there is no harm in leaving this as-is, but think about optimizing away the non-address args
+            vector<int> argNodeVals = evaluateNode(in,argNode, evaluatedNodeValues, visitCount);
 
-      //       callSiteFlow->setArg(i, argNodeVals);
-      //    }
+            callSiteFlow->setArg(i, argNodeVals);
+
+            if(_runtimeVerifierDiagnostics) callSiteFlow->print();
+         }
 
 
-      //    /*
-      //    * now we have an argsMap containing the argument info - we call verify for the called method all over again
-      //    * 
-      //    * but before that, check to see if we need to analyze it
-      //    * details here - https://gist.github.com/shashinh/e6a2d035ab5df87d35fe6d8053cd6e89
-      //    * 
-      //    */ 
+         /*
+         * now we have an argsMap containing the argument info - we call verify for the called method all over again
+         * 
+         * but before that, check to see if we need to analyze it
+         * details here - https://gist.github.com/shashinh/e6a2d035ab5df87d35fe6d8053cd6e89
+         * 
+         */ 
         
-      //   TR::ResolvedMethodSymbol *calledMethodSymbol = usefulNode->getSymbolReference()->getSymbol()->castToResolvedMethodSymbol();
-      //   TR_ASSERT_FATAL(calledMethodSymbol, "a called method is not resolved!");
+        TR::ResolvedMethodSymbol *calledMethodSymbol = usefulNode->getSymbolReference()->getSymbol()->castToResolvedMethodSymbol();
+        TR_ASSERT_FATAL(calledMethodSymbol, "a called method is not resolved!");
 
-      //    PointsToGraph *outFlow = verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, calledMethodSymbol, "", "", in, false);
+         //PointsToGraph *outFlow = verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, calledMethodSymbol, "", "", in, false);
 
-      //   //TODO: now merge the interesting vars back to the PTG at the call site
+        //TODO: now merge the interesting vars back to the PTG at the call site
 
          break;
       }

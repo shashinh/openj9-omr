@@ -12,6 +12,7 @@ class PointsToGraph {
         int summarize(Entry * entry);
         string getHeader();
     public:
+        PointsToGraph();
         void setArg(int argIndex, vector<int> values);
         vector<int> getArgPointsToSet(int argIndex);
         vector<Entry> getPointsToSet (int symRef);
@@ -20,12 +21,14 @@ class PointsToGraph {
         int assignBot (int bci, string field);
         void printRho();
         void printSigma();
+        void printArgs();
         void print();
         void dumpRho();
         void dumpSigma();
         void dump();
         string getRhoString();
         string getSigmaString();
+        string getArgsString();
         bool equals(PointsToGraph &other);
 
         PointsToGraph * meet(PointsToGraph &other);
@@ -44,5 +47,6 @@ class PointsToGraph {
         void extend(int symRef, int bci);
         //weak updates
         void extend(int symRef, vector<int> bcis);
+        void killArgs();
         
 };
