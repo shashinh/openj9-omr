@@ -41,8 +41,6 @@ public:
 
     virtual antlrcpp::Any visitBciKey(PTGParser::BciKeyContext *context) = 0;
 
-    virtual antlrcpp::Any visitBciKey2(PTGParser::BciKey2Context *context) = 0;
-
     virtual antlrcpp::Any visitBciVal(PTGParser::BciValContext *context) = 0;
 
     virtual antlrcpp::Any visitFieldKey(PTGParser::FieldKeyContext *context) = 0;

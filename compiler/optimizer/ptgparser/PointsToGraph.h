@@ -14,6 +14,10 @@ class PointsToGraph {
         string getHeader();
     public:
         PointsToGraph();
+        PointsToGraph(std::map <int, std::vector<Entry> > rho,  std::map <int, std::map <string, vector <Entry> > > sigma);
+
+        std::map <int, std::vector<Entry> > getRho();
+        std::map <int, std::map <string, vector <Entry> > > getSigma();
         void setArg(int argIndex, vector<int> values);
         vector<int> getArgPointsToSet(int argIndex);
         vector<Entry> getPointsToSet (int symRef);

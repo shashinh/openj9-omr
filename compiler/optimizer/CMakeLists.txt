@@ -106,5 +106,11 @@ compiler_library(optimizer
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpStack.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpArray.cpp
 	${CMAKE_CURRENT_LIST_DIR}/ptgparser/PointsToGraph.cpp
-	#${CMAKE_CURRENT_LIST_DIR}/ptgparser/parser.cpp
+	${CMAKE_CURRENT_LIST_DIR}/ptgparser/StaticPtgReader.cpp
+	${CMAKE_CURRENT_LIST_DIR}/ptgparser/PTGBuilderVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/ptgparser/PTGBaseVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/ptgparser/PTGLexer.cpp
+	${CMAKE_CURRENT_LIST_DIR}/ptgparser/PTGParser.cpp
+	${CMAKE_CURRENT_LIST_DIR}/ptgparser/PTGVisitor.cpp
+	
 )

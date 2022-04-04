@@ -122,6 +122,7 @@ using namespace std;
 //#include "il/ParameterSymbol.hpp"
 
 static std::set<string> _runtimeVerifiedMethods;
+static std::map<string, int> _methodIndices;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation * _runtimeVerifierComp;
 #define IFDIAGPRINT if(_runtimeVerifierDiagnostics) cout
@@ -136,6 +137,9 @@ using namespace OMR; // Note: used here only to avoid having to prepend all opts
 #define MAX_LOCAL_OPTS_ITERS 5
 
 extern void testMethod();
+extern map <string, int> readMethodIndices();
+extern map<int, PointsToGraph> readLoopInvariants(string fileName);
+
 const OptimizationStrategy localValuePropagationOpts[] =
     {
         {localCSE},
@@ -2050,6 +2054,17 @@ int evaluateAllocate(TR::Node * node) {
 PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp, TR::ResolvedMethodSymbol *methodSymbol,
                                       std::string className, std::string methodName, PointsToGraph *inFlow, bool isInvokedByJITC);
 
+
+int getOrInsertMethodIndex(string methodName) {
+   if(_methodIndices.find(methodName) != _methodIndices.end()) {
+      return _methodIndices[methodName];
+   } else {
+      int index = _methodIndices.size();
+      _methodIndices[methodName] = ++index;
+      return index;
+   }
+}
+
 // recursively evaluates a node and returns its evaluated value. it may have a side effect of updating the points-to maps.
 vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, vector<int>> &evaluatedNodeValues, int visitCount)
 {
@@ -2508,6 +2523,15 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
    if (!analyzed)
    {
 
+
+      // TODO: remember that checking for emptiness isn't the way to lazy-load a map
+      if( _methodIndices.empty() ) 
+         _methodIndices = readMethodIndices();
+
+
+      string fileName = "ci.log";
+      readLoopInvariants(fileName);
+
       // maintain the PTG in a before-after format. The flow function will transform the "before" to the "after"
       // std::map<int, PointsToGraph> ptgsBefore;
       // std::map<int, PointsToGraph> ptgsAfter;
@@ -2522,7 +2546,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
          inFlow = new PointsToGraph();
 
          if (_runtimeVerifierDiagnostics)
-            cout << "shashin -runtime verification of method " << sig << " invoked by JIT-C" << endl;
+            cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(sig) << " invoked by JIT-C" << endl;
 
          // verify has been invoked by the JIT-C - so we need to assume that the incoming arguments are all BOT
          bottomizeParameters(methodSymbol, inFlow);

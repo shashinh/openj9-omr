@@ -59,10 +59,6 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitBciKey2(PTGParser::BciKey2Context *ctx) override {
-    return visitChildren(ctx);
-  }
-
   virtual antlrcpp::Any visitBciVal(PTGParser::BciValContext *ctx) override {
     return visitChildren(ctx);
   }

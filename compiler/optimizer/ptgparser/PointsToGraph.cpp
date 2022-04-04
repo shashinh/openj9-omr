@@ -1,5 +1,17 @@
 #include "PointsToGraph.h"
 
+
+
+std::map <int, std::vector<Entry> >  PointsToGraph::getRho() {
+    return rho;
+}
+std::map <int, std::map <string, vector <Entry> > > PointsToGraph::getSigma() {
+    return sigma;
+}
+
+
+
+
 vector <Entry> PointsToGraph::getPointsToSet(int symRef) {
     cout << "ho ho ho you requested for the ptg set for bci " << symRef << endl;
     vector <Entry> res;
@@ -229,6 +241,12 @@ void PointsToGraph::killArgs() {
 PointsToGraph::PointsToGraph() {
     
 }
+
+PointsToGraph::PointsToGraph(std::map <int, std::vector<Entry> > rho,  std::map <int, std::map <string, vector <Entry> > > sigma) {
+    this->rho = rho;
+    this->sigma = sigma;
+}
+
 
 void PointsToGraph::printArgs() {
     cout << getArgsString();
