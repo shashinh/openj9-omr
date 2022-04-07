@@ -1310,7 +1310,7 @@ std::string getFormattedCurrentMethodName(TR::Compilation *comp)
 
    int methodNameLength = comp->getMethodSymbol()->getMethod()->nameLength();
    string methodName = comp->getMethodSymbol()->getMethod()->nameChars();
-
+   
    return methodName.substr(0, methodNameLength);
 }
 
@@ -2055,12 +2055,12 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp, TR:
                                       std::string className, std::string methodName, PointsToGraph *inFlow, bool isInvokedByJITC);
 
 
-int getOrInsertMethodIndex(string methodName) {
-   if(_methodIndices.find(methodName) != _methodIndices.end()) {
-      return _methodIndices[methodName];
+int getOrInsertMethodIndex(string methodSignature) {
+   if(_methodIndices.find(methodSignature) != _methodIndices.end()) {
+      return _methodIndices[methodSignature];
    } else {
       int index = _methodIndices.size();
-      _methodIndices[methodName] = ++index;
+      _methodIndices[methodSignature] = ++index;
       return index;
    }
 }
@@ -2528,6 +2528,9 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       if( _methodIndices.empty() ) 
          _methodIndices = readMethodIndices();
 
+     // cout << methodSymbol->getName();
+      //cout << methodSymbol->getMethod()->nameChars() << endl;
+      string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
 
       string fileName = "ci.log";
       readLoopInvariants(fileName);
@@ -2546,7 +2549,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
          inFlow = new PointsToGraph();
 
          if (_runtimeVerifierDiagnostics)
-            cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(sig) << " invoked by JIT-C" << endl;
+            cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by JIT-C" << endl;
 
          // verify has been invoked by the JIT-C - so we need to assume that the incoming arguments are all BOT
          bottomizeParameters(methodSymbol, inFlow);
@@ -2555,6 +2558,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       }
       else
       {
+         cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by callsite descent" << endl;
          // verify() was invoked by the verification algorithm, so all the required data points should be available.
          //TODO: is there any housekeeping unique to this scenario?
          mapParameters(methodSymbol, inFlow);
