@@ -24,7 +24,7 @@ class PTGParseErrorListener : public BaseErrorListener
 
 map <string, int> readMethodIndices() {
 	map<string, int> ret;
-	char* methodIndicesFileName = "method-indices.txt";
+	char* methodIndicesFileName = "mi.txt";
 
 	ifstream file(methodIndicesFileName);
 	string methodName;
