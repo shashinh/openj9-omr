@@ -1579,10 +1579,12 @@ TR::Node *getUsefulNode(TR::Node *node)
          opCode == TR::aloadi || 
          opCode == TR::call || 
          opCode == TR::calli || 
+         opCode == TR::acalli ||
          opCode == TR::acall || 
          opCode == TR::calli ||
          opCode == TR::awrtbari ||
-         opCode == TR::ardbari)
+         opCode == TR::ardbari ||
+         node->getOpCode().isCall())
          {
             IFDIAGPRINT << "found useful node at n" << node->getGlobalIndex() << "n" << endl;
             ret = node;
@@ -2254,46 +2256,48 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       {
 
          
-      //    //instance calls
-      //    //create a copy of the in PTG to pass in to the called method
-      //    PointsToGraph * callSiteFlow = new PointsToGraph(*in);
+          //instance calls
+          //create a copy of the in PTG to pass in to the called method
+          PointsToGraph * callSiteFlow = new PointsToGraph(*in);
 
-      //    //a convenience map to hold the points to sets of the arguments, to be passed into the called method
-      //    //key is the argument index
+          //a convenience map to hold the points to sets of the arguments, to be passed into the called method
+          //key is the argument index
 
-      //    //the first child of an instance call node is the receiver (i.e. the 'this' pointer)
-      //    TR::Node *receiverNode = usefulNode->getFirstChild();
-      //    vector<int> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount);
-      //    callSiteFlow->setArg(THISVAR, receiverVals);
+          //the first child of an instance call node is the receiver (i.e. the 'this' pointer)
+         // TR::Node *receiverNode = usefulNode->getFirstChild();
+         // vector<int> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount);
+          //callSiteFlow->setArg(THISVAR, receiverVals);
 
-      //    //the remaining children correspond to the rest of the arguments
-      //    int numChildren = usefulNode->getNumChildren();
-      //    for(int i = 1; i < numChildren; i++) {
-      //       TR::Node *argNode = usefulNode->getChild(i);
-      //       //there is no harm in leaving this as-is, but think about optimizing away the non-address args
-      //       vector<int> argNodeVals = evaluateNode(in,argNode, evaluatedNodeValues, visitCount);
+          //the remaining children correspond to the rest of the arguments
+          int numChildren = usefulNode->getNumChildren();
+          for(int i = 0; i < numChildren; i++) {
+             TR::Node *argNode = usefulNode->getChild(i);
+             //there is no harm in leaving this as-is, but think about optimizing away the non-address args
+             vector<int> argNodeVals = evaluateNode(in,argNode, evaluatedNodeValues, visitCount);
 
-      //       callSiteFlow->setArg(i, argNodeVals);
-      //    }
+             callSiteFlow->setArg(i, argNodeVals);
+          }
 
-      //    /*
-      //    * now we have an argsMap containing the argument info - we call verify for the called method all over again
-      //    * 
-      //    * but before that, check to see if we need to analyze it
-      //    * details here - https://gist.github.com/shashinh/e6a2d035ab5df87d35fe6d8053cd6e89
-      //    * 
-      //    */ 
-      //   //fetch the resolved method symbol of the called method
-      //   TR::ResolvedMethodSymbol *calledMethodSymbol = usefulNode->getSymbolReference()->getSymbol()->castToResolvedMethodSymbol();
-      //   TR_ASSERT_FATAL(calledMethodSymbol, "a called method is not resolved!");
+         if(_runtimeVerifierDiagnostics) callSiteFlow->print();
 
-      //    //this doesn't seem to be needed?
-      //   //TR_ResolvedMethod *calledMethod = calledMethodSymbol->getResolvedMethod();
+          /*
+          * now we have an argsMap containing the argument info - we call verify for the called method all over again
+          * 
+          * but before that, check to see if we need to analyze it
+          * details here - https://gist.github.com/shashinh/e6a2d035ab5df87d35fe6d8053cd6e89
+          * 
+          */ 
+         //fetch the resolved method symbol of the called method
+         TR::ResolvedMethodSymbol *calledMethodSymbol = usefulNode->getSymbolReference()->getSymbol()->castToResolvedMethodSymbol();
+         TR_ASSERT_FATAL(calledMethodSymbol, "a called method is not resolved!");
 
-      //   PointsToGraph * out = verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, calledMethodSymbol, "", "", in, false);
+          //this doesn't seem to be needed?
+         //TR_ResolvedMethod *calledMethod = calledMethodSymbol->getResolvedMethod();
 
-      //   //TODO: now merge the interesting vars back to the PTG at the call site
-      //    //mapCallerFlowToCallee(out, in)
+//         PointsToGraph * out = verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, calledMethodSymbol, "", "", in, false);
+
+         //TODO: now merge the interesting vars back to the PTG at the call site
+          //mapCallerFlowToCallee(out, in)
 
          
          break;
@@ -2333,9 +2337,9 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
             vector<int> argNodeVals = evaluateNode(in,argNode, evaluatedNodeValues, visitCount);
 
             callSiteFlow->setArg(i, argNodeVals);
-
-            if(_runtimeVerifierDiagnostics) callSiteFlow->print();
          }
+
+         if(_runtimeVerifierDiagnostics) callSiteFlow->print();
 
 
          /*
