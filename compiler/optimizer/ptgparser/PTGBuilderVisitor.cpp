@@ -56,7 +56,7 @@ std::vector<Entry> PTGBuilderVisitor::processciBciEntrys(std::vector<PTGParser::
 				entries.push_back(varEntry);
 			} else {
 				int callerIndex = entry->ciEntries()->callerIndex()->accept(this).as<int>();
-		cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
+		//cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
 				for(auto val : entry->ciEntries()->bciVal()){
 					int bciVal = stoi(val->accept(this).as<string>());
 					varEntry.type = Reference;
@@ -98,7 +98,7 @@ antlrcpp::Any PTGBuilderVisitor::visitVars(PTGParser::VarsContext *ctx)
 				entries.push_back(varEntry);
 			} else {
 				int callerIndex = entry->ciEntries()->callerIndex()->accept(this).as<int>();
-		cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
+		//cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
 				for(auto val : entry->ciEntries()->bciVal()){
 					int bciVal = stoi(val->accept(this).as<string>());
 					varEntry.type = Reference;
@@ -109,7 +109,7 @@ antlrcpp::Any PTGBuilderVisitor::visitVars(PTGParser::VarsContext *ctx)
 			}
 
 		}
-		cout << "inserting " << entries.size() << " entries into varsMap" << endl;
+		//cout << "inserting " << entries.size() << " entries into varsMap" << endl;
 		varsMap.insert(std::pair<int, std::vector<Entry>>(varKey, entries));
 	}
 
@@ -122,14 +122,14 @@ antlrcpp::Any PTGBuilderVisitor::visitFields(PTGParser::FieldsContext *ctx)
 
 	for(auto fieldEntry : ctx->fieldentry()){
 		int bciKey = fieldEntry->bciKey()->accept(this).as<int>();
-		cout << "bci key is " << bciKey << endl;
-		cout << "there are " << fieldEntry->field().size() << " fields" << endl;
+		//cout << "bci key is " << bciKey << endl;
+		//cout << "there are " << fieldEntry->field().size() << " fields" << endl;
 		std::map <std::string, std::vector <Entry>> map;
 		for(auto field : fieldEntry->field()){
 			std::string fieldKey = field->fieldKey()->accept(this).as<string>();
 			//std::map <std::string, std::vector <Entry>> map;
-			cout << "the fieldKey is " << fieldKey << endl;
-			cout << "there are " << field->ciBciEntry().size() << " ciBciEntrys" << endl;
+			//cout << "the fieldKey is " << fieldKey << endl;
+			//cout << "there are " << field->ciBciEntry().size() << " ciBciEntrys" << endl;
 
 			std::vector<Entry> entries = processciBciEntrys(field->ciBciEntry());
 			
@@ -173,7 +173,7 @@ antlrcpp::Any PTGBuilderVisitor::visitBciVal(PTGParser::BciValContext *ctx)
 	auto res = ctx->NUMS() != NULL ? ctx->NUMS()->toString() : ctx->NIL()->toString();
 	//cout << res << endl;
 
-	cout << "bciVal is " << res << endl;
+	//cout << "bciVal is " << res << endl;
 	return res;
 }
 
@@ -192,7 +192,7 @@ antlrcpp::Any PTGBuilderVisitor::visitBciVal(PTGParser::BciValContext *ctx)
 
 antlrcpp::Any PTGBuilderVisitor::visitCallerIndex(PTGParser::CallerIndexContext *ctx) {
     auto res = stoi(ctx->NUMS()->toString());
-	cout << "caller index is " << res << endl;
+	//cout << "caller index is " << res << endl;
 	return res;
   }
 
