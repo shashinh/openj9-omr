@@ -2138,6 +2138,8 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
 
 
          //lets do this !
+         //TODO: even if its a function table load, we need to handle it since it may have child nodes that have essential side-effects
+         //TODO: what will happen if we don't handle a given node the first time we encounter it? won't they get evaluated automatically the next time we encounter it?
 
          TR::SymbolReference *symRef = usefulNode->getSymbolReference();
          bool isUnresolved = symRef->isUnresolved();
@@ -2174,6 +2176,7 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
 
 
          }
+
          else cout << "I may be a VFT load :(" << endl;
 
          break;
