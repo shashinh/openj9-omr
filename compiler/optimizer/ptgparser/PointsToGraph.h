@@ -21,9 +21,9 @@ class PointsToGraph {
         void setArg(int argIndex, vector<int> values);
         vector<int> getArgPointsToSet(int argIndex);
         vector<Entry> getPointsToSet (int symRef);
-        vector<Entry> getPointsToSet (int callerIndex, int bci, string field);
+        vector<Entry> getPointsToSet (int methodIndex, int bci, string field);
         int assignBot (int symRef);
-        int assignBot (int callerIndex, int bci, string field);
+        int assignBot (int methodIndex, int bci, string field);
         void printRho();
         void printSigma();
         void printArgs();
