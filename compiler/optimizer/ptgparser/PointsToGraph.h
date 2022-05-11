@@ -40,14 +40,14 @@ class PointsToGraph {
         PointsToGraph * meet(PointsToGraph &other);
         bool subsumes(PointsToGraph &other);
 
-        //assign a single bci to the points-to set of a symRef
+        //assign a single object to the points-to set of a symRef
         void assign(int symRef, int methodIndex, int bci);
-        //assign a collection of bcis to the points-to set of a symRef
+        //assign a collection of objects to the points-to set of a symRef
         void assign(int symRef, vector<Entry> entries);
 
-        //assign a single bci to the points-to set of a field
+        //assign a single object to the points-to set of a field
         void assign(int methodIndex, int bci, string field, Entry entry);
-        //assign a collection of bcis to the points-to set of a field
+        //assign a collection of objects to the points-to set of a field
         void assign(int methodIndex, int bci, string field, vector <Entry> entries);
 
         //weak updates
