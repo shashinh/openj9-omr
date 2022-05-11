@@ -39,4 +39,9 @@ struct Entry {
     }
 };
 
+//this enables usage of an Entry as a key to a sigma set
+bool operator<(const Entry& x, const Entry& y) {
+    return x.caller != y.caller ? x.caller < y.caller : x.bci < y.bci;
+}
+
 #endif
