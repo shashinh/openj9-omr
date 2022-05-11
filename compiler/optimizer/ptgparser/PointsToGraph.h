@@ -8,22 +8,22 @@ class PointsToGraph {
         std::map <int, std::vector<Entry> > rho;
         //TODO: sigma should be keyed by a caller-index--bci pair (to uniquely identify it)
         std::map <Entry, std::map <string, vector <Entry> > > sigma;
-        //this is a hack
+        //this is a hack - key is the arg index
         std::map <int, std::vector<int> > args;
         int summarize(Entry * entry);
         string getHeader();
     public:
         PointsToGraph();
-        PointsToGraph(std::map <int, std::vector<Entry> > rho,  std::map <int, std::map <string, vector <Entry> > > sigma);
+        PointsToGraph(std::map <int, std::vector<Entry> > rho,  std::map <Entry, std::map <string, vector <Entry> > > sigma);
 
         std::map <int, std::vector<Entry> > getRho();
-        std::map <int, std::map <string, vector <Entry> > > getSigma();
+        std::map <Entry, std::map <string, vector <Entry> > > getSigma();
         void setArg(int argIndex, vector<int> values);
         vector<int> getArgPointsToSet(int argIndex);
         vector<Entry> getPointsToSet (int symRef);
-        vector<Entry> getPointsToSet (int bci, string field);
+        vector<Entry> getPointsToSet (int callerIndex, int bci, string field);
         int assignBot (int symRef);
-        int assignBot (int bci, string field);
+        int assignBot (int callerIndex, int bci, string field);
         void printRho();
         void printSigma();
         void printArgs();
@@ -40,19 +40,19 @@ class PointsToGraph {
         bool subsumes(PointsToGraph &other);
 
         //assign a single bci to the points-to set of a symRef
-        void assign(int symRef, int bci);
+        void assign(int symRef, int methodIndex, int bci);
         //assign a collection of bcis to the points-to set of a symRef
-        void assign(int symRef, vector<int> bcis);
+        void assign(int symRef, vector<Entry> entries);
 
         //assign a single bci to the points-to set of a field
-        void assign(int bci, string field, int bciToAssign);
+        void assign(int methodIndex, int bci, string field, Entry entry);
         //assign a collection of bcis to the points-to set of a field
-        void assign(int bci, string field, vector <int> bcisToAssign);
+        void assign(int methodIndex, int bci, string field, vector <Entry> entries);
 
         //weak updates
-        void extend(int symRef, int bci);
+        void extend(int symRef, int methodIndex, int bci);
         //weak updates
-        void extend(int symRef, vector<int> bcis);
+        void extend(int symRef, vector<Entry> entries);
         void killArgs();
         
 };
