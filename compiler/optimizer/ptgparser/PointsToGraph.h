@@ -7,6 +7,7 @@ class PointsToGraph {
         //TOOD: why did I make this a vector instead of a set?
         std::map <int, std::vector<Entry> > rho;
         //TODO: sigma should be keyed by a caller-index--bci pair (to uniquely identify it)
+       //TODO :  https://stackoverflow.com/questions/1102392/how-can-i-use-stdmaps-with-user-defined-types-as-key
         std::map <Entry, std::map <string, vector <Entry> > > sigma;
         //this is a hack - key is the arg index
         std::map <int, std::vector<int> > args;

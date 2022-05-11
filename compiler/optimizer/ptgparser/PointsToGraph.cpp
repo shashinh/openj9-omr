@@ -27,7 +27,7 @@ vector <Entry> PointsToGraph::getPointsToSet(int methodIndex, int bci, string fi
     vector <Entry> res;
 
     //first obtain the desired points to set from rho - TODO: how do you query rho using method index and bci?? You need the symref for that
-    map <int, map <string, vector <Entry> > >::iterator it1 = sigma.find(bci);
+    map <Entry, map <string, vector <Entry> > >::iterator it1 = sigma.find(bci);
     if(it1 != sigma.end()) {
         map <string, vector <Entry> > m = it1->second;
         map <string, vector <Entry> > :: iterator it2 = m.find(field);
