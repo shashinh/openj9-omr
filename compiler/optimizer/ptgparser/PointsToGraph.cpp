@@ -251,3 +251,11 @@ PointsToGraph::PointsToGraph(std::map <int, std::vector<Entry> > rho,  std::map 
 void PointsToGraph::printArgs() {
     cout << getArgsString();
 }
+
+PointsToGraph * PointsToGraph::meet(PointsToGraph &other) {
+    return new PointsToGraph();
+}
+
+bool PointsToGraph::subsumes(PointsToGraph &other) {
+    return true;
+}

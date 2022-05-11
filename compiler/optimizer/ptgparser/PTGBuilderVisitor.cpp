@@ -121,7 +121,9 @@ antlrcpp::Any PTGBuilderVisitor::visitFields(PTGParser::FieldsContext *ctx)
     std::map <int, std::map <std::string, std::vector <Entry>>> fieldsMap;
 
 	for(auto fieldEntry : ctx->fieldentry()){
-		int bciKey = fieldEntry->bciKey()->accept(this).as<int>();
+//		int bciKey = fieldEntry->bciKey()->accept(this).as<int>();
+		int ci = fieldEntry->callerIndex()->accept(this).as<int>();
+		int bciVal = fieldEntry->bciKey()->accept(this).as<int>();
 		//cout << "bci key is " << bciKey << endl;
 		//cout << "there are " << fieldEntry->field().size() << " fields" << endl;
 		std::map <std::string, std::vector <Entry>> map;
@@ -136,7 +138,7 @@ antlrcpp::Any PTGBuilderVisitor::visitFields(PTGParser::FieldsContext *ctx)
 			map.insert(std::pair<std::string, vector <Entry>> (fieldKey, entries));
  		}		
 		
-		fieldsMap.insert(std::pair<int, std::map<std::string, std::vector <Entry>>> (bciKey, map));
+		fieldsMap.insert(std::pair<int, std::map<std::string, std::vector <Entry>>> (bciVal, map));
 	}
 
 	return fieldsMap;

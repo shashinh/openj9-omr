@@ -7,7 +7,7 @@ class PointsToGraph {
         //TOOD: why did I make this a vector instead of a set?
         std::map <int, std::vector<Entry> > rho;
         //TODO: sigma should be keyed by a caller-index--bci pair (to uniquely identify it)
-        std::map <int, std::map <string, vector <Entry> > > sigma;
+        std::map <Entry, std::map <string, vector <Entry> > > sigma;
         //this is a hack
         std::map <int, std::vector<int> > args;
         int summarize(Entry * entry);
@@ -37,6 +37,7 @@ class PointsToGraph {
         bool equals(PointsToGraph &other);
 
         PointsToGraph * meet(PointsToGraph &other);
+        bool subsumes(PointsToGraph &other);
 
         //assign a single bci to the points-to set of a symRef
         void assign(int symRef, int bci);

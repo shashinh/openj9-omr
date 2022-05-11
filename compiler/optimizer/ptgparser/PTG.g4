@@ -8,7 +8,7 @@ vars: (varentry (',' varentry)*)?;
 varentry : bciKey ':' ( (ciBciEntry) (' ' (ciBciEntry))*);
 
 fields: (fieldentry (',' fieldentry)*)?;
-fieldentry : bciKey '('  (field) ((',' (field))*) ')';
+fieldentry : callerIndex '-' bciKey '('  (field) ((',' (field))*) ')';
 
 field : fieldKey ':'  (ciBciEntry) (' ' (ciBciEntry))*;
 
