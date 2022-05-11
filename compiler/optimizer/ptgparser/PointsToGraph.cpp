@@ -5,7 +5,7 @@
 std::map <int, std::vector<Entry> >  PointsToGraph::getRho() {
     return rho;
 }
-std::map <int, std::map <string, vector <Entry> > > PointsToGraph::getSigma() {
+std::map <Entry, std::map <string, vector <Entry> > > PointsToGraph::getSigma() {
     return sigma;
 }
 
@@ -23,9 +23,10 @@ vector <Entry> PointsToGraph::getPointsToSet(int symRef) {
     return res;
 }
 
-vector <Entry> PointsToGraph::getPointsToSet(int bci, string field) {
+vector <Entry> PointsToGraph::getPointsToSet(int methodIndex, int bci, string field) {
     vector <Entry> res;
 
+    //first obtain the desired points to set from rho - TODO: how do you query rho using method index and bci?? You need the symref for that
     map <int, map <string, vector <Entry> > >::iterator it1 = sigma.find(bci);
     if(it1 != sigma.end()) {
         map <string, vector <Entry> > m = it1->second;
