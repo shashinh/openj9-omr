@@ -2402,6 +2402,32 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
    return evaluatedValues;
 }
 
+void pseudoTopoSort(TR::Block * currentBlock, vector<Block*>& gray, vector<Block*>& black, vector<Block*>& sorted){
+   if(find(gray.begin(), gray.end(), currentBlock) != gray.end()) {
+      return;
+   } else {
+      gray.push_back(currentBlock);
+   }
+
+      TR::CFGEdgeList successors = currentBlock->getSuccessors();
+      for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
+      {
+         TR::Block *successorBlock = toBlock((*successorIt)->getTo());
+
+         if(find(black.begin(), black.end(), successorBlock) != black.end()) {
+            continue;
+         } else {
+            pseudoTopoSort(successorBlock, gray, black, sorted);
+         }
+
+      }
+
+      gray.erase(find(gray.begin(),gray.end(),currentBlock));
+      black.push_back(currentBlock);
+      sorted.push_back(currentBlock);
+   
+}
+
 /*
  * Runs Points-To Analysis for the method represented by the supplied resolved method symbol.
  */
