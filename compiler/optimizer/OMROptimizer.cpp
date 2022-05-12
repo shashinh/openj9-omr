@@ -2402,7 +2402,7 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
    return evaluatedValues;
 }
 
-void pseudoTopoSort(TR::Block * currentBlock, vector<Block*>& gray, vector<Block*>& black, vector<Block*>& sorted){
+void pseudoTopoSort(TR::Block * currentBlock, vector<TR::Block*>& gray, vector<TR::Block*>& black, stack<TR::Block*>& sorted){
    if(find(gray.begin(), gray.end(), currentBlock) != gray.end()) {
       return;
    } else {
@@ -2424,7 +2424,7 @@ void pseudoTopoSort(TR::Block * currentBlock, vector<Block*>& gray, vector<Block
 
       gray.erase(find(gray.begin(),gray.end(),currentBlock));
       black.push_back(currentBlock);
-      sorted.push_back(currentBlock);
+      sorted.push(currentBlock);
    
 }
 
@@ -2461,17 +2461,23 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    TR::CFG *cfg = methodSymbol->getFlowGraph();
    TR::Block *start = cfg->getStart()->asBlock();
 
-   queue<TR::Block *> workList;
-   workList.push(start);
+   //perform a topological sort of the CFG to determine the order in which the basic blocks are to be processed
+   vector<TR::Block*> gray;
+   vector<TR::Block*> black;
+   stack<TR::Block*> blockProcessingOrder;
+   pseudoTopoSort(start, gray, black, blockProcessingOrder);
+   
+//   queue<TR::Block *> workList;
+//   workList.push(start);
 
    // not technically needed. We can look to see if this block has an Out-PTG
    // set<int> visitedBlocks;
    std::map<TR::Node *, vector<int>> evaluatedNodeValues;
 
-   while (!workList.empty())
+   while (!blockProcessingOrder.empty())
    {
-      TR::Block *currentBB = workList.front();
-      workList.pop();
+      TR::Block *currentBB = blockProcessingOrder.top();
+      blockProcessingOrder.pop();
 
       int currentBBNumber = currentBB->getNumber();
       if (_runtimeVerifierDiagnostics)
@@ -2522,7 +2528,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             // if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
             evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount);
 
-            localRunningPTG->print();
+            if(_runtimeVerifierDiagnostics)
+               localRunningPTG->print();
 
             // lets store away the running ptg as the out of the current bci
             outs[nodeBCI] = new PointsToGraph(*localRunningPTG);
@@ -2534,13 +2541,15 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
       // re-enable this for verification testing
       // if(out != prevOut) {
-      TR::CFGEdgeList successors = currentBB->getSuccessors();
-      for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
-      {
-         TR::Block *successorBlock = toBlock((*successorIt)->getTo());
 
-         workList.push(successorBlock);
-      }
+         //the below code for adding successors is no longer needed, since the order of processing is determined before hand by the topological sort
+//      TR::CFGEdgeList successors = currentBB->getSuccessors();
+//      for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
+//      {
+//         TR::Block *successorBlock = toBlock((*successorIt)->getTo());
+//
+//         workList.push(successorBlock);
+//      }
       // }
    }
 
