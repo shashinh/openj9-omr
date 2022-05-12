@@ -2110,6 +2110,7 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       case TR::New:
       {
          // process new here
+         //TODO: this needs to be a combination of the methodIndex-bci (use longint)
          int v = evaluateAllocate(usefulNode);
          evaluatedValues.push_back(v);
          break;
