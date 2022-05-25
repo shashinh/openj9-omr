@@ -27,14 +27,14 @@ vector <Entry> PointsToGraph::getPointsToSet(int methodIndex, int bci, string fi
     vector <Entry> res;
 
     //first obtain the desired points to set from rho - TODO: how do you query rho using method index and bci?? You need the symref for that
-    map <Entry, map <string, vector <Entry> > >::iterator it1 = sigma.find(bci);
-    if(it1 != sigma.end()) {
-        map <string, vector <Entry> > m = it1->second;
-        map <string, vector <Entry> > :: iterator it2 = m.find(field);
-        if(it2 != m.end()) {
-            res = it2->second;
-        }
-    }
+//    map <Entry, map <string, vector <Entry> > >::iterator it1 = sigma.find(bci);
+//    if(it1 != sigma.end()) {
+//        map <string, vector <Entry> > m = it1->second;
+//        map <string, vector <Entry> > :: iterator it2 = m.find(field);
+//        if(it2 != m.end()) {
+//            res = it2->second;
+//        }
+//    }
 
     return res;
 }
@@ -85,29 +85,29 @@ string PointsToGraph::getSigmaString() {
     string res;
     res.append("SIGMA:\n");
 
-    std::map <int, std::map <string, vector <Entry> > >::iterator sigmaIterator = sigma.begin();
-    while(sigmaIterator != sigma.end()) {
-        res.append("\n");
-        int bci = sigmaIterator->first;
-        res.append(to_string(bci)).append(": ");
-        map <string, vector <Entry> > fieldMap = sigmaIterator->second;
-        map <string, vector <Entry> >::iterator fieldIterator = fieldMap.begin();
-        while(fieldIterator != fieldMap.end()) {
-            string field = fieldIterator->first;
-            res.append("\n\t").append(field).append(": ");
-            vector<Entry> pointsToSet = fieldIterator->second;
-            for(auto i : pointsToSet) {
-                res.append(i.getString()).append(" ");
-            }
-            res.append("\n");
-            fieldIterator++;
-        }
-
-        sigmaIterator++;        
-    }
-    
-    res.append("\n");
-
+//    std::map <int, std::map <string, vector <Entry> > >::iterator sigmaIterator = sigma.begin();
+//    while(sigmaIterator != sigma.end()) {
+//        res.append("\n");
+//        int bci = sigmaIterator->first;
+//        res.append(to_string(bci)).append(": ");
+//        map <string, vector <Entry> > fieldMap = sigmaIterator->second;
+//        map <string, vector <Entry> >::iterator fieldIterator = fieldMap.begin();
+//        while(fieldIterator != fieldMap.end()) {
+//            string field = fieldIterator->first;
+//            res.append("\n\t").append(field).append(": ");
+//            vector<Entry> pointsToSet = fieldIterator->second;
+//            for(auto i : pointsToSet) {
+//                res.append(i.getString()).append(" ");
+//            }
+//            res.append("\n");
+//            fieldIterator++;
+//        }
+//
+//        sigmaIterator++;        
+//    }
+//    
+//    res.append("\n");
+//
     return res;
 }
 
@@ -170,7 +170,7 @@ bool equals(PointsToGraph other) {
     return equals;
 }
 
-void PointsToGraph::assign(int symRef, int bci) {
+void PointsToGraph::assign(int symRef, int methodIndex, int bci) {
     printRho();
     
     Entry entry;
@@ -186,34 +186,34 @@ void PointsToGraph::assign(int symRef, int bci) {
     //rho.insert(std::pair <int, vector <Entry> > (std::pair <int, vector <Entry> >(symRef, pointsToSet)));
 }
 
-void PointsToGraph::assign(int symRef, vector<int> bcis){
-    for(auto bci : bcis) {
-        assign(symRef, bci);
-    }
+void PointsToGraph::assign(int symRef, vector<Entry> entries){
+//    for(auto bci : bcis) {
+//        assign(symRef, bci);
+//    }
 }
 
-void PointsToGraph::assign(int bci, string field, int bciToAssign){
+void PointsToGraph::assign(int methoidIndex, int bci, string field, Entry entry){
  
-    Entry entry;
-    entry.bci = bciToAssign;
-    entry.caller = 99;
-    entry.type = Reference;
-    vector<Entry> entries;
-    entries.push_back(entry);
-
-    map <string, vector <Entry> > fieldsMap = sigma[bci];
-    fieldsMap[field] = entries;
-    sigma[bci] = fieldsMap;
+//    Entry entry;
+//    entry.bci = bciToAssign;
+//    entry.caller = 99;
+//    entry.type = Reference;
+//    vector<Entry> entries;
+//    entries.push_back(entry);
+//
+//    map <string, vector <Entry> > fieldsMap = sigma[bci];
+//    fieldsMap[field] = entries;
+//    sigma[bci] = fieldsMap;
 }
 
-void PointsToGraph::assign(int bci, string field, vector<int> bcisToAssign){
-    for(int bciToAssign : bcisToAssign) {
-        assign(bci, field, bciToAssign);
-    }
+void PointsToGraph::assign(int methodIndex, int bci, string field, vector<Entry> bcisToAssign){
+//    for(int bciToAssign : bcisToAssign) {
+//        assign(bci, field, bciToAssign);
+//    }
  
 }
 
-void PointsToGraph::extend(int symRef, int bci){
+void PointsToGraph::extend(int methodIndex, int symRef, int bci){
     vector<Entry> entries = rho[symRef];
     Entry entry;
     entry.bci = bci;
@@ -225,10 +225,10 @@ void PointsToGraph::extend(int symRef, int bci){
     rho[symRef] = entries;
 }
 
-void PointsToGraph::extend(int symRef, vector<int> bcis){
-    for(auto bci : bcis) {
-        extend(symRef, bci);
-    }
+void PointsToGraph::extend(int symRef, vector<Entry> bcis){
+//    for(auto bci : bcis) {
+//        extend(symRef, bci);
+//    }
 }
 
 void PointsToGraph::setArg(int argIndex, vector<int> values) {
@@ -243,7 +243,7 @@ PointsToGraph::PointsToGraph() {
     
 }
 
-PointsToGraph::PointsToGraph(std::map <int, std::vector<Entry> > rho,  std::map <int, std::map <string, vector <Entry> > > sigma) {
+PointsToGraph::PointsToGraph(std::map <int, std::vector<Entry> > rho,  std::map <Entry, std::map <string, vector <Entry> > > sigma) {
     this->rho = rho;
     this->sigma = sigma;
 }

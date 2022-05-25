@@ -24,7 +24,7 @@ class PTGParseErrorListener : public BaseErrorListener
 
 map <string, int> readMethodIndices() {
 	map<string, int> ret;
-	char* methodIndicesFileName = "mi.txt";
+	char* methodIndicesFileName = "invariants/mi.txt";
 
 	ifstream file(methodIndicesFileName);
 	string methodName;
@@ -47,7 +47,7 @@ std::map<int, PointsToGraph> readLoopInvariants(string fileName) {
 // {
 
 	//string fileName(argv[1]);
-	ifstream ins(fileName, std::ifstream::in);
+/*	ifstream ins(fileName, std::ifstream::in);
 	// ins.open("/home/shashin/antlr/demo/test1/test1.log");
 
 	ANTLRInputStream input(ins);
@@ -153,6 +153,6 @@ std::map<int, PointsToGraph> readLoopInvariants(string fileName) {
 			}
 			it++;
 		}
-
+*/
 	return ret;
 }

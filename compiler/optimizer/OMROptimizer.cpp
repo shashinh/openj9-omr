@@ -1969,7 +1969,7 @@ int mapParameters(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
          cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
 
       vector<int> argsPointsTo = in->getArgPointsToSet(paramSlot);
-      in->assign(symRefNumber, argsPointsTo);
+//      in->assign(symRefNumber, argsPointsTo);
    }
 
    return 0;
@@ -2046,7 +2046,7 @@ int processStore(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, vector<
    {
       cout << childNode->getGlobalIndex() << " visited already" << endl;
       vector<int> evaluatedNodeValue = evaluatedNodeValues.find(childNode)->second;
-      in->assign(node->getSymbolReference()->getReferenceNumber(), evaluatedNodeValue);
+      //in->assign(node->getSymbolReference()->getReferenceNumber(), evaluatedNodeValue);
       if (_runtimeVerifierDiagnostics)
          in->print();
    }
@@ -2107,162 +2107,6 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       TR::ILOpCodes opCode = usefulNode->getOpCodeValue();
       switch (opCode)
       {
-      case TR::New:
-      {
-         // process new here
-         //TODO: this needs to be a combination of the methodIndex-bci (use longint)
-         int v = evaluateAllocate(usefulNode);
-         evaluatedValues.push_back(v);
-         break;
-      }
-      case TR::astore:
-      {
-         // process store here
-         // astore has a single child denoting an address
-         TR::Node *storeChild = usefulNode->getFirstChild();
-         evaluatedValues = evaluateNode(in, storeChild, evaluatedNodeValues, visitCount);
-         // now we update the rho map for the symref
-         int storeSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
-         in->assign(storeSymRef, evaluatedValues);
-         // TODO: do astore's need an evaluated value? can there be pointers to astore nodes?
-
-         // if(_runtimeVerifierDiagnostics) in->print();
-         break;
-      }
-      case TR::aload:
-      {
-         // process load here
-         // an aload's evaluated value is simply the list of objects in the points-to set of its symref
-         int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
-         vector<Entry> pointsToSet = in->getPointsToSet(loadSymRef);
-         for (Entry entry : pointsToSet)
-         {
-            evaluatedValues.push_back(entry.bci);
-         }
-         break;
-      }
-
-      case TR::aloadi:
-      {
-         // take a look at this
-         //  #ifdef J9_PROJECT_SPECIFIC
-         //     if (node->getSymbolReference() == comp->getSymRefTab()->findVftSymbolRef())
-         //        TR::TreeEvaluator::generateVFTMaskInstruction(node, reg, cg);
-         //  #endif
-
-         // and also
-
-         // // also handles aloadi
-         // TR::Register *
-         // OMR::ARM64::TreeEvaluator::aloadEvaluator(TR::Node *node, TR::CodeGenerator *cg)
-
-         // lets do this !
-         // TODO: even if its a function table load, we need to handle it since it may have child nodes that have essential side-effects
-         // TODO: what will happen if we don't handle a given node the first time we encounter it? won't they get evaluated automatically the next time we encounter it?
-
-         TR::SymbolReference *symRef = usefulNode->getSymbolReference();
-         bool isUnresolved = symRef->isUnresolved();
-         IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
-
-         bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
-         IFDIAGPRINT << "isShadow = " << isShadow << endl;
-
-         int cpIndex = symRef->getCPIndex();
-         IFDIAGPRINT << "cp index = " << cpIndex << endl;
-
-         if (!isUnresolved && isShadow && cpIndex > 0)
-         {
-            cout << "I May be a field load!" << endl;
-
-            int32_t len;
-            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-
-            cout << "the field is " << fieldName << endl;
-
-            // now fetch the receiver object
-            TR::Node *valueNode = usefulNode->getFirstChild();
-            vector<int> values = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount);
-
-            // now the evaluated value of the ardbari will be the points to set for the receiver(s) and field (from sigma)
-            for (int receiverBCI : values)
-            {
-               vector<Entry> pointsToSet = in->getPointsToSet(receiverBCI, fieldName);
-               for (Entry entry : pointsToSet)
-               {
-                  evaluatedValues.push_back(entry.bci);
-               }
-            }
-         }
-
-         else
-            cout << "I may be a VFT load :(" << endl;
-
-         break;
-      }
-      case TR::awrtbari:
-      {
-         // process field store
-         // first we obtain the children of awrtbari
-         // obviously we only process if the RHS of the field write is a ref type
-
-         TR::Node *valueNode = usefulNode->getSecondChild();
-         if (valueNode->getDataType() == TR::Address)
-         {
-            // receiver
-            TR::Node *receiverNode = usefulNode->getFirstChild();
-            vector<int> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount);
-
-            // value
-            vector<int> valueNodeVals = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount);
-
-            // fetch the field being written to
-            // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
-            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-            // char *field = strtok((char *)fieldSig, ". ");
-            // field = strtok(NULL, ". ");
-
-            int32_t len;
-            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-
-            for (int receiverBCI : receiverNodeVals)
-            {
-               in->assign(receiverBCI, fieldName, valueNodeVals);
-            }
-         }
-         else
-         {
-            // we do not care, this is not storing a ref type
-         }
-
-         break;
-      }
-
-      case TR::ardbari:
-      {
-         // process field load
-
-         // the data type of the ardbari is guaranteed to be an address type
-         // fetch the field being read from
-         // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
-         const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-         char *field = strtok((char *)fieldSig, ". ");
-         field = strtok(NULL, ". ");
-
-         // now fetch the receiver object
-         TR::Node *valueNode = usefulNode->getFirstChild();
-         vector<int> values = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount);
-
-         // now the evaluated value of the ardbari will be the points to set for the receiver(s) and field (from sigma)
-         for (int receiverBCI : values)
-         {
-            vector<Entry> pointsToSet = in->getPointsToSet(receiverBCI, field);
-            for (Entry entry : pointsToSet)
-            {
-               evaluatedValues.push_back(entry.bci);
-            }
-         }
-      }
-
       case TR::vcalli:
       case TR::icalli:
       case TR::lcalli:
@@ -2271,53 +2115,13 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       case TR::acalli:
       case TR::calli:
       {
-
-         // instance calls
-         // create a copy of the in PTG to pass in to the called method
-         PointsToGraph *callSiteFlow = new PointsToGraph(*in);
-
-         // a convenience map to hold the points to sets of the arguments, to be passed into the called method
-         // key is the argument index
-
-         // the first child of an instance call node is the receiver (i.e. the 'this' pointer)
-         // TR::Node *receiverNode = usefulNode->getFirstChild();
-         // vector<int> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount);
-         // callSiteFlow->setArg(THISVAR, receiverVals);
-
-         // the remaining children correspond to the rest of the arguments
-         int numChildren = usefulNode->getNumChildren();
-         for (int i = 0; i < numChildren; i++)
-         {
-            TR::Node *argNode = usefulNode->getChild(i);
-            // there is no harm in leaving this as-is, but think about optimizing away the non-address args
-            vector<int> argNodeVals = evaluateNode(in, argNode, evaluatedNodeValues, visitCount);
-
-            callSiteFlow->setArg(i, argNodeVals);
+         if(usefulNode->getSymbol()->isResolvedMethod()) {
+            cout << "the method is resolved" << endl;
+         } else {
+            cout << "found an unresolved method" << endl;
          }
-
-         if (_runtimeVerifierDiagnostics)
-            callSiteFlow->print();
-
-         /*
-          * now we have an argsMap containing the argument info - we call verify for the called method all over again
-          *
-          * but before that, check to see if we need to analyze it
-          * details here - https://gist.github.com/shashinh/e6a2d035ab5df87d35fe6d8053cd6e89
-          *
-          */
-         // fetch the resolved method symbol of the called method
-         TR::ResolvedMethodSymbol *calledMethodSymbol = usefulNode->getSymbolReference()->getSymbol()->castToResolvedMethodSymbol();
-         TR_ASSERT_FATAL(calledMethodSymbol, "a called method is not resolved!");
-
-         // this doesn't seem to be needed?
-         // TR_ResolvedMethod *calledMethod = calledMethodSymbol->getResolvedMethod();
-
-         //         PointsToGraph * out = verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, calledMethodSymbol, "", "", in, false);
-
-         // TODO: now merge the interesting vars back to the PTG at the call site
-         // mapCallerFlowToCallee(out, in)
-
          break;
+
       }
 
       case TR::icall:
@@ -2328,71 +2132,18 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       case TR::call:
       case TR::vcall:
       {
-         // these are non-instance calls - handle in exactly the same way, minus the 'this' parm
-
-         // create a copy of the in PTG to pass in to the called method
-         PointsToGraph *callSiteFlow = new PointsToGraph(*in);
-
-         // kill off the args from the calling method
-         callSiteFlow->killArgs();
-
-         // kill off the locals of the calling method
-         // callSiteFlow->killRho();
-
-         // kill off the return of the calling method
-         // callSiteFlow->killReturn();
-
-         // a convenience map to hold the points to sets of the arguments, to be passed into the called method
-         // key is the argument index
-
-         // the remaining children correspond to the rest of the arguments
-         int numChildren = usefulNode->getNumChildren();
-         for (int i = 0; i < numChildren; i++)
-         {
-            TR::Node *argNode = usefulNode->getChild(i);
-            // there is no harm in leaving this as-is, but think about optimizing away the non-address args
-            vector<int> argNodeVals = evaluateNode(in, argNode, evaluatedNodeValues, visitCount);
-
-            callSiteFlow->setArg(i, argNodeVals);
+         if(usefulNode->getSymbol()->isResolvedMethod()) {
+            cout << "the method is resolved" << endl;
+         } else {
+            cout << "found an unresolved method" << endl;
          }
-
-         if (_runtimeVerifierDiagnostics)
-            callSiteFlow->print();
-
-         /*
-          * now we have an argsMap containing the argument info - we call verify for the called method all over again
-          *
-          * but before that, check to see if we need to analyze it
-          * details here - https://gist.github.com/shashinh/e6a2d035ab5df87d35fe6d8053cd6e89
-          *
-          */
-
-         TR::ResolvedMethodSymbol *calledMethodSymbol = usefulNode->getSymbolReference()->getSymbol()->castToResolvedMethodSymbol();
-         TR_ASSERT_FATAL(calledMethodSymbol, "a called method is not resolved!");
-
-         // PointsToGraph *outFlow = verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, calledMethodSymbol, "", "", in, false);
-
-         // TODO: now merge the interesting vars back to the PTG at the call site
-
          break;
       }
 
-      case TR::areturn:
-      {
-         // TODO: do return statements need any specific evaluation? Doesn't seem like we need to update their evaluated node values
-
-         TR::Node *childNode = usefulNode->getFirstChild();
-         vector<int> returnVals = evaluateNode(in, childNode, evaluatedNodeValues, visitCount);
-         // areturn nodes have one child - of an address type. Simply fetch its points to set and 'meet' (union) with the current points to set of the return var
-         vector<Entry> currentReturnPointsTo = in->getPointsToSet(RETURNVAR);
-         in->extend(RETURNVAR, returnVals);
-
-         break;
-      }
 
       default:
       {
-         TR_ASSERT_FATAL(true, "opcode %s not recognized", usefulNode->getOpCode().getName());
+//         TR_ASSERT_FATAL(true, "opcode %s not recognized", usefulNode->getOpCode().getName());
          break;
       }
       }
@@ -2445,6 +2196,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
    int methodIndex = getOrInsertMethodIndex(methodSignature);
    string fileName = "invariants/li" + std::to_string(methodIndex) + ".txt";
+   cout << "attempting to read loop invariant " << fileName << " " << methodSignature << endl;
    std::map<int, PointsToGraph> staticLoopInvariants = readLoopInvariants(fileName);
 
    // TODO: it'd be nice to encapsulate both of these into a context of sorts
@@ -2614,7 +2366,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
             cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by JIT-C" << endl;
 
          // verify has been invoked by the JIT-C - so we need to bottomize the incoming arguments
-         bottomizeParameters(methodSymbol, inFlow);
+//         bottomizeParameters(methodSymbol, inFlow);
          if (_runtimeVerifierDiagnostics)
             inFlow->print();
       }

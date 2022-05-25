@@ -23,8 +23,8 @@ antlrcpp::Any PTGBuilderVisitor::visitPtg(PTGParser::PtgContext *ctx)
     std::map <int, std::map <std::string, std::vector <Entry>>> fieldsMap;
 		if(entry->fields())
 			fieldsMap = entry->fields()->accept(this).as<std::map <int, std::map <std::string, std::vector <Entry>>>>();
-		PointsToGraph ptg(varsMap, fieldsMap);
-		staticKeyedPtg.insert(std::pair <int, PointsToGraph> (bci, ptg));
+//		PointsToGraph ptg(varsMap, fieldsMap);
+//		staticKeyedPtg.insert(std::pair <int, PointsToGraph> (bci, ptg));
 
 	}
 
