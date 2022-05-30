@@ -244,6 +244,19 @@ PointsToGraph::PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <i
 }
 
 
+PointsToGraph::PointsToGraph(const PointsToGraph &ptg) {
+    this->rho = ptg.rho;
+    this->sigma = ptg.sigma;
+}
+
 void PointsToGraph::printArgs() {
     cout << getArgsString();
+}
+
+void PointsToGraph::killRho() {
+    this->rho.clear();
+}
+
+void PointsToGraph::setBotReturn() {
+    assignBot(RETURNLOCAL);
 }

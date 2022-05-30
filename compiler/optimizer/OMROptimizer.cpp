@@ -2202,14 +2202,22 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
 	         if(!isHelperMethodCall) {
 	         const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
 	         
+               PointsToGraph *callSitePtg = new PointsToGraph(*in);
+               //kill all the locals and return local (i.e. retain only the Heap)
+               //TODO: confirm - does this simply mean set the Rho to empty map ?
+               callSitePtg->killRho();
+               callSitePtg->setBotReturn();
+
 	         if(usefulNode->getSymbol()->isResolvedMethod()) {
 	            cout << "the method is resolved" << endl;
 	            string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
 	            cout << sig << " is resolved" << endl;
 
                //TODO: called method is resolved. map the arguments and peek into it
-               PointsToGraph *callSitePtg = new PointsToGraph(*in);
-               //kill all the locals and return local (i.e. retain only the Heap)
+               if(_runtimeVerifierDiagnostics) {
+                  cout << "return bottomized, parameters mapped, here is the in ptg" << endl;
+                  callSitePtg->print();
+               }  
 	         } else {
 	            cout << "found an unresolved method " << methodName << endl;
                //TODO: method is not resolved, do
@@ -2389,11 +2397,12 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             // if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
            set <Entry> evaluatedValuesForNode = evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount, methodIndex);
             //quick test to make sure values are persisting b/w calls
-            if(_runtimeVerifierDiagnostics) {
-	           for(Entry e : evaluatedValuesForNode) {
-	              cout << e.getString() << endl;
-	           }
-            }
+            //UPDATE: they are!
+//            if(_runtimeVerifierDiagnostics) {
+//	           for(Entry e : evaluatedValuesForNode) {
+//	              cout << e.getString() << endl;
+//	           }
+//            }
             
 
             if(_runtimeVerifierDiagnostics) {

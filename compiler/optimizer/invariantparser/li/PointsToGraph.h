@@ -2,9 +2,11 @@
 #include "structs.h"
 using namespace std;
 
+#define RETURNLOCAL -99
+
 class PointsToGraph {
     private:
-        //TOOD: why did I make this a vector instead of a set?
+        //TODO: why did I make this a vector instead of a set?
         std::map <int, set <Entry> > rho;
         //TODO: sigma should be keyed by a caller-index--bci pair (to uniquely identify it)
         std::map <int, std::map <string, vector <Entry> > > sigma;
@@ -15,7 +17,7 @@ class PointsToGraph {
     public:
         PointsToGraph();
         PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <int, std::map <string, vector <Entry> > > sigma);
-
+        PointsToGraph(const PointsToGraph &ptg);
         std::map <int, std::set <Entry> > getRho();
         std::map <int, std::map <string, vector <Entry> > > getSigma();
         void setArg(int argIndex, set <Entry> values);
@@ -53,5 +55,9 @@ class PointsToGraph {
         //weak updates
         void extend(int symRef, vector<int> bcis);
         void killArgs();
+
+        void killRho();
+
+        void setBotReturn();
         
 };
