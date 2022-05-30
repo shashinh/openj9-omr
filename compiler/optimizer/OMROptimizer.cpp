@@ -2208,6 +2208,8 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
 	            cout << sig << " is resolved" << endl;
 
                //TODO: called method is resolved. map the arguments and peek into it
+               PointsToGraph *callSitePtg = new PointsToGraph(*in);
+               //kill all the locals and return local (i.e. retain only the Heap)
 	         } else {
 	            cout << "found an unresolved method " << methodName << endl;
                //TODO: method is not resolved, do
