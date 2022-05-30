@@ -38,7 +38,7 @@ vector <Entry> PointsToGraph::getPointsToSet(int bci, string field) {
     return res;
 }
 
-vector<int> PointsToGraph::getArgPointsToSet(int argIndex) {
+set <Entry> PointsToGraph::getArgPointsToSet(int argIndex) {
     return args[argIndex];
 }
 
@@ -118,9 +118,9 @@ string PointsToGraph::getArgsString(){
         res.append("\n");
         int symRef = varIterator->first;
         res.append(to_string(symRef)).append(": ");
-        auto pointsToSet = varIterator->second;
+        set <Entry> pointsToSet = varIterator->second;
         for(auto i : pointsToSet) {
-            res.append(to_string(i)).append(" ");
+            res.append(i.getString()).append(" ");
         }
         res.append("\n");
         varIterator++;
@@ -226,7 +226,7 @@ void PointsToGraph::extend(int symRef, vector<int> bcis){
     }
 }
 
-void PointsToGraph::setArg(int argIndex, vector<int> values) {
+void PointsToGraph::setArg(int argIndex, set <Entry> values) {
     args[argIndex] = values;
 }
 

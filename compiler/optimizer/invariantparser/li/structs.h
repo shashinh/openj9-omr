@@ -38,6 +38,7 @@ struct Entry {
         return res;
     }
 bool operator<(const Entry& e) const {
+
 	    if(this->type == Reference && e.type == Reference){
             return this->caller == e.caller ? this->bci < e.bci : this->caller < e.caller;
         } else {

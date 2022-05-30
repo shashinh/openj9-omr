@@ -1969,8 +1969,8 @@ int mapParameters(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
       if (_runtimeVerifierDiagnostics)
          cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
 
-      vector<int> argsPointsTo = in->getArgPointsToSet(paramSlot);
-//      in->assign(symRefNumber, argsPointsTo);
+      set <Entry> argsPointsTo = in->getArgPointsToSet(paramSlot);
+      in->assign(symRefNumber, argsPointsTo);
    }
 
    return 0;
@@ -2138,6 +2138,58 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
          // if(_runtimeVerifierDiagnostics) in->print();
          break;
       }
+      case TR::aload:
+      {
+         // process load here
+         // an aload's evaluated value is simply the list of objects in the points-to set of its symref
+         int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
+         set <Entry> pointsToSet = in->getPointsToSet(loadSymRef);
+         for (Entry entry : pointsToSet)
+         {
+            //TODO: use copy here
+            evaluatedValues.insert(entry);
+         }
+         break;
+      }
+      
+//      case TR::awrtbari:
+//      {
+//         // process field store
+//         // first we obtain the children of awrtbari
+//         // obviously we only process if the RHS of the field write is a ref type
+//
+//         TR::Node *valueNode = usefulNode->getSecondChild();
+//         if (valueNode->getDataType() == TR::Address)
+//         {
+//            // receiver
+//            TR::Node *receiverNode = usefulNode->getFirstChild();
+//            set <Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
+//
+//            // value
+//            set <Entry> valueNodeVals = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount, methodIndex);
+//
+//            // fetch the field being written to
+//            // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
+//            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+//            // char *field = strtok((char *)fieldSig, ". ");
+//            // field = strtok(NULL, ". ");
+//
+//            int32_t len;
+//            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
+//
+//            for (Entry receiverBCI : receiverNodeVals)
+//            {
+//               in->assign(receiverBCI, fieldName, valueNodeVals);
+//            }
+//         }
+//         else
+//         {
+//            // we do not care, this is not storing a ref type
+//         }
+//
+//         break;
+//      }
+
       case TR::vcalli:
       case TR::icalli:
       case TR::lcalli:
@@ -2146,10 +2198,22 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       case TR::acalli:
       case TR::calli:
       {
-         if(usefulNode->getSymbol()->isResolvedMethod()) {
-            cout << "the method is resolved" << endl;
-         } else {
-            cout << "found an unresolved method" << endl;
+         bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
+	         if(!isHelperMethodCall) {
+	         const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+	         
+	         if(usefulNode->getSymbol()->isResolvedMethod()) {
+	            cout << "the method is resolved" << endl;
+	            string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
+	            cout << sig << " is resolved" << endl;
+
+               //TODO: called method is resolved. map the arguments and peek into it
+	         } else {
+	            cout << "found an unresolved method " << methodName << endl;
+               //TODO: method is not resolved, do
+               //1. set return to BOT
+               //2. set all fields of all arguments to BOT (this includes the receiver, if applicable)
+	         } 
          }
          break;
 
@@ -2163,10 +2227,17 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       case TR::call:
       case TR::vcall:
       {
-         if(usefulNode->getSymbol()->isResolvedMethod()) {
-            cout << "the method is resolved" << endl;
-         } else {
-            cout << "found an unresolved method" << endl;
+         bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
+	         if(!isHelperMethodCall) {
+	         const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+	         
+	         if(usefulNode->getSymbol()->isResolvedMethod()) {
+	            cout << "the method is resolved" << endl;
+	            string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
+	            cout << sig << " is resolved" << endl;
+	         } else {
+	            cout << "found an unresolved method " << methodName << endl;
+	         } 
          }
          break;
       }
@@ -2415,7 +2486,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
             cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by JIT-C" << endl;
 
          // verify has been invoked by the JIT-C - so we need to bottomize the incoming arguments
-//         bottomizeParameters(methodSymbol, inFlow);
+         bottomizeParameters(methodSymbol, inFlow);
          if (_runtimeVerifierDiagnostics)
             inFlow->print();
       }

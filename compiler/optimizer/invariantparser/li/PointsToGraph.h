@@ -9,7 +9,7 @@ class PointsToGraph {
         //TODO: sigma should be keyed by a caller-index--bci pair (to uniquely identify it)
         std::map <int, std::map <string, vector <Entry> > > sigma;
         //this is a hack
-        std::map <int, std::vector<int> > args;
+        std::map <int, std::set <Entry> > args;
         int summarize(Entry * entry);
         string getHeader();
     public:
@@ -18,8 +18,8 @@ class PointsToGraph {
 
         std::map <int, std::set <Entry> > getRho();
         std::map <int, std::map <string, vector <Entry> > > getSigma();
-        void setArg(int argIndex, vector<int> values);
-        vector<int> getArgPointsToSet(int argIndex);
+        void setArg(int argIndex, set <Entry> values);
+        set <Entry> getArgPointsToSet(int argIndex);
         set <Entry> getPointsToSet (int symRef);
         vector <Entry> getPointsToSet (int bci, string field);
         int assignBot (int symRef);
