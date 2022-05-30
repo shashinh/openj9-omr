@@ -1,4 +1,4 @@
-grammar PTG;
+grammar LI;
 
 
 ptg: (entry ( ';' entry)* )? (NEWLINE | EOF);

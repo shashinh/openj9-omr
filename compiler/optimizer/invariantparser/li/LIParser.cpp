@@ -1,74 +1,74 @@
 
-// Generated from PTG.g4 by ANTLR 4.9.2
+// Generated from LI.g4 by ANTLR 4.9.2
 
 
-#include "PTGVisitor.h"
+#include "LIVisitor.h"
 
-#include "PTGParser.h"
+#include "LIParser.h"
 
 
 using namespace antlrcpp;
 using namespace antlr4;
 
-PTGParser::PTGParser(TokenStream *input) : Parser(input) {
+LIParser::LIParser(TokenStream *input) : Parser(input) {
   _interpreter = new atn::ParserATNSimulator(this, _atn, _decisionToDFA, _sharedContextCache);
 }
 
-PTGParser::~PTGParser() {
+LIParser::~LIParser() {
   delete _interpreter;
 }
 
-std::string PTGParser::getGrammarFileName() const {
-  return "PTG.g4";
+std::string LIParser::getGrammarFileName() const {
+  return "LI.g4";
 }
 
-const std::vector<std::string>& PTGParser::getRuleNames() const {
+const std::vector<std::string>& LIParser::getRuleNames() const {
   return _ruleNames;
 }
 
-dfa::Vocabulary& PTGParser::getVocabulary() const {
+dfa::Vocabulary& LIParser::getVocabulary() const {
   return _vocabulary;
 }
 
 
 //----------------- PtgContext ------------------------------------------------------------------
 
-PTGParser::PtgContext::PtgContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::PtgContext::PtgContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* PTGParser::PtgContext::NEWLINE() {
-  return getToken(PTGParser::NEWLINE, 0);
+tree::TerminalNode* LIParser::PtgContext::NEWLINE() {
+  return getToken(LIParser::NEWLINE, 0);
 }
 
-tree::TerminalNode* PTGParser::PtgContext::EOF() {
-  return getToken(PTGParser::EOF, 0);
+tree::TerminalNode* LIParser::PtgContext::EOF() {
+  return getToken(LIParser::EOF, 0);
 }
 
-std::vector<PTGParser::EntryContext *> PTGParser::PtgContext::entry() {
-  return getRuleContexts<PTGParser::EntryContext>();
+std::vector<LIParser::EntryContext *> LIParser::PtgContext::entry() {
+  return getRuleContexts<LIParser::EntryContext>();
 }
 
-PTGParser::EntryContext* PTGParser::PtgContext::entry(size_t i) {
-  return getRuleContext<PTGParser::EntryContext>(i);
-}
-
-
-size_t PTGParser::PtgContext::getRuleIndex() const {
-  return PTGParser::RulePtg;
+LIParser::EntryContext* LIParser::PtgContext::entry(size_t i) {
+  return getRuleContext<LIParser::EntryContext>(i);
 }
 
 
-antlrcpp::Any PTGParser::PtgContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::PtgContext::getRuleIndex() const {
+  return LIParser::RulePtg;
+}
+
+
+antlrcpp::Any LIParser::PtgContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitPtg(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::PtgContext* PTGParser::ptg() {
+LIParser::PtgContext* LIParser::ptg() {
   PtgContext *_localctx = _tracker.createInstance<PtgContext>(_ctx, getState());
-  enterRule(_localctx, 0, PTGParser::RulePtg);
+  enterRule(_localctx, 0, LIParser::RulePtg);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -84,15 +84,15 @@ PTGParser::PtgContext* PTGParser::ptg() {
     _errHandler->sync(this);
 
     _la = _input->LA(1);
-    if (_la == PTGParser::NUMS) {
+    if (_la == LIParser::NUMS) {
       setState(26);
       entry();
       setState(31);
       _errHandler->sync(this);
       _la = _input->LA(1);
-      while (_la == PTGParser::T__0) {
+      while (_la == LIParser::T__0) {
         setState(27);
-        match(PTGParser::T__0);
+        match(LIParser::T__0);
         setState(28);
         entry();
         setState(33);
@@ -102,9 +102,9 @@ PTGParser::PtgContext* PTGParser::ptg() {
     }
     setState(36);
     _la = _input->LA(1);
-    if (!(_la == PTGParser::EOF
+    if (!(_la == LIParser::EOF
 
-    || _la == PTGParser::NEWLINE)) {
+    || _la == LIParser::NEWLINE)) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -124,38 +124,38 @@ PTGParser::PtgContext* PTGParser::ptg() {
 
 //----------------- EntryContext ------------------------------------------------------------------
 
-PTGParser::EntryContext::EntryContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::EntryContext::EntryContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-PTGParser::BciKeyContext* PTGParser::EntryContext::bciKey() {
-  return getRuleContext<PTGParser::BciKeyContext>(0);
+LIParser::BciKeyContext* LIParser::EntryContext::bciKey() {
+  return getRuleContext<LIParser::BciKeyContext>(0);
 }
 
-PTGParser::VarsContext* PTGParser::EntryContext::vars() {
-  return getRuleContext<PTGParser::VarsContext>(0);
+LIParser::VarsContext* LIParser::EntryContext::vars() {
+  return getRuleContext<LIParser::VarsContext>(0);
 }
 
-PTGParser::FieldsContext* PTGParser::EntryContext::fields() {
-  return getRuleContext<PTGParser::FieldsContext>(0);
-}
-
-
-size_t PTGParser::EntryContext::getRuleIndex() const {
-  return PTGParser::RuleEntry;
+LIParser::FieldsContext* LIParser::EntryContext::fields() {
+  return getRuleContext<LIParser::FieldsContext>(0);
 }
 
 
-antlrcpp::Any PTGParser::EntryContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::EntryContext::getRuleIndex() const {
+  return LIParser::RuleEntry;
+}
+
+
+antlrcpp::Any LIParser::EntryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitEntry(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::EntryContext* PTGParser::entry() {
+LIParser::EntryContext* LIParser::entry() {
   EntryContext *_localctx = _tracker.createInstance<EntryContext>(_ctx, getState());
-  enterRule(_localctx, 2, PTGParser::RuleEntry);
+  enterRule(_localctx, 2, LIParser::RuleEntry);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -170,24 +170,24 @@ PTGParser::EntryContext* PTGParser::entry() {
     setState(38);
     bciKey();
     setState(39);
-    match(PTGParser::T__1);
+    match(LIParser::T__1);
     setState(40);
-    match(PTGParser::T__2);
+    match(LIParser::T__2);
     setState(41);
     vars();
     setState(42);
-    match(PTGParser::T__3);
+    match(LIParser::T__3);
     setState(47);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
-    if (_la == PTGParser::T__2) {
+    if (_la == LIParser::T__2) {
       setState(43);
-      match(PTGParser::T__2);
+      match(LIParser::T__2);
       setState(44);
       fields();
       setState(45);
-      match(PTGParser::T__3);
+      match(LIParser::T__3);
     }
    
   }
@@ -202,34 +202,34 @@ PTGParser::EntryContext* PTGParser::entry() {
 
 //----------------- VarsContext ------------------------------------------------------------------
 
-PTGParser::VarsContext::VarsContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::VarsContext::VarsContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-std::vector<PTGParser::VarentryContext *> PTGParser::VarsContext::varentry() {
-  return getRuleContexts<PTGParser::VarentryContext>();
+std::vector<LIParser::VarentryContext *> LIParser::VarsContext::varentry() {
+  return getRuleContexts<LIParser::VarentryContext>();
 }
 
-PTGParser::VarentryContext* PTGParser::VarsContext::varentry(size_t i) {
-  return getRuleContext<PTGParser::VarentryContext>(i);
-}
-
-
-size_t PTGParser::VarsContext::getRuleIndex() const {
-  return PTGParser::RuleVars;
+LIParser::VarentryContext* LIParser::VarsContext::varentry(size_t i) {
+  return getRuleContext<LIParser::VarentryContext>(i);
 }
 
 
-antlrcpp::Any PTGParser::VarsContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::VarsContext::getRuleIndex() const {
+  return LIParser::RuleVars;
+}
+
+
+antlrcpp::Any LIParser::VarsContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitVars(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::VarsContext* PTGParser::vars() {
+LIParser::VarsContext* LIParser::vars() {
   VarsContext *_localctx = _tracker.createInstance<VarsContext>(_ctx, getState());
-  enterRule(_localctx, 4, PTGParser::RuleVars);
+  enterRule(_localctx, 4, LIParser::RuleVars);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -245,15 +245,15 @@ PTGParser::VarsContext* PTGParser::vars() {
     _errHandler->sync(this);
 
     _la = _input->LA(1);
-    if (_la == PTGParser::NUMS) {
+    if (_la == LIParser::NUMS) {
       setState(49);
       varentry();
       setState(54);
       _errHandler->sync(this);
       _la = _input->LA(1);
-      while (_la == PTGParser::T__4) {
+      while (_la == LIParser::T__4) {
         setState(50);
-        match(PTGParser::T__4);
+        match(LIParser::T__4);
         setState(51);
         varentry();
         setState(56);
@@ -274,38 +274,38 @@ PTGParser::VarsContext* PTGParser::vars() {
 
 //----------------- VarentryContext ------------------------------------------------------------------
 
-PTGParser::VarentryContext::VarentryContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::VarentryContext::VarentryContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-PTGParser::BciKeyContext* PTGParser::VarentryContext::bciKey() {
-  return getRuleContext<PTGParser::BciKeyContext>(0);
+LIParser::BciKeyContext* LIParser::VarentryContext::bciKey() {
+  return getRuleContext<LIParser::BciKeyContext>(0);
 }
 
-std::vector<PTGParser::CiBciEntryContext *> PTGParser::VarentryContext::ciBciEntry() {
-  return getRuleContexts<PTGParser::CiBciEntryContext>();
+std::vector<LIParser::CiBciEntryContext *> LIParser::VarentryContext::ciBciEntry() {
+  return getRuleContexts<LIParser::CiBciEntryContext>();
 }
 
-PTGParser::CiBciEntryContext* PTGParser::VarentryContext::ciBciEntry(size_t i) {
-  return getRuleContext<PTGParser::CiBciEntryContext>(i);
-}
-
-
-size_t PTGParser::VarentryContext::getRuleIndex() const {
-  return PTGParser::RuleVarentry;
+LIParser::CiBciEntryContext* LIParser::VarentryContext::ciBciEntry(size_t i) {
+  return getRuleContext<LIParser::CiBciEntryContext>(i);
 }
 
 
-antlrcpp::Any PTGParser::VarentryContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::VarentryContext::getRuleIndex() const {
+  return LIParser::RuleVarentry;
+}
+
+
+antlrcpp::Any LIParser::VarentryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitVarentry(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::VarentryContext* PTGParser::varentry() {
+LIParser::VarentryContext* LIParser::varentry() {
   VarentryContext *_localctx = _tracker.createInstance<VarentryContext>(_ctx, getState());
-  enterRule(_localctx, 6, PTGParser::RuleVarentry);
+  enterRule(_localctx, 6, LIParser::RuleVarentry);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -320,16 +320,16 @@ PTGParser::VarentryContext* PTGParser::varentry() {
     setState(59);
     bciKey();
     setState(60);
-    match(PTGParser::T__1);
+    match(LIParser::T__1);
 
     setState(61);
     ciBciEntry();
     setState(66);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (_la == PTGParser::T__5) {
+    while (_la == LIParser::T__5) {
       setState(62);
-      match(PTGParser::T__5);
+      match(LIParser::T__5);
 
       setState(63);
       ciBciEntry();
@@ -350,34 +350,34 @@ PTGParser::VarentryContext* PTGParser::varentry() {
 
 //----------------- FieldsContext ------------------------------------------------------------------
 
-PTGParser::FieldsContext::FieldsContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::FieldsContext::FieldsContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-std::vector<PTGParser::FieldentryContext *> PTGParser::FieldsContext::fieldentry() {
-  return getRuleContexts<PTGParser::FieldentryContext>();
+std::vector<LIParser::FieldentryContext *> LIParser::FieldsContext::fieldentry() {
+  return getRuleContexts<LIParser::FieldentryContext>();
 }
 
-PTGParser::FieldentryContext* PTGParser::FieldsContext::fieldentry(size_t i) {
-  return getRuleContext<PTGParser::FieldentryContext>(i);
-}
-
-
-size_t PTGParser::FieldsContext::getRuleIndex() const {
-  return PTGParser::RuleFields;
+LIParser::FieldentryContext* LIParser::FieldsContext::fieldentry(size_t i) {
+  return getRuleContext<LIParser::FieldentryContext>(i);
 }
 
 
-antlrcpp::Any PTGParser::FieldsContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::FieldsContext::getRuleIndex() const {
+  return LIParser::RuleFields;
+}
+
+
+antlrcpp::Any LIParser::FieldsContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitFields(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::FieldsContext* PTGParser::fields() {
+LIParser::FieldsContext* LIParser::fields() {
   FieldsContext *_localctx = _tracker.createInstance<FieldsContext>(_ctx, getState());
-  enterRule(_localctx, 8, PTGParser::RuleFields);
+  enterRule(_localctx, 8, LIParser::RuleFields);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -393,15 +393,15 @@ PTGParser::FieldsContext* PTGParser::fields() {
     _errHandler->sync(this);
 
     _la = _input->LA(1);
-    if (_la == PTGParser::NUMS) {
+    if (_la == LIParser::NUMS) {
       setState(69);
       fieldentry();
       setState(74);
       _errHandler->sync(this);
       _la = _input->LA(1);
-      while (_la == PTGParser::T__4) {
+      while (_la == LIParser::T__4) {
         setState(70);
-        match(PTGParser::T__4);
+        match(LIParser::T__4);
         setState(71);
         fieldentry();
         setState(76);
@@ -422,42 +422,42 @@ PTGParser::FieldsContext* PTGParser::fields() {
 
 //----------------- FieldentryContext ------------------------------------------------------------------
 
-PTGParser::FieldentryContext::FieldentryContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::FieldentryContext::FieldentryContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-PTGParser::CallerIndexContext* PTGParser::FieldentryContext::callerIndex() {
-  return getRuleContext<PTGParser::CallerIndexContext>(0);
+LIParser::CallerIndexContext* LIParser::FieldentryContext::callerIndex() {
+  return getRuleContext<LIParser::CallerIndexContext>(0);
 }
 
-PTGParser::BciKeyContext* PTGParser::FieldentryContext::bciKey() {
-  return getRuleContext<PTGParser::BciKeyContext>(0);
+LIParser::BciKeyContext* LIParser::FieldentryContext::bciKey() {
+  return getRuleContext<LIParser::BciKeyContext>(0);
 }
 
-std::vector<PTGParser::FieldContext *> PTGParser::FieldentryContext::field() {
-  return getRuleContexts<PTGParser::FieldContext>();
+std::vector<LIParser::FieldContext *> LIParser::FieldentryContext::field() {
+  return getRuleContexts<LIParser::FieldContext>();
 }
 
-PTGParser::FieldContext* PTGParser::FieldentryContext::field(size_t i) {
-  return getRuleContext<PTGParser::FieldContext>(i);
-}
-
-
-size_t PTGParser::FieldentryContext::getRuleIndex() const {
-  return PTGParser::RuleFieldentry;
+LIParser::FieldContext* LIParser::FieldentryContext::field(size_t i) {
+  return getRuleContext<LIParser::FieldContext>(i);
 }
 
 
-antlrcpp::Any PTGParser::FieldentryContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::FieldentryContext::getRuleIndex() const {
+  return LIParser::RuleFieldentry;
+}
+
+
+antlrcpp::Any LIParser::FieldentryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitFieldentry(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::FieldentryContext* PTGParser::fieldentry() {
+LIParser::FieldentryContext* LIParser::fieldentry() {
   FieldentryContext *_localctx = _tracker.createInstance<FieldentryContext>(_ctx, getState());
-  enterRule(_localctx, 10, PTGParser::RuleFieldentry);
+  enterRule(_localctx, 10, LIParser::RuleFieldentry);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -472,11 +472,11 @@ PTGParser::FieldentryContext* PTGParser::fieldentry() {
     setState(79);
     callerIndex();
     setState(80);
-    match(PTGParser::T__6);
+    match(LIParser::T__6);
     setState(81);
     bciKey();
     setState(82);
-    match(PTGParser::T__2);
+    match(LIParser::T__2);
 
     setState(83);
     field();
@@ -484,9 +484,9 @@ PTGParser::FieldentryContext* PTGParser::fieldentry() {
     setState(88);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (_la == PTGParser::T__4) {
+    while (_la == LIParser::T__4) {
       setState(84);
-      match(PTGParser::T__4);
+      match(LIParser::T__4);
 
       setState(85);
       field();
@@ -495,7 +495,7 @@ PTGParser::FieldentryContext* PTGParser::fieldentry() {
       _la = _input->LA(1);
     }
     setState(91);
-    match(PTGParser::T__3);
+    match(LIParser::T__3);
    
   }
   catch (RecognitionException &e) {
@@ -509,38 +509,38 @@ PTGParser::FieldentryContext* PTGParser::fieldentry() {
 
 //----------------- FieldContext ------------------------------------------------------------------
 
-PTGParser::FieldContext::FieldContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::FieldContext::FieldContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-PTGParser::FieldKeyContext* PTGParser::FieldContext::fieldKey() {
-  return getRuleContext<PTGParser::FieldKeyContext>(0);
+LIParser::FieldKeyContext* LIParser::FieldContext::fieldKey() {
+  return getRuleContext<LIParser::FieldKeyContext>(0);
 }
 
-std::vector<PTGParser::CiBciEntryContext *> PTGParser::FieldContext::ciBciEntry() {
-  return getRuleContexts<PTGParser::CiBciEntryContext>();
+std::vector<LIParser::CiBciEntryContext *> LIParser::FieldContext::ciBciEntry() {
+  return getRuleContexts<LIParser::CiBciEntryContext>();
 }
 
-PTGParser::CiBciEntryContext* PTGParser::FieldContext::ciBciEntry(size_t i) {
-  return getRuleContext<PTGParser::CiBciEntryContext>(i);
-}
-
-
-size_t PTGParser::FieldContext::getRuleIndex() const {
-  return PTGParser::RuleField;
+LIParser::CiBciEntryContext* LIParser::FieldContext::ciBciEntry(size_t i) {
+  return getRuleContext<LIParser::CiBciEntryContext>(i);
 }
 
 
-antlrcpp::Any PTGParser::FieldContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::FieldContext::getRuleIndex() const {
+  return LIParser::RuleField;
+}
+
+
+antlrcpp::Any LIParser::FieldContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitField(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::FieldContext* PTGParser::field() {
+LIParser::FieldContext* LIParser::field() {
   FieldContext *_localctx = _tracker.createInstance<FieldContext>(_ctx, getState());
-  enterRule(_localctx, 12, PTGParser::RuleField);
+  enterRule(_localctx, 12, LIParser::RuleField);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -555,16 +555,16 @@ PTGParser::FieldContext* PTGParser::field() {
     setState(93);
     fieldKey();
     setState(94);
-    match(PTGParser::T__1);
+    match(LIParser::T__1);
 
     setState(95);
     ciBciEntry();
     setState(100);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (_la == PTGParser::T__5) {
+    while (_la == LIParser::T__5) {
       setState(96);
-      match(PTGParser::T__5);
+      match(LIParser::T__5);
 
       setState(97);
       ciBciEntry();
@@ -585,46 +585,46 @@ PTGParser::FieldContext* PTGParser::field() {
 
 //----------------- CiBciEntryContext ------------------------------------------------------------------
 
-PTGParser::CiBciEntryContext::CiBciEntryContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::CiBciEntryContext::CiBciEntryContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-PTGParser::CiEntriesContext* PTGParser::CiBciEntryContext::ciEntries() {
-  return getRuleContext<PTGParser::CiEntriesContext>(0);
+LIParser::CiEntriesContext* LIParser::CiBciEntryContext::ciEntries() {
+  return getRuleContext<LIParser::CiEntriesContext>(0);
 }
 
-tree::TerminalNode* PTGParser::CiBciEntryContext::STRING() {
-  return getToken(PTGParser::STRING, 0);
+tree::TerminalNode* LIParser::CiBciEntryContext::STRING() {
+  return getToken(LIParser::STRING, 0);
 }
 
-tree::TerminalNode* PTGParser::CiBciEntryContext::CONST() {
-  return getToken(PTGParser::CONST, 0);
+tree::TerminalNode* LIParser::CiBciEntryContext::CONST() {
+  return getToken(LIParser::CONST, 0);
 }
 
-tree::TerminalNode* PTGParser::CiBciEntryContext::GLOBAL() {
-  return getToken(PTGParser::GLOBAL, 0);
+tree::TerminalNode* LIParser::CiBciEntryContext::GLOBAL() {
+  return getToken(LIParser::GLOBAL, 0);
 }
 
-tree::TerminalNode* PTGParser::CiBciEntryContext::NIL() {
-  return getToken(PTGParser::NIL, 0);
-}
-
-
-size_t PTGParser::CiBciEntryContext::getRuleIndex() const {
-  return PTGParser::RuleCiBciEntry;
+tree::TerminalNode* LIParser::CiBciEntryContext::NIL() {
+  return getToken(LIParser::NIL, 0);
 }
 
 
-antlrcpp::Any PTGParser::CiBciEntryContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::CiBciEntryContext::getRuleIndex() const {
+  return LIParser::RuleCiBciEntry;
+}
+
+
+antlrcpp::Any LIParser::CiBciEntryContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitCiBciEntry(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::CiBciEntryContext* PTGParser::ciBciEntry() {
+LIParser::CiBciEntryContext* LIParser::ciBciEntry() {
   CiBciEntryContext *_localctx = _tracker.createInstance<CiBciEntryContext>(_ctx, getState());
-  enterRule(_localctx, 14, PTGParser::RuleCiBciEntry);
+  enterRule(_localctx, 14, LIParser::RuleCiBciEntry);
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -637,38 +637,38 @@ PTGParser::CiBciEntryContext* PTGParser::ciBciEntry() {
     setState(108);
     _errHandler->sync(this);
     switch (_input->LA(1)) {
-      case PTGParser::NUMS: {
+      case LIParser::NUMS: {
         enterOuterAlt(_localctx, 1);
         setState(103);
         ciEntries();
         break;
       }
 
-      case PTGParser::STRING: {
+      case LIParser::STRING: {
         enterOuterAlt(_localctx, 2);
         setState(104);
-        match(PTGParser::STRING);
+        match(LIParser::STRING);
         break;
       }
 
-      case PTGParser::CONST: {
+      case LIParser::CONST: {
         enterOuterAlt(_localctx, 3);
         setState(105);
-        match(PTGParser::CONST);
+        match(LIParser::CONST);
         break;
       }
 
-      case PTGParser::GLOBAL: {
+      case LIParser::GLOBAL: {
         enterOuterAlt(_localctx, 4);
         setState(106);
-        match(PTGParser::GLOBAL);
+        match(LIParser::GLOBAL);
         break;
       }
 
-      case PTGParser::NIL: {
+      case LIParser::NIL: {
         enterOuterAlt(_localctx, 5);
         setState(107);
-        match(PTGParser::NIL);
+        match(LIParser::NIL);
         break;
       }
 
@@ -688,38 +688,38 @@ PTGParser::CiBciEntryContext* PTGParser::ciBciEntry() {
 
 //----------------- CiEntriesContext ------------------------------------------------------------------
 
-PTGParser::CiEntriesContext::CiEntriesContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::CiEntriesContext::CiEntriesContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-PTGParser::CallerIndexContext* PTGParser::CiEntriesContext::callerIndex() {
-  return getRuleContext<PTGParser::CallerIndexContext>(0);
+LIParser::CallerIndexContext* LIParser::CiEntriesContext::callerIndex() {
+  return getRuleContext<LIParser::CallerIndexContext>(0);
 }
 
-std::vector<PTGParser::BciValContext *> PTGParser::CiEntriesContext::bciVal() {
-  return getRuleContexts<PTGParser::BciValContext>();
+std::vector<LIParser::BciValContext *> LIParser::CiEntriesContext::bciVal() {
+  return getRuleContexts<LIParser::BciValContext>();
 }
 
-PTGParser::BciValContext* PTGParser::CiEntriesContext::bciVal(size_t i) {
-  return getRuleContext<PTGParser::BciValContext>(i);
-}
-
-
-size_t PTGParser::CiEntriesContext::getRuleIndex() const {
-  return PTGParser::RuleCiEntries;
+LIParser::BciValContext* LIParser::CiEntriesContext::bciVal(size_t i) {
+  return getRuleContext<LIParser::BciValContext>(i);
 }
 
 
-antlrcpp::Any PTGParser::CiEntriesContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::CiEntriesContext::getRuleIndex() const {
+  return LIParser::RuleCiEntries;
+}
+
+
+antlrcpp::Any LIParser::CiEntriesContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitCiEntries(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::CiEntriesContext* PTGParser::ciEntries() {
+LIParser::CiEntriesContext* LIParser::ciEntries() {
   CiEntriesContext *_localctx = _tracker.createInstance<CiEntriesContext>(_ctx, getState());
-  enterRule(_localctx, 16, PTGParser::RuleCiEntries);
+  enterRule(_localctx, 16, LIParser::RuleCiEntries);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -734,16 +734,16 @@ PTGParser::CiEntriesContext* PTGParser::ciEntries() {
     setState(110);
     callerIndex();
     setState(111);
-    match(PTGParser::T__6);
+    match(LIParser::T__6);
 
     setState(112);
     bciVal();
     setState(117);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (_la == PTGParser::T__7) {
+    while (_la == LIParser::T__7) {
       setState(113);
-      match(PTGParser::T__7);
+      match(LIParser::T__7);
 
       setState(114);
       bciVal();
@@ -764,30 +764,30 @@ PTGParser::CiEntriesContext* PTGParser::ciEntries() {
 
 //----------------- CallerIndexContext ------------------------------------------------------------------
 
-PTGParser::CallerIndexContext::CallerIndexContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::CallerIndexContext::CallerIndexContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* PTGParser::CallerIndexContext::NUMS() {
-  return getToken(PTGParser::NUMS, 0);
+tree::TerminalNode* LIParser::CallerIndexContext::NUMS() {
+  return getToken(LIParser::NUMS, 0);
 }
 
 
-size_t PTGParser::CallerIndexContext::getRuleIndex() const {
-  return PTGParser::RuleCallerIndex;
+size_t LIParser::CallerIndexContext::getRuleIndex() const {
+  return LIParser::RuleCallerIndex;
 }
 
 
-antlrcpp::Any PTGParser::CallerIndexContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+antlrcpp::Any LIParser::CallerIndexContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitCallerIndex(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::CallerIndexContext* PTGParser::callerIndex() {
+LIParser::CallerIndexContext* LIParser::callerIndex() {
   CallerIndexContext *_localctx = _tracker.createInstance<CallerIndexContext>(_ctx, getState());
-  enterRule(_localctx, 18, PTGParser::RuleCallerIndex);
+  enterRule(_localctx, 18, LIParser::RuleCallerIndex);
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -799,7 +799,7 @@ PTGParser::CallerIndexContext* PTGParser::callerIndex() {
   try {
     enterOuterAlt(_localctx, 1);
     setState(120);
-    match(PTGParser::NUMS);
+    match(LIParser::NUMS);
    
   }
   catch (RecognitionException &e) {
@@ -813,30 +813,30 @@ PTGParser::CallerIndexContext* PTGParser::callerIndex() {
 
 //----------------- BciKeyContext ------------------------------------------------------------------
 
-PTGParser::BciKeyContext::BciKeyContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::BciKeyContext::BciKeyContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* PTGParser::BciKeyContext::NUMS() {
-  return getToken(PTGParser::NUMS, 0);
+tree::TerminalNode* LIParser::BciKeyContext::NUMS() {
+  return getToken(LIParser::NUMS, 0);
 }
 
 
-size_t PTGParser::BciKeyContext::getRuleIndex() const {
-  return PTGParser::RuleBciKey;
+size_t LIParser::BciKeyContext::getRuleIndex() const {
+  return LIParser::RuleBciKey;
 }
 
 
-antlrcpp::Any PTGParser::BciKeyContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+antlrcpp::Any LIParser::BciKeyContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitBciKey(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::BciKeyContext* PTGParser::bciKey() {
+LIParser::BciKeyContext* LIParser::bciKey() {
   BciKeyContext *_localctx = _tracker.createInstance<BciKeyContext>(_ctx, getState());
-  enterRule(_localctx, 20, PTGParser::RuleBciKey);
+  enterRule(_localctx, 20, LIParser::RuleBciKey);
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -848,7 +848,7 @@ PTGParser::BciKeyContext* PTGParser::bciKey() {
   try {
     enterOuterAlt(_localctx, 1);
     setState(122);
-    match(PTGParser::NUMS);
+    match(LIParser::NUMS);
    
   }
   catch (RecognitionException &e) {
@@ -862,34 +862,34 @@ PTGParser::BciKeyContext* PTGParser::bciKey() {
 
 //----------------- BciValContext ------------------------------------------------------------------
 
-PTGParser::BciValContext::BciValContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::BciValContext::BciValContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* PTGParser::BciValContext::NUMS() {
-  return getToken(PTGParser::NUMS, 0);
+tree::TerminalNode* LIParser::BciValContext::NUMS() {
+  return getToken(LIParser::NUMS, 0);
 }
 
-tree::TerminalNode* PTGParser::BciValContext::NIL() {
-  return getToken(PTGParser::NIL, 0);
-}
-
-
-size_t PTGParser::BciValContext::getRuleIndex() const {
-  return PTGParser::RuleBciVal;
+tree::TerminalNode* LIParser::BciValContext::NIL() {
+  return getToken(LIParser::NIL, 0);
 }
 
 
-antlrcpp::Any PTGParser::BciValContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+size_t LIParser::BciValContext::getRuleIndex() const {
+  return LIParser::RuleBciVal;
+}
+
+
+antlrcpp::Any LIParser::BciValContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitBciVal(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::BciValContext* PTGParser::bciVal() {
+LIParser::BciValContext* LIParser::bciVal() {
   BciValContext *_localctx = _tracker.createInstance<BciValContext>(_ctx, getState());
-  enterRule(_localctx, 22, PTGParser::RuleBciVal);
+  enterRule(_localctx, 22, LIParser::RuleBciVal);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -903,9 +903,9 @@ PTGParser::BciValContext* PTGParser::bciVal() {
     enterOuterAlt(_localctx, 1);
     setState(124);
     _la = _input->LA(1);
-    if (!(_la == PTGParser::NIL
+    if (!(_la == LIParser::NIL
 
-    || _la == PTGParser::NUMS)) {
+    || _la == LIParser::NUMS)) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -925,30 +925,30 @@ PTGParser::BciValContext* PTGParser::bciVal() {
 
 //----------------- FieldKeyContext ------------------------------------------------------------------
 
-PTGParser::FieldKeyContext::FieldKeyContext(ParserRuleContext *parent, size_t invokingState)
+LIParser::FieldKeyContext::FieldKeyContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* PTGParser::FieldKeyContext::ALPHAS() {
-  return getToken(PTGParser::ALPHAS, 0);
+tree::TerminalNode* LIParser::FieldKeyContext::ALPHAS() {
+  return getToken(LIParser::ALPHAS, 0);
 }
 
 
-size_t PTGParser::FieldKeyContext::getRuleIndex() const {
-  return PTGParser::RuleFieldKey;
+size_t LIParser::FieldKeyContext::getRuleIndex() const {
+  return LIParser::RuleFieldKey;
 }
 
 
-antlrcpp::Any PTGParser::FieldKeyContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<PTGVisitor*>(visitor))
+antlrcpp::Any LIParser::FieldKeyContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<LIVisitor*>(visitor))
     return parserVisitor->visitFieldKey(this);
   else
     return visitor->visitChildren(this);
 }
 
-PTGParser::FieldKeyContext* PTGParser::fieldKey() {
+LIParser::FieldKeyContext* LIParser::fieldKey() {
   FieldKeyContext *_localctx = _tracker.createInstance<FieldKeyContext>(_ctx, getState());
-  enterRule(_localctx, 24, PTGParser::RuleFieldKey);
+  enterRule(_localctx, 24, LIParser::RuleFieldKey);
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -960,7 +960,7 @@ PTGParser::FieldKeyContext* PTGParser::fieldKey() {
   try {
     enterOuterAlt(_localctx, 1);
     setState(126);
-    match(PTGParser::ALPHAS);
+    match(LIParser::ALPHAS);
    
   }
   catch (RecognitionException &e) {
@@ -973,33 +973,33 @@ PTGParser::FieldKeyContext* PTGParser::fieldKey() {
 }
 
 // Static vars and initialization.
-std::vector<dfa::DFA> PTGParser::_decisionToDFA;
-atn::PredictionContextCache PTGParser::_sharedContextCache;
+std::vector<dfa::DFA> LIParser::_decisionToDFA;
+atn::PredictionContextCache LIParser::_sharedContextCache;
 
 // We own the ATN which in turn owns the ATN states.
-atn::ATN PTGParser::_atn;
-std::vector<uint16_t> PTGParser::_serializedATN;
+atn::ATN LIParser::_atn;
+std::vector<uint16_t> LIParser::_serializedATN;
 
-std::vector<std::string> PTGParser::_ruleNames = {
+std::vector<std::string> LIParser::_ruleNames = {
   "ptg", "entry", "vars", "varentry", "fields", "fieldentry", "field", "ciBciEntry", 
   "ciEntries", "callerIndex", "bciKey", "bciVal", "fieldKey"
 };
 
-std::vector<std::string> PTGParser::_literalNames = {
+std::vector<std::string> LIParser::_literalNames = {
   "", "';'", "':'", "'('", "')'", "','", "' '", "'-'", "'.'", "'N'", "'S'", 
   "'C'", "'G'"
 };
 
-std::vector<std::string> PTGParser::_symbolicNames = {
+std::vector<std::string> LIParser::_symbolicNames = {
   "", "", "", "", "", "", "", "", "", "NIL", "STRING", "CONST", "GLOBAL", 
   "NUMS", "ALPHAS", "NEWLINE", "ALL"
 };
 
-dfa::Vocabulary PTGParser::_vocabulary(_literalNames, _symbolicNames);
+dfa::Vocabulary LIParser::_vocabulary(_literalNames, _symbolicNames);
 
-std::vector<std::string> PTGParser::_tokenNames;
+std::vector<std::string> LIParser::_tokenNames;
 
-PTGParser::Initializer::Initializer() {
+LIParser::Initializer::Initializer() {
 	for (size_t i = 0; i < _symbolicNames.size(); ++i) {
 		std::string name = _vocabulary.getLiteralName(i);
 		if (name.empty()) {
@@ -1117,4 +1117,4 @@ PTGParser::Initializer::Initializer() {
   }
 }
 
-PTGParser::Initializer PTGParser::_init;
+LIParser::Initializer LIParser::_init;

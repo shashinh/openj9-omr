@@ -23,7 +23,7 @@
 
 #include <iostream>
 //#include "ptgparser/structs.h"
-#include "ptgparser/PointsToGraph.h"
+#include "invariantparser/li/PointsToGraph.h"
 #include <map>
 #include <queue>
 #include "il/ParameterSymbol.hpp"
@@ -140,8 +140,9 @@ using namespace OMR; // Note: used here only to avoid having to prepend all opts
 #define MAX_LOCAL_OPTS_ITERS 5
 
 extern void testMethod();
-extern map<string, int> readMethodIndices();
-extern map<int, PointsToGraph> readLoopInvariants(string fileName);
+extern map <string, int> readMethodIndices();
+extern map <int, PointsToGraph> readLoopInvariant(string fileName);
+extern map <int, set <Entry> > readCallsiteInvariant(string fileName);
 
 const OptimizationStrategy localValuePropagationOpts[] =
     {
@@ -2057,13 +2058,19 @@ int processStore(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, vector<
 #define THISVAR 0
 #define RETURNVAR -77
 
-int evaluateAllocate(TR::Node *node)
+Entry evaluateAllocate(TR::Node *node, int methodIndex)
 {
    if (_runtimeVerifierDiagnostics)
       cout << "evaluated an allocation node at n" << node->getGlobalIndex() << "n" << endl;
    int allocationBCI = node->getByteCodeIndex();
+   int callerIndex = methodIndex;
 
-   return allocationBCI;
+   Entry entry;
+   entry.bci = allocationBCI;
+   entry.caller = methodIndex;
+   entry.type = Reference;
+
+   return entry;
 }
 
 PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp, TR::ResolvedMethodSymbol *methodSymbol,
@@ -2084,10 +2091,10 @@ int getOrInsertMethodIndex(string methodSignature)
 }
 
 // recursively evaluates a node and returns its evaluated value. it may have a side effect of updating the points-to maps.
-vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, vector<int>> &evaluatedNodeValues, int visitCount)
+set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set <Entry> > &evaluatedNodeValues, int visitCount, int methodIndex)
 {
 
-   vector<int> evaluatedValues;
+   set <Entry> evaluatedValues;
 
    TR::Node *usefulNode = getUsefulNode(node);
 
@@ -2107,6 +2114,30 @@ vector<int> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       TR::ILOpCodes opCode = usefulNode->getOpCodeValue();
       switch (opCode)
       {
+      case TR::New:
+      {
+         // process new here
+         //TODO: this needs to be a combination of the methodIndex-bci (use longint)
+         Entry e = evaluateAllocate(usefulNode, methodIndex);
+         evaluatedValues.insert(e);
+         break;
+      }
+
+      case TR::astore:
+      {
+         // process store here
+         // astore has a single child denoting an address
+         TR::Node *storeChild = usefulNode->getFirstChild();
+         evaluatedValues = evaluateNode(in, storeChild, evaluatedNodeValues, visitCount, methodIndex);
+         // now we update the rho map for the symref
+         // note that this is a strong update
+         int storeSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
+         in->assign(storeSymRef, evaluatedValues);
+         // TODO: do astore's need an evaluated value? can there be pointers to astore nodes?
+
+         // if(_runtimeVerifierDiagnostics) in->print();
+         break;
+      }
       case TR::vcalli:
       case TR::icalli:
       case TR::lcalli:
@@ -2195,9 +2226,13 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    // load in the loop invariants for this method
       string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
    int methodIndex = getOrInsertMethodIndex(methodSignature);
-   string fileName = "invariants/li" + std::to_string(methodIndex) + ".txt";
-   cout << "attempting to read loop invariant " << fileName << " " << methodSignature << endl;
-   std::map<int, PointsToGraph> staticLoopInvariants = readLoopInvariants(fileName);
+   string loopInvariantFileName = "invariants/li" + std::to_string(methodIndex) + ".txt";
+   IFDIAGPRINT << "attempting to read loop invariant " << loopInvariantFileName << " " << methodSignature << endl;
+   std::map<int, PointsToGraph> staticLoopInvariants; /* = readLoopInvariant(loopInvariantFileName); */
+
+   string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
+   IFDIAGPRINT << "attempting to read callsite invariant " << callsiteInvariantFileName <<  " " << methodSignature << endl;
+   std::map<int, set <Entry> > staticCallSiteInvariant; /*= readCallsiteInvariant(callsiteInvariantFileName); */
 
    // TODO: it'd be nice to encapsulate both of these into a context of sorts
    // a collection of all the in-PTGs, keyed by the bci of the instruction
@@ -2225,7 +2260,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
    // not technically needed. We can look to see if this block has an Out-PTG
    // set<int> visitedBlocks;
-   std::map<TR::Node *, vector<int>> evaluatedNodeValues;
+   std::map<TR::Node *, set <Entry> > evaluatedNodeValues;
 
    while (!blockProcessingOrder.empty())
    {
@@ -2279,12 +2314,22 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             //  }
 
             // if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
-            evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount);
+           set <Entry> evaluatedValuesForNode = evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount, methodIndex);
+            //quick test to make sure values are persisting b/w calls
+            if(_runtimeVerifierDiagnostics) {
+	           for(Entry e : evaluatedValuesForNode) {
+	              cout << e.getString() << endl;
+	           }
+            }
+            
 
-            if(_runtimeVerifierDiagnostics)
+            if(_runtimeVerifierDiagnostics) {
+               cout << "processed evaluate node" << endl;
                localRunningPTG->print();
+            }
 
             // lets store away the running ptg as the out of the current bci
+            // by design of the algorithm, the outs of any BB will/should never change
             outs[nodeBCI] = new PointsToGraph(*localRunningPTG);
          }
       }
@@ -2314,6 +2359,8 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
                                       std::string className = "", std::string methodName = "", PointsToGraph *inFlow = NULL, bool isInvokedByJITC = true)
 {
 
+   string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
+   cout << "analyzing method " << methodSignature << endl;
    if (!_runtimeVerifierDiagnostics)
       _runtimeVerifierDiagnostics = feGetEnv("TR_runtimeVerifyDiag") != NULL;
 
@@ -2329,9 +2376,11 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
    //TODO: use the standardized method signature here, no need for another specially formatted string
    std::string sig = className + "." + methodName;
    bool analyzed = false;
-   if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end())
+   if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end()) {
       // this method has already been analyzed
+      cout << "\talready analyzed" << endl;
       analyzed = true;
+   }
    else
       _runtimeVerifiedMethods.insert(sig);
 

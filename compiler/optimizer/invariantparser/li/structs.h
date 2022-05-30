@@ -37,11 +37,15 @@ struct Entry {
 
         return res;
     }
+bool operator<(const Entry& e) const {
+	    if(this->type == Reference && e.type == Reference){
+            return this->caller == e.caller ? this->bci < e.bci : this->caller < e.caller;
+        } else {
+            return this->type < e.type;
+        }
+	}
 };
 
-//this enables usage of an Entry as a key to a sigma set
-inline bool operator<(const Entry& x, const Entry& y) {
-    return x.caller != y.caller ? x.caller < y.caller : x.bci < y.bci;
-}
+
 
 #endif

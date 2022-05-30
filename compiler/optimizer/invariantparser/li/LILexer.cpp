@@ -1,50 +1,50 @@
 
-// Generated from PTG.g4 by ANTLR 4.9.2
+// Generated from LI.g4 by ANTLR 4.9.2
 
 
-#include "PTGLexer.h"
+#include "LILexer.h"
 
 
 using namespace antlr4;
 
 
-PTGLexer::PTGLexer(CharStream *input) : Lexer(input) {
+LILexer::LILexer(CharStream *input) : Lexer(input) {
   _interpreter = new atn::LexerATNSimulator(this, _atn, _decisionToDFA, _sharedContextCache);
 }
 
-PTGLexer::~PTGLexer() {
+LILexer::~LILexer() {
   delete _interpreter;
 }
 
-std::string PTGLexer::getGrammarFileName() const {
-  return "PTG.g4";
+std::string LILexer::getGrammarFileName() const {
+  return "LI.g4";
 }
 
-const std::vector<std::string>& PTGLexer::getRuleNames() const {
+const std::vector<std::string>& LILexer::getRuleNames() const {
   return _ruleNames;
 }
 
-const std::vector<std::string>& PTGLexer::getChannelNames() const {
+const std::vector<std::string>& LILexer::getChannelNames() const {
   return _channelNames;
 }
 
-const std::vector<std::string>& PTGLexer::getModeNames() const {
+const std::vector<std::string>& LILexer::getModeNames() const {
   return _modeNames;
 }
 
-const std::vector<std::string>& PTGLexer::getTokenNames() const {
+const std::vector<std::string>& LILexer::getTokenNames() const {
   return _tokenNames;
 }
 
-dfa::Vocabulary& PTGLexer::getVocabulary() const {
+dfa::Vocabulary& LILexer::getVocabulary() const {
   return _vocabulary;
 }
 
-const std::vector<uint16_t> PTGLexer::getSerializedATN() const {
+const std::vector<uint16_t> LILexer::getSerializedATN() const {
   return _serializedATN;
 }
 
-const atn::ATN& PTGLexer::getATN() const {
+const atn::ATN& LILexer::getATN() const {
   return _atn;
 }
 
@@ -52,41 +52,41 @@ const atn::ATN& PTGLexer::getATN() const {
 
 
 // Static vars and initialization.
-std::vector<dfa::DFA> PTGLexer::_decisionToDFA;
-atn::PredictionContextCache PTGLexer::_sharedContextCache;
+std::vector<dfa::DFA> LILexer::_decisionToDFA;
+atn::PredictionContextCache LILexer::_sharedContextCache;
 
 // We own the ATN which in turn owns the ATN states.
-atn::ATN PTGLexer::_atn;
-std::vector<uint16_t> PTGLexer::_serializedATN;
+atn::ATN LILexer::_atn;
+std::vector<uint16_t> LILexer::_serializedATN;
 
-std::vector<std::string> PTGLexer::_ruleNames = {
+std::vector<std::string> LILexer::_ruleNames = {
   "T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "NIL", 
   "STRING", "CONST", "GLOBAL", "NUMS", "ALPHAS", "NEWLINE", "ALL"
 };
 
-std::vector<std::string> PTGLexer::_channelNames = {
+std::vector<std::string> LILexer::_channelNames = {
   "DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 };
 
-std::vector<std::string> PTGLexer::_modeNames = {
+std::vector<std::string> LILexer::_modeNames = {
   "DEFAULT_MODE"
 };
 
-std::vector<std::string> PTGLexer::_literalNames = {
+std::vector<std::string> LILexer::_literalNames = {
   "", "';'", "':'", "'('", "')'", "','", "' '", "'-'", "'.'", "'N'", "'S'", 
   "'C'", "'G'"
 };
 
-std::vector<std::string> PTGLexer::_symbolicNames = {
+std::vector<std::string> LILexer::_symbolicNames = {
   "", "", "", "", "", "", "", "", "", "NIL", "STRING", "CONST", "GLOBAL", 
   "NUMS", "ALPHAS", "NEWLINE", "ALL"
 };
 
-dfa::Vocabulary PTGLexer::_vocabulary(_literalNames, _symbolicNames);
+dfa::Vocabulary LILexer::_vocabulary(_literalNames, _symbolicNames);
 
-std::vector<std::string> PTGLexer::_tokenNames;
+std::vector<std::string> LILexer::_tokenNames;
 
-PTGLexer::Initializer::Initializer() {
+LILexer::Initializer::Initializer() {
   // This code could be in a static initializer lambda, but VS doesn't allow access to private class members from there.
 	for (size_t i = 0; i < _symbolicNames.size(); ++i) {
 		std::string name = _vocabulary.getLiteralName(i);
@@ -176,4 +176,4 @@ PTGLexer::Initializer::Initializer() {
   }
 }
 
-PTGLexer::Initializer PTGLexer::_init;
+LILexer::Initializer LILexer::_init;

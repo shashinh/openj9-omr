@@ -1,5 +1,5 @@
-#include "PTGBuilderVisitor.h"
-#include "PTGBaseVisitor.h"
+#include "LIBuilderVisitor.h"
+#include "LIBaseVisitor.h"
 #include <algorithm>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,7 +10,7 @@ using namespace std;
 using namespace antlrcpp;
 
 
-antlrcpp::Any PTGBuilderVisitor::visitPtg(PTGParser::PtgContext *ctx)
+antlrcpp::Any LIBuilderVisitor::visitPtg(LIParser::PtgContext *ctx)
 {
 	//a map of ptgs keyed by locations - represented by bci's in the method
 	std::map<int, PointsToGraph> staticKeyedPtg;
@@ -19,19 +19,19 @@ antlrcpp::Any PTGBuilderVisitor::visitPtg(PTGParser::PtgContext *ctx)
 		//cout << "invoking bciKey()->accept(this)" << endl;
 		int bci = entry->bciKey()->accept(this).as<int>();
 		//cout << "completed bciKey()->accept(this)" << endl;
-		std::map<int, std::vector<Entry>> varsMap = entry->vars()->accept(this).as<std::map<int, std::vector<Entry>>>();
+		std::map<int, std::set <Entry> > varsMap = entry->vars()->accept(this).as<std::map <int, std::set <Entry> > >();
     std::map <int, std::map <std::string, std::vector <Entry>>> fieldsMap;
 		if(entry->fields())
 			fieldsMap = entry->fields()->accept(this).as<std::map <int, std::map <std::string, std::vector <Entry>>>>();
-//		PointsToGraph ptg(varsMap, fieldsMap);
-//		staticKeyedPtg.insert(std::pair <int, PointsToGraph> (bci, ptg));
+		PointsToGraph ptg(varsMap, fieldsMap);
+		staticKeyedPtg.insert(std::pair <int, PointsToGraph> (bci, ptg));
 
 	}
 
 	return staticKeyedPtg;
 }
 
-std::vector<Entry> PTGBuilderVisitor::processciBciEntrys(std::vector<PTGParser::CiBciEntryContext *> ctx) {
+std::vector<Entry> LIBuilderVisitor::processciBciEntrys(std::vector<LIParser::CiBciEntryContext *> ctx) {
 
 		std::vector<Entry> entries;
 		for(auto entry : ctx){
@@ -70,7 +70,7 @@ std::vector<Entry> PTGBuilderVisitor::processciBciEntrys(std::vector<PTGParser::
 
 		return entries;
 }
-antlrcpp::Any PTGBuilderVisitor::visitVars(PTGParser::VarsContext *ctx)
+antlrcpp::Any LIBuilderVisitor::visitVars(LIParser::VarsContext *ctx)
 {
 	std::map<int, std::vector<Entry>> varsMap;
 	for(auto varEntry : ctx->varentry()){
@@ -116,7 +116,7 @@ antlrcpp::Any PTGBuilderVisitor::visitVars(PTGParser::VarsContext *ctx)
 	return varsMap;
 }
 
-antlrcpp::Any PTGBuilderVisitor::visitFields(PTGParser::FieldsContext *ctx)
+antlrcpp::Any LIBuilderVisitor::visitFields(LIParser::FieldsContext *ctx)
 {
     std::map <int, std::map <std::string, std::vector <Entry>>> fieldsMap;
 
@@ -161,16 +161,16 @@ antlrcpp::Any PTGBuilderVisitor::visitFields(PTGParser::FieldsContext *ctx)
 	
 }
 
-antlrcpp::Any PTGBuilderVisitor::visitBciKey(PTGParser::BciKeyContext *ctx)
+antlrcpp::Any LIBuilderVisitor::visitBciKey(LIParser::BciKeyContext *ctx)
 {
-	//cout << "entered visitBciKey(PTGParser::BciKeyContext *ctx)" << endl;
+	//cout << "entered visitBciKey(LIParser::BciKeyContext *ctx)" << endl;
 	int bci = stoi(ctx->NUMS()->toString());
 	//cout << "bci key is " << bci << endl;
 	//cout << str << endl;
 	return bci;
 }
 
-antlrcpp::Any PTGBuilderVisitor::visitBciVal(PTGParser::BciValContext *ctx)
+antlrcpp::Any LIBuilderVisitor::visitBciVal(LIParser::BciValContext *ctx)
 {
 	auto res = ctx->NUMS() != NULL ? ctx->NUMS()->toString() : ctx->NIL()->toString();
 	//cout << res << endl;
@@ -179,12 +179,12 @@ antlrcpp::Any PTGBuilderVisitor::visitBciVal(PTGParser::BciValContext *ctx)
 	return res;
 }
 
-// antlrcpp::Any PTGBuilderVisitor::visitBciKeyField(PTGParser::BciKeyFieldContext *ctx) {
+// antlrcpp::Any LIBuilderVisitor::visitBciKeyField(LIParser::BciKeyFieldContext *ctx) {
 //     auto res = ctx->NUMS()->toString();
 // 	return res;
 //   }
 
-//antlrcpp::Any PTGBuilderVisitor::visitField(PTGParser::FieldContext *ctx) {
+//antlrcpp::Any LIBuilderVisitor::visitField(LIParser::FieldContext *ctx) {
 	// string field = ctx->fieldKey()->toString();
 	// cout << "the field key is " << field << endl;
 
@@ -192,14 +192,14 @@ antlrcpp::Any PTGBuilderVisitor::visitBciVal(PTGParser::BciValContext *ctx)
   //}
 
 
-antlrcpp::Any PTGBuilderVisitor::visitCallerIndex(PTGParser::CallerIndexContext *ctx) {
+antlrcpp::Any LIBuilderVisitor::visitCallerIndex(LIParser::CallerIndexContext *ctx) {
     auto res = stoi(ctx->NUMS()->toString());
 	//cout << "caller index is " << res << endl;
 	return res;
   }
 
 
-   antlrcpp::Any PTGBuilderVisitor::visitFieldKey(PTGParser::FieldKeyContext *ctx) {
+   antlrcpp::Any LIBuilderVisitor::visitFieldKey(LIParser::FieldKeyContext *ctx) {
 	   string fieldKey = ctx->ALPHAS()->toString();
 
 	   return fieldKey;
