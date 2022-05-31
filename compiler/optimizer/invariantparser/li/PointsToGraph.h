@@ -9,21 +9,22 @@ class PointsToGraph {
         //TODO: why did I make this a vector instead of a set?
         std::map <int, set <Entry> > rho;
         //TODO: sigma should be keyed by a caller-index--bci pair (to uniquely identify it)
-        std::map <int, std::map <string, vector <Entry> > > sigma;
+        std::map <Entry, std::map <string, set  <Entry> > > sigma;
         //this is a hack
         std::map <int, std::set <Entry> > args;
         int summarize(Entry * entry);
         string getHeader();
+        Entry getBotEntry();
     public:
         PointsToGraph();
-        PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <int, std::map <string, vector <Entry> > > sigma);
+        PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <Entry, std::map <string, set <Entry> > > sigma);
         PointsToGraph(const PointsToGraph &ptg);
         std::map <int, std::set <Entry> > getRho();
-        std::map <int, std::map <string, vector <Entry> > > getSigma();
+        std::map <Entry, std::map <string, set <Entry> > > getSigma();
         void setArg(int argIndex, set <Entry> values);
         set <Entry> getArgPointsToSet(int argIndex);
         set <Entry> getPointsToSet (int symRef);
-        vector <Entry> getPointsToSet (int bci, string field);
+        set <Entry> getPointsToSet (Entry target, string field);
         int assignBot (int symRef);
         int assignBot (int bci, string field);
         void printRho();
@@ -46,9 +47,9 @@ class PointsToGraph {
         void assign(int symRef, set <Entry> entries);
 
         //assign a single bci to the points-to set of a field
-        void assign(int bci, string field, int bciToAssign);
+        void assign(Entry target, string field, Entry entry);
         //assign a collection of bcis to the points-to set of a field
-        void assign(int bci, string field, vector <int> bcisToAssign);
+        void assign(Entry target, string field, set <Entry> entries);
 
         //weak updates
         void extend(int symRef, int bci);
@@ -59,5 +60,7 @@ class PointsToGraph {
         void killRho();
 
         void setBotReturn();
+
+        void summarizeFields(int symRef);
         
 };

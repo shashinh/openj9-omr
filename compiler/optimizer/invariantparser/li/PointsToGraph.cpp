@@ -5,7 +5,7 @@
 std::map <int, std::set <Entry> >  PointsToGraph::getRho() {
     return rho;
 }
-std::map <int, std::map <string, vector <Entry> > > PointsToGraph::getSigma() {
+std::map <Entry, std::map <string, set <Entry> > > PointsToGraph::getSigma() {
     return sigma;
 }
 
@@ -23,13 +23,13 @@ set <Entry> PointsToGraph::getPointsToSet(int symRef) {
     return res;
 }
 
-vector <Entry> PointsToGraph::getPointsToSet(int bci, string field) {
-    vector <Entry> res;
+set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
+    set <Entry> res;
 
-    map <int, map <string, vector <Entry> > >::iterator it1 = sigma.find(bci);
+    map <Entry, map <string, set <Entry> > >::iterator it1 = sigma.find(target);
     if(it1 != sigma.end()) {
-        map <string, vector <Entry> > m = it1->second;
-        map <string, vector <Entry> > :: iterator it2 = m.find(field);
+        map <string, set <Entry> > m = it1->second;
+        map <string, set <Entry> > :: iterator it2 = m.find(field);
         if(it2 != m.end()) {
             res = it2->second;
         }
@@ -43,6 +43,7 @@ set <Entry> PointsToGraph::getArgPointsToSet(int argIndex) {
 }
 
 int PointsToGraph::summarize(Entry *entry) {
+    entry->type = Global;
     return 0;
 }
 
@@ -84,17 +85,17 @@ string PointsToGraph::getSigmaString() {
     string res;
     res.append("SIGMA:\n");
 
-    std::map <int, std::map <string, vector <Entry> > >::iterator sigmaIterator = sigma.begin();
+    std::map <Entry, std::map <string, set <Entry> > >::iterator sigmaIterator = sigma.begin();
     while(sigmaIterator != sigma.end()) {
         res.append("\n");
-        int bci = sigmaIterator->first;
-        res.append(to_string(bci)).append(": ");
-        map <string, vector <Entry> > fieldMap = sigmaIterator->second;
-        map <string, vector <Entry> >::iterator fieldIterator = fieldMap.begin();
+        Entry target = sigmaIterator->first;
+        res.append(target.getString()).append(": ");
+        map <string, set <Entry> > fieldMap = sigmaIterator->second;
+        map <string, set <Entry> >::iterator fieldIterator = fieldMap.begin();
         while(fieldIterator != fieldMap.end()) {
             string field = fieldIterator->first;
             res.append("\n\t").append(field).append(": ");
-            vector<Entry> pointsToSet = fieldIterator->second;
+            set <Entry> pointsToSet = fieldIterator->second;
             for(auto i : pointsToSet) {
                 res.append(i.getString()).append(" ");
             }
@@ -187,25 +188,15 @@ void PointsToGraph::assign(int symRef, set <Entry> entries){
     }
 }
 
-void PointsToGraph::assign(int bci, string field, int bciToAssign){
- 
-    Entry entry;
-    entry.bci = bciToAssign;
-    entry.caller = 99;
-    entry.type = Reference;
-    vector<Entry> entries;
-    entries.push_back(entry);
+void PointsToGraph::assign(Entry target, string field, Entry pointee){
 
-    map <string, vector <Entry> > fieldsMap = sigma[bci];
-    fieldsMap[field] = entries;
-    sigma[bci] = fieldsMap;
+    set <Entry> pointees;
+    pointees.insert(pointee);
+    sigma[target][field] = pointees;
 }
 
-void PointsToGraph::assign(int bci, string field, vector<int> bcisToAssign){
-    for(int bciToAssign : bcisToAssign) {
-        assign(bci, field, bciToAssign);
-    }
- 
+void PointsToGraph::assign(Entry target, string field, set <Entry> pointees){
+    sigma[target][field] = pointees;
 }
 
 void PointsToGraph::extend(int symRef, int bci){
@@ -238,7 +229,7 @@ PointsToGraph::PointsToGraph() {
     
 }
 
-PointsToGraph::PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <int, std::map <string, vector <Entry> > > sigma) {
+PointsToGraph::PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <Entry, std::map <string, set <Entry> > > sigma) {
     this->rho = rho;
     this->sigma = sigma;
 }
@@ -259,4 +250,26 @@ void PointsToGraph::killRho() {
 
 void PointsToGraph::setBotReturn() {
     assignBot(RETURNLOCAL);
+}
+
+void PointsToGraph::summarizeFields(int symRef) {
+    set <Entry> targets = getPointsToSet(symRef);
+    for(Entry target : targets) {
+        //get the entire sigma map for this target
+//        std::map <int, std::map <string, vector <Entry> > > sigma;
+        map <Entry, std::map <string, set <Entry> > > :: iterator sigmaIterator = this->sigma.find(target);
+
+        if(sigmaIterator != this->sigma.end()) {
+            //we have some heap references reachable from this target
+            //go ahead and summarize all of them
+            map <string, set <Entry> > fieldsMap = sigmaIterator->second;
+            map <string, set <Entry> > ::iterator fieldsIterator = fieldsMap.begin();
+            while(fieldsIterator != fieldsMap.begin()) {
+                string field = fieldsIterator->first;
+                assign(target, field, getBotEntry()); 
+            }
+
+
+        }
+    }
 }

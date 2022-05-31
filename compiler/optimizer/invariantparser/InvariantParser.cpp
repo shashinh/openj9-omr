@@ -149,29 +149,18 @@ std::map<int, PointsToGraph> readLoopInvariant(string fileName) {
 		while (it != li.end())
 		{
 			cout << "bci : " << it->first << endl;
-			auto rho = it->second.getRho();
-			auto sigma = it->second.getSigma();
+			map <int, set <Entry> > rho = it->second.getRho();
+			map <Entry, map <string, set <Entry> > > sigma = it->second.getSigma();
 
 			cout << "ROOTs" << endl;
-			std::map<int, std::set <Entry>>::iterator vIt = rho.begin();
+			map< int, set <Entry> >::iterator vIt = rho.begin();
 			while (vIt != rho.end())
 			{
 				cout << "\t" << vIt->first << ": ";
-				auto vals = vIt->second;
-				for (Entry entry : vals)
+				set <Entry> pointees = vIt->second;
+				for (Entry pointee : pointees)
 				{
-					if (entry.type == Null)
-						cout << " n";
-					else if (entry.type == Constant)
-						cout << " c";
-					else if (entry.type == Global)
-						cout << " g";
-					else if (entry.type == String)
-						cout << " s";
-					else
-					{
-						cout << " " << entry.caller << "-" << entry.bci;
-					}
+					cout << pointee.getString();
 				}
 
 				cout << endl;
@@ -179,29 +168,19 @@ std::map<int, PointsToGraph> readLoopInvariant(string fileName) {
 			}
 
 			cout << "HEAP" << endl;
-			std::map<int, std::map<std::string, std::vector<Entry>>>::iterator fIt = sigma.begin();
+			map<Entry, map<string, set<Entry> > >::iterator fIt = sigma.begin();
 			while (fIt != sigma.end())
 			{
-				cout << "\t" << fIt->first << ": ";
-				auto vals = fIt->second;
-				auto fkIt = vals.begin();
-				while (fkIt != vals.end())
+				Entry target = fIt->first;
+				cout << "\t" << target.getString() << ": ";
+				map <string, set <Entry> > fieldsMap = fIt->second;
+				map <string, set <Entry> >::iterator fkIt = fieldsMap.begin();
+				while (fkIt != fieldsMap.end())
 				{
 					cout << "\t\t" << fkIt->first << ": ";
-					for (auto entry : fkIt->second)
+					for (Entry pointee : fkIt->second)
 					{
-						if (entry.type == Null)
-							cout << " n";
-						else if (entry.type == Constant)
-							cout << " c";
-						else if (entry.type == Global)
-							cout << " g";
-						else if (entry.type == String)
-							cout << " s";
-						else
-						{
-							cout << " " << entry.caller << "-" << entry.bci;
-						}
+						cout << pointee.getString();
 					}
 
 					cout << "\t";

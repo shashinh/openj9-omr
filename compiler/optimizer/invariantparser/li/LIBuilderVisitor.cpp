@@ -13,47 +13,47 @@ using namespace antlrcpp;
 antlrcpp::Any LIBuilderVisitor::visitPtg(LIParser::PtgContext *ctx)
 {
 	//a map of ptgs keyed by locations - represented by bci's in the method
-	std::map<int, PointsToGraph> staticKeyedPtg;
+	map<int, PointsToGraph> staticKeyedPtg;
 	for (auto entry : ctx->entry())
 	{
 		//cout << "invoking bciKey()->accept(this)" << endl;
 		int bci = entry->bciKey()->accept(this).as<int>();
 		//cout << "completed bciKey()->accept(this)" << endl;
-		std::map<int, std::set <Entry> > varsMap = entry->vars()->accept(this).as<std::map <int, std::set <Entry> > >();
-    std::map <int, std::map <std::string, std::vector <Entry>>> fieldsMap;
+		map<int, set <Entry> > varsMap = entry->vars()->accept(this).as<map <int, set <Entry> > >();
+    map <Entry, map <string, set <Entry>>> fieldsMap;
 		if(entry->fields())
-			fieldsMap = entry->fields()->accept(this).as<std::map <int, std::map <std::string, std::vector <Entry>>>>();
+			fieldsMap = entry->fields()->accept(this).as<map <Entry, map <string, set <Entry> > > >();
 		PointsToGraph ptg(varsMap, fieldsMap);
-		staticKeyedPtg.insert(std::pair <int, PointsToGraph> (bci, ptg));
+		staticKeyedPtg.insert(pair <int, PointsToGraph> (bci, ptg));
 
 	}
 
 	return staticKeyedPtg;
 }
 
-std::vector<Entry> LIBuilderVisitor::processciBciEntrys(std::vector<LIParser::CiBciEntryContext *> ctx) {
+set <Entry> LIBuilderVisitor::processciBciEntrys(vector<LIParser::CiBciEntryContext *> ctx) {
 
-		std::vector<Entry> entries;
+		set <Entry> entries;
 		for(auto entry : ctx){
 			Entry varEntry;
 			
 			if (entry->STRING() != NULL) {
 				//cout << "varEntry is string" << endl;
 				varEntry.type = String;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else if (entry->CONST() != NULL) {
 				//cout << "varEntry is const" << endl;
 				varEntry.type = Constant;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else if (entry->GLOBAL() != NULL) {
 				//cout << "varEntry is global" << endl;
 				varEntry.type = Global;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else if (entry->NIL() != NULL) {
 				//cout << "varEntry is null" << endl;
 				//the value is a NIL;
 				varEntry.type = Null;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else {
 				int callerIndex = entry->ciEntries()->callerIndex()->accept(this).as<int>();
 		//cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
@@ -62,7 +62,7 @@ std::vector<Entry> LIBuilderVisitor::processciBciEntrys(std::vector<LIParser::Ci
 					varEntry.type = Reference;
 					varEntry.caller = callerIndex;
 					varEntry.bci = bciVal;
-					entries.push_back(varEntry);
+					entries.insert(varEntry);
 				}
 			}
 
@@ -72,10 +72,10 @@ std::vector<Entry> LIBuilderVisitor::processciBciEntrys(std::vector<LIParser::Ci
 }
 antlrcpp::Any LIBuilderVisitor::visitVars(LIParser::VarsContext *ctx)
 {
-	std::map<int, std::vector<Entry>> varsMap;
+	map<int, vector<Entry>> varsMap;
 	for(auto varEntry : ctx->varentry()){
 		int varKey = varEntry->bciKey()->accept(this).as<int>();
-		std::vector<Entry> entries;
+		vector<Entry> entries;
 		for(auto entry : varEntry->ciBciEntry()){
 			Entry varEntry;
 			
@@ -110,7 +110,7 @@ antlrcpp::Any LIBuilderVisitor::visitVars(LIParser::VarsContext *ctx)
 
 		}
 		//cout << "inserting " << entries.size() << " entries into varsMap" << endl;
-		varsMap.insert(std::pair<int, std::vector<Entry>>(varKey, entries));
+		varsMap.insert(pair<int, vector<Entry>>(varKey, entries));
 	}
 
 	return varsMap;
@@ -118,42 +118,47 @@ antlrcpp::Any LIBuilderVisitor::visitVars(LIParser::VarsContext *ctx)
 
 antlrcpp::Any LIBuilderVisitor::visitFields(LIParser::FieldsContext *ctx)
 {
-    std::map <int, std::map <std::string, std::vector <Entry>>> fieldsMap;
+    map <Entry, map <string, set <Entry>>> fieldsMap;
 
 	for(auto fieldEntry : ctx->fieldentry()){
 //		int bciKey = fieldEntry->bciKey()->accept(this).as<int>();
 		int ci = fieldEntry->callerIndex()->accept(this).as<int>();
 		int bciVal = fieldEntry->bciKey()->accept(this).as<int>();
+		Entry target;
+		target.type = Reference;
+		target.bci = bciVal;
+		target.caller = ci;
 		//cout << "bci key is " << bciKey << endl;
 		//cout << "there are " << fieldEntry->field().size() << " fields" << endl;
-		std::map <std::string, std::vector <Entry>> map;
+		map <string, set <Entry>> map;
 		for(auto field : fieldEntry->field()){
-			std::string fieldKey = field->fieldKey()->accept(this).as<string>();
-			//std::map <std::string, std::vector <Entry>> map;
+			string fieldKey = field->fieldKey()->accept(this).as<string>();
+			//map <string, vector <Entry>> map;
 			//cout << "the fieldKey is " << fieldKey << endl;
 			//cout << "there are " << field->ciBciEntry().size() << " ciBciEntrys" << endl;
 
-			std::vector<Entry> entries = processciBciEntrys(field->ciBciEntry());
+			set<Entry> entries = processciBciEntrys(field->ciBciEntry());
+			fieldsMap[target][fieldKey] = entries;
 			
-			map.insert(std::pair<std::string, vector <Entry>> (fieldKey, entries));
+//			map.insert(pair<string, set <Entry>> (fieldKey, entries));
  		}		
 		
-		fieldsMap.insert(std::pair<int, std::map<std::string, std::vector <Entry>>> (bciVal, map));
+	//	fieldsMap.insert(pair <Entry, map <string, set <Entry> > > (target, map));
 	}
 
 	return fieldsMap;
 
-	// std::map<string, std::set<string>> fieldsMap;
+	// map<string, set<string>> fieldsMap;
 	// for(auto fieldEntry : ctx->fieldentry()){
 	// 	string fieldReceiver = fieldEntry->bciKeyField()->accept(this).as<string>();
 	// 	string field = fieldEntry->field()->accept(this).as<string>();
 	// 	string fieldKey = fieldReceiver + "." + field;
-	// 	std::set<string> vals;
+	// 	set<string> vals;
 	// 	for(auto val : fieldEntry->bciVal()) {
 	// 		string v = val->accept(this).as<string>();
 	// 		vals.insert(v);
 	// 	}
-	// 	fieldsMap.insert(std::pair<string, std::set<string>> (fieldKey, vals));
+	// 	fieldsMap.insert(pair<string, set<string>> (fieldKey, vals));
 
 	// }
 

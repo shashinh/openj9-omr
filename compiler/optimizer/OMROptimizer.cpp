@@ -2100,6 +2100,7 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
 
    if (!usefulNode)
       return evaluatedValues;
+
    if (usefulNode->getVisitCount() >= visitCount)
    {
       // the node's been visited before - fetch its evaluated value
@@ -2223,6 +2224,7 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
                //TODO: method is not resolved, do
                //1. set return to BOT
                //2. set all fields of all arguments to BOT (this includes the receiver, if applicable)
+               //bottomize all heap references reachable from the arguments
 	         } 
          }
          break;

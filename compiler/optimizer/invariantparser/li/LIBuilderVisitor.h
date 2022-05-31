@@ -18,7 +18,7 @@ public:
     //virtual antlrcpp::Any visitField(LIParser::FieldContext *ctx) override;
     virtual antlrcpp::Any visitCallerIndex(LIParser::CallerIndexContext *ctx);
     virtual antlrcpp::Any visitFieldKey(LIParser::FieldKeyContext *ctx);
-    virtual std::vector<Entry> processciBciEntrys(std::vector<LIParser::CiBciEntryContext *> ctx);
+    virtual std::set<Entry> processciBciEntrys(std::vector<LIParser::CiBciEntryContext *> ctx);
 
     
 
