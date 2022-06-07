@@ -13,7 +13,6 @@ std::map <Entry, std::map <string, set <Entry> > > PointsToGraph::getSigma() {
 
 
 set <Entry> PointsToGraph::getPointsToSet(int symRef) {
-    cout << "ho ho ho you requested for the ptg set for bci " << symRef << endl;
     set <Entry> res;
 
     if(rho.find(symRef) != rho.end()) {
@@ -226,7 +225,10 @@ void PointsToGraph::killArgs() {
 }
 
 PointsToGraph::PointsToGraph() {
-    
+    map <int, std::set <Entry> > rho;
+    this->rho = rho;
+    map <Entry, std::map <string, set <Entry> > > sigma;
+    this->sigma = sigma;
 }
 
 PointsToGraph::PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <Entry, std::map <string, set <Entry> > > sigma) {
@@ -272,4 +274,126 @@ void PointsToGraph::summarizeFields(int symRef) {
 
         }
     }
+}
+
+void PointsToGraph::ptgUnion(PointsToGraph *a, PointsToGraph *b) {
+
+        std::map <int, set <Entry> > rho;
+        //TODO: sigma should be keyed by a caller-index--bci pair (to uniquely identify it)
+        std::map <Entry, std::map <string, set  <Entry> > > sigma;
+    
+    set<int> allRhoKeys;
+    set<int> rhoKeys_a;
+    set<int> rhoKeys_b;
+
+    for(map <int, set<Entry> > ::iterator it = a->rho.begin(); it != a->rho.end(); it++) {
+        rhoKeys_a.insert(it->first);
+    }
+    for(map <int, set<Entry> > ::iterator it = b->rho.begin(); it != b->rho.end(); it++) {
+        rhoKeys_b.insert(it->first);
+    }
+
+    allRhoKeys.insert(rhoKeys_a.begin(), rhoKeys_a.end());
+    allRhoKeys.insert(rhoKeys_b.begin(), rhoKeys_b.end());
+
+    for(int var : allRhoKeys) {
+        set <Entry> pointees;
+        if(a->rho.find(var) != a->rho.end()) {
+            set<Entry> temp = a->rho[var];
+            pointees.insert(temp.begin(), temp.end());
+        }
+        if(b->rho.find(var) != b->rho.end()) {
+            set<Entry> temp = b->rho[var];
+            pointees.insert(temp.begin(), temp.end());
+        }
+
+        rho[var] = pointees;
+        this->rho = rho;
+
+    }
+
+    set <Entry> allSigmaKeys;
+    set <Entry> sigmaKeys_a;
+    set <Entry> sigmaKeys_b;
+
+    for(map <Entry, map<string, set <Entry>>>::iterator it = a->sigma.begin(); it != a->sigma.end(); it++) {
+        sigmaKeys_a.insert(it->first);
+    }
+    for(map <Entry, map<string, set <Entry>>>::iterator it = b->sigma.begin(); it != b->sigma.end(); it++) {
+        sigmaKeys_b.insert(it->first);
+    }
+
+    allSigmaKeys.insert(sigmaKeys_a.begin(), sigmaKeys_a.end());
+    allSigmaKeys.insert(sigmaKeys_b.begin(), sigmaKeys_b.end());
+
+    for(Entry obj : allSigmaKeys) {
+
+        if(a->sigma.find(obj) != a->sigma.end()) {
+            for(map <string, set<Entry>>::iterator it = a->sigma[obj].begin(); it != a->sigma[obj].end(); it++) {
+                sigma[obj][it->first].insert(it->second.begin(), it->second.end());
+            }
+        }
+
+        if(b->sigma.find(obj) != b->sigma.end()) {
+            for(map <string, set<Entry>>::iterator it = b->sigma[obj].begin(); it != b->sigma[obj].end(); it++) {
+                sigma[obj][it->first].insert(it->second.begin(), it->second.end());
+            }
+        }
+
+    }
+
+    this->sigma = sigma;
+    cout << "printing ptg from ptgunion" << endl;
+    this->print();
+
+}
+
+bool PointsToGraph::subsumes(PointsToGraph *other) {
+
+    cout << "subsumes check requested for ptgs " << endl;
+    cout << "lhs : " << endl;
+    this->print();
+    cout << "rhs :" << endl;
+    other->print();
+
+    //this-ptg needs to subsume other-ptg
+    
+    //1. check rho subsumes
+    for(map<int, set<Entry>>::iterator it = other->rho.begin(); it != other->rho.end(); it++) {
+        //we only check subsumes between rho entries that are present in both ptgs
+        //because it is entirely possible for the runtime ptg to have extra rho entries (temps, for example)
+        if(this->rho.find(it->first) != this->rho.end()) {
+            set <Entry> rhsPointees = it->second;
+            set <Entry> lhsPointees = this->rho[it->first];
+            //lhsPointees should be a superset of rhsPointees
+            if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
+                            rhsPointees.begin(), rhsPointees.end())) {
+                return false;
+            }
+        }
+    }
+
+    //2. check sigma subsumes
+    for(map <Entry, map <string, set<Entry>>>::iterator it = other->sigma.begin(); it != other->sigma.end(); it++) {
+       if(this->sigma.find(it->first) != this->sigma.end()) {
+           map <string, set <Entry>> rhsFields = it->second;
+           map <string, set <Entry>> lhsFields = this->sigma[it->first];
+
+           //once again, we only check for object x fields that are present in both ptgs
+           for( map <string, set <Entry>>::iterator i = rhsFields.begin(); i != rhsFields.end(); i++) {
+               if(lhsFields.find(i->first) != lhsFields.end()) {
+                   set <Entry> rhsPointees = i->second;
+                   set <Entry> lhsPointees = lhsFields[i->first];
+                    //lhsPointees should be a superset of rhsPointees
+                    if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
+                                    rhsPointees.begin(), rhsPointees.end())) {
+                        return false;
+                    }
+               }
+           }
+       } 
+    }
+
+    //if we made it here, lhs subsumes rhs
+    return true;
 }

@@ -39,7 +39,7 @@ class PointsToGraph {
         string getArgsString();
         bool equals(PointsToGraph &other);
 
-        PointsToGraph * meet(PointsToGraph &other);
+        void ptgUnion(PointsToGraph *a, PointsToGraph *b);
 
         //assign a single bci to the points-to set of a symRef
         void assign(int symRef, Entry entry);
@@ -62,5 +62,7 @@ class PointsToGraph {
         void setBotReturn();
 
         void summarizeFields(int symRef);
+
+        bool subsumes(PointsToGraph * other);
         
 };
