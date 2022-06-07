@@ -2400,6 +2400,7 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
                argIndex++;
             } else if(methodSymbol->isInterface()) {
                //invokeinterface do not seem to get resolved - what do we do ??
+               //TODO: add an assert_fatal here
                argIndex++;
             }
 
@@ -2484,7 +2485,6 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
 
                      if(ilGenFailed) cout << "fatal IL gen failed!" << endl;
 
-                     cout << "the method is really resolved" << endl;
                      _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", resolvedMethodSymbol);
 
                      _runtimeVerifierComp->dumpFlowGraph(resolvedMethodSymbol->getFlowGraph());
@@ -2499,7 +2499,7 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
                cout << "found an unresolved method " << methodName << endl;
                // TODO: method is not resolved, do
                // 1. set return to BOT
-               // 2. set all fields of all arguments to BOT (this includes the receiver, if applicable) - this involves the escape map
+               // 2. summarize the reachable heap - this involves use of the escape map
                // bottomize all heap references reachable from the arguments
             }
          }
