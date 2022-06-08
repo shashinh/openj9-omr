@@ -125,6 +125,9 @@ static std::set<string> _runtimeVerifiedMethods;
 static std::map<string, int> _methodIndices;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation *_runtimeVerifierComp;
+std::map<string, PointsToGraph *> forceCallsiteArgsForJITCInvocation;
+std::map <string, PointsToGraph *> verifiedMethodSummaries;
+
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
    cout
@@ -140,9 +143,9 @@ using namespace OMR; // Note: used here only to avoid having to prepend all opts
 #define MAX_LOCAL_OPTS_ITERS 5
 
 extern void testMethod();
-extern map <string, int> readMethodIndices();
-extern map <int, PointsToGraph> readLoopInvariant(string fileName);
-extern map <int, set <Entry> > readCallsiteInvariant(string fileName);
+extern map<string, int> readMethodIndices();
+extern map<int, PointsToGraph> readLoopInvariant(string fileName);
+extern map<int, set<Entry>> readCallsiteInvariant(string fileName);
 
 const OptimizationStrategy localValuePropagationOpts[] =
     {
@@ -1961,19 +1964,19 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
    TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
    TR::SymbolReference *symRef;
    bool isVirtualOrSpecial = false;
-   if(methodSymbol->isVirtual() || methodSymbol->isSpecial()) {
-      //map off the this parm first
-//      symRef = methodSymbol->getParmSymRef(0);
-//      int32_t symRefNumber = symRef->getReferenceNumber();
-//
-//      set <Entry> thisPointees = in->getArgPointsToSet(0);
-//      in->assign(symRefNumber, thisPointees);
-//
-//      argIndex++;
-//      paramCursor = paramIterator.getNext();
+   if (methodSymbol->isVirtual() || methodSymbol->isSpecial())
+   {
+      // map off the this parm first
+      //      symRef = methodSymbol->getParmSymRef(0);
+      //      int32_t symRefNumber = symRef->getReferenceNumber();
+      //
+      //      set <Entry> thisPointees = in->getArgPointsToSet(0);
+      //      in->assign(symRefNumber, thisPointees);
+      //
+      //      argIndex++;
+      //      paramCursor = paramIterator.getNext();
 
       isVirtualOrSpecial = true;
-
    }
 
    for (; paramCursor != NULL; paramCursor = paramIterator.getNext())
@@ -1982,65 +1985,73 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
       int paramSlot = paramCursor->getSlot();
 
       int argIndex = paramSlot;
-      if(! isVirtualOrSpecial) argIndex++;
+      if (!isVirtualOrSpecial)
+         argIndex++;
 
       symRef = methodSymbol->getParmSymRef(paramSlot);
-      if(symRef->getSymbol()->getType().isAddress()) {
+      if (symRef->getSymbol()->getType().isAddress())
+      {
 
          int32_t symRefNumber = symRef->getReferenceNumber();
 
          if (_runtimeVerifierDiagnostics)
-            cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
+            cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << " will be mapped to param " << argIndex << endl;
 
-         set <Entry> argsPointsTo = in->getArgPointsToSet(argIndex);
+         set<Entry> argsPointsTo = in->getArgPointsToSet(argIndex);
          in->assign(symRefNumber, argsPointsTo);
+         argIndex++;
       }
-
-
    }
 
    return 0;
 }
 
-
-void mapParametersOut(TR::ResolvedMethodSymbol *methodSymbol, TR::Node *callNode, set <Entry>  &evaluatedNodeValue, PointsToGraph *in) {
+void mapParametersOut(TR::ResolvedMethodSymbol *methodSymbol, TR::Node *callNode, set<Entry> &evaluatedNodeValue, PointsToGraph *in)
+{
 
    ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
    TR::SymbolReference *symRef;
-   //invokespecial (private instance calls, constructors, etc - labeled 'special' in the IL tree) and invokevirtual (public, package private, defaults,)
-   // pass the this-parm. However the trees are slightly different
+   // invokespecial (private instance calls, constructors, etc - labeled 'special' in the IL tree) and invokevirtual (public, package private, defaults,)
+   //  pass the this-parm. However the trees are slightly different
    int argIndex = 0;
-   if(methodSymbol->isVirtual()) {
-      //the first arg for a virtual call is the load of the VFT, we shall skip that
+   if (methodSymbol->isVirtual())
+   {
+      // the first arg for a virtual call is the load of the VFT, we shall skip that
       TR::Node *thisParmNode = callNode->getSecondChild();
-   } else if(methodSymbol->isSpecial()) {
-      //no VFTs here, pick off the args directly
+   }
+   else if (methodSymbol->isSpecial())
+   {
+      // no VFTs here, pick off the args directly
       argIndex++;
-   } else if(methodSymbol->isStatic()) {
-      //no VFT or this-param, pick off the args directly
+   }
+   else if (methodSymbol->isStatic())
+   {
+      // no VFT or this-param, pick off the args directly
       argIndex++;
-   } else if(methodSymbol->isInterface()) {
-      //invokeinterface do not seem to get resolved - what do we do ??
+   }
+   else if (methodSymbol->isInterface())
+   {
+      // invokeinterface do not seem to get resolved - what do we do ??
       argIndex++;
    }
 
-
-//   for (TR::ParameterSymbol *paramCursor = paramIterator.getFirst(); paramCursor != NULL; paramCursor = paramIterator.getNext())
-//   {
-//      // param at getSlot == 0 is the this-pointer
-//      int paramSlot = paramCursor->getSlot();
-//      symRef = methodSymbol->getParmSymRef(paramSlot);
-//      int32_t symRefNumber = symRef->getReferenceNumber();
-//
-//      if (_runtimeVerifierDiagnostics)
-//         cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
-//
-//      set <Entry> argsPointsTo = in->getArgPointsToSet(paramSlot);
-//      in->assign(symRefNumber, argsPointsTo);
-//   }
+   //   for (TR::ParameterSymbol *paramCursor = paramIterator.getFirst(); paramCursor != NULL; paramCursor = paramIterator.getNext())
+   //   {
+   //      // param at getSlot == 0 is the this-pointer
+   //      int paramSlot = paramCursor->getSlot();
+   //      symRef = methodSymbol->getParmSymRef(paramSlot);
+   //      int32_t symRefNumber = symRef->getReferenceNumber();
+   //
+   //      if (_runtimeVerifierDiagnostics)
+   //         cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
+   //
+   //      set <Entry> argsPointsTo = in->getArgPointsToSet(paramSlot);
+   //      in->assign(symRefNumber, argsPointsTo);
+   //   }
 }
-PointsToGraph * meet(PointsToGraph * a, PointsToGraph * b) {
-   PointsToGraph * res = new PointsToGraph();
+PointsToGraph *meet(PointsToGraph *a, PointsToGraph *b)
+{
+   PointsToGraph *res = new PointsToGraph();
    res->ptgUnion(a, b);
    return res;
 }
@@ -2051,15 +2062,16 @@ PointsToGraph *getPredecessorMeet(TR::Block *bl, std::map<TR::Block *, PointsToG
 {
    PointsToGraph *predecessorMeet = new PointsToGraph();
 
-   for (TR::CFGEdgeList::iterator pred = bl->getPredecessors().begin(); pred != bl->getPredecessors().end(); ++pred) {
+   for (TR::CFGEdgeList::iterator pred = bl->getPredecessors().begin(); pred != bl->getPredecessors().end(); ++pred)
+   {
       TR::Block *predBlock = toBlock((*pred)->getFrom());
-      if(basicBlockOuts.find(predBlock) != basicBlockOuts.end()) {
+      if (basicBlockOuts.find(predBlock) != basicBlockOuts.end())
+      {
          PointsToGraph *predOut = basicBlockOuts[predBlock];
 
          predecessorMeet = meet(predecessorMeet, predOut);
       }
    }
-
 
    return predecessorMeet;
 }
@@ -2126,7 +2138,7 @@ int processStore(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, vector<
    {
       cout << childNode->getGlobalIndex() << " visited already" << endl;
       vector<int> evaluatedNodeValue = evaluatedNodeValues.find(childNode)->second;
-      //in->assign(node->getSymbolReference()->getReferenceNumber(), evaluatedNodeValue);
+      // in->assign(node->getSymbolReference()->getReferenceNumber(), evaluatedNodeValue);
       if (_runtimeVerifierDiagnostics)
          in->print();
    }
@@ -2169,17 +2181,16 @@ int getOrInsertMethodIndex(string methodSignature)
    }
 }
 
-void mapParameters(PointsToGraph *pred, PointsToGraph *inFlow, TR::Node* callNode) {
-
+void mapParameters(PointsToGraph *pred, PointsToGraph *inFlow, TR::Node *callNode)
+{
 }
-
 
 PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::ResolvedMethodSymbol *methodSymbol, int visitCount);
 // recursively evaluates a node and returns its evaluated value. it may have a side effect of updating the points-to maps.
-set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set <Entry> > &evaluatedNodeValues, int visitCount, int methodIndex)
+set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
 {
 
-   set <Entry> evaluatedValues;
+   set<Entry> evaluatedValues;
 
    TR::Node *usefulNode = getUsefulNode(node);
 
@@ -2203,7 +2214,7 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
       case TR::New:
       {
          // process new here
-         //TODO: this needs to be a combination of the methodIndex-bci (use longint)
+         // TODO: this needs to be a combination of the methodIndex-bci (use longint)
          Entry e = evaluateAllocate(usefulNode, methodIndex);
          evaluatedValues.insert(e);
          break;
@@ -2229,10 +2240,10 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
          // process load here
          // an aload's evaluated value is simply the list of objects in the points-to set of its symref
          int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
-         set <Entry> pointsToSet = in->getPointsToSet(loadSymRef);
+         set<Entry> pointsToSet = in->getPointsToSet(loadSymRef);
          for (Entry entry : pointsToSet)
          {
-            //TODO: use copy here
+            // TODO: use copy here
             evaluatedValues.insert(entry);
          }
          break;
@@ -2250,31 +2261,30 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
          int cpIndex = symRef->getCPIndex();
          IFDIAGPRINT << "cp index = " << cpIndex << endl;
 
-            if(/* !isUnresolved && */ isShadow && cpIndex > 0) {
-               //this is most certainly a field access, until proven otherwise
+         if (/* !isUnresolved && */ isShadow && cpIndex > 0)
+         {
+            // this is most certainly a field access, until proven otherwise
 
-               int32_t len;
-               const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
+            int32_t len;
+            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
 
-               IFDIAGPRINT << "field access for " << fieldName << endl;
+            IFDIAGPRINT << "field access for " << fieldName << endl;
 
-               // receiver
-               TR::Node *receiverNode = usefulNode->getFirstChild();
-               set <Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
+            // receiver
+            TR::Node *receiverNode = usefulNode->getFirstChild();
+            set<Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
 
-               for(Entry receiver : receiverNodeVals) {
-                  //we fetch the requested field for each of the receiver pointees, then union
-                  set<Entry> rhsPointees = in->getPointsToSet(receiver, fieldName);
-                  evaluatedValues.insert(rhsPointees.begin(), rhsPointees.end());
-               }
-
+            for (Entry receiver : receiverNodeVals)
+            {
+               // we fetch the requested field for each of the receiver pointees, then union
+               set<Entry> rhsPointees = in->getPointsToSet(receiver, fieldName);
+               evaluatedValues.insert(rhsPointees.begin(), rhsPointees.end());
             }
-
-
+         }
 
          break;
       }
-      
+
       case TR::awrtbari:
       {
          // process field store
@@ -2286,47 +2296,48 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
          {
             // receiver
             TR::Node *receiverNode = usefulNode->getFirstChild();
-            set <Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
+            set<Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
 
             // value
-            set <Entry> valueNodeVals = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount, methodIndex);
+            set<Entry> valueNodeVals = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount, methodIndex);
 
-	         TR::SymbolReference *symRef = usefulNode->getSymbolReference();
-	         bool isUnresolved = symRef->isUnresolved();
-	         IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
-	
-	         bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
-	         IFDIAGPRINT << "isShadow = " << isShadow << endl;
-	
-	         int cpIndex = symRef->getCPIndex();
-	         IFDIAGPRINT << "cp index = " << cpIndex << endl;
+            TR::SymbolReference *symRef = usefulNode->getSymbolReference();
+            bool isUnresolved = symRef->isUnresolved();
+            IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
 
-            if(/* !isUnresolved && */ isShadow && cpIndex > 0) {
-               //this is most certainly a field access, until proven otherwise
+            bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
+            IFDIAGPRINT << "isShadow = " << isShadow << endl;
+
+            int cpIndex = symRef->getCPIndex();
+            IFDIAGPRINT << "cp index = " << cpIndex << endl;
+
+            if (/* !isUnresolved && */ isShadow && cpIndex > 0)
+            {
+               // this is most certainly a field access, until proven otherwise
 
                int32_t len;
                const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
 
                IFDIAGPRINT << "field access for " << fieldName << endl;
 
-               for(Entry receiver : receiverNodeVals) {
+               for (Entry receiver : receiverNodeVals)
+               {
                   in->assign(receiver, fieldName, valueNodeVals);
                }
-
             }
             // fetch the field being written to
-//            // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
-//            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-//            // char *field = strtok((char *)fieldSig, ". ");
-//            // field = strtok(NULL, ". ");
-//
-//            int32_t len;
-//            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-//
-//            for (Entry receiverBCI : receiverNodeVals)
-//            {
-//               in->assign(receiverBCI, fieldName, valueNodeVals);
-//            }
+            //            // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
+            //            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+            //            // char *field = strtok((char *)fieldSig, ". ");
+            //            // field = strtok(NULL, ". ");
+            //
+            //            int32_t len;
+            //            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
+            //
+            //            for (Entry receiverBCI : receiverNodeVals)
+            //            {
+            //               in->assign(receiverBCI, fieldName, valueNodeVals);
+            //            }
          }
          else
          {
@@ -2372,127 +2383,131 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
                cout << sig << " is resolved" << endl;
 
                // TODO: called method is resolved. map the arguments and peek into it
-//               mapParameters(in, callSitePtg, usefulNode);
+               //               mapParameters(in, callSitePtg, usefulNode);
 
+               // invokespecial (private instance calls, constructors, etc - labeled 'special' in the IL tree) and invokevirtual (public, package private, defaults,)
+               //  pass the this-parm. However the trees are slightly different
+               int argIndex = 0;
+               int childIndex = 0;
+               if (methodSymbol->isVirtual())
+               {
+                  // the first arg for a virtual call is the load of the VFT, we shall skip that
+                  TR::Node *thisParmNode = usefulNode->getSecondChild();
+                  set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
+                  callSitePtg->setArg(0, thisParmValues);
 
-            //invokespecial (private instance calls, constructors, etc - labeled 'special' in the IL tree) and invokevirtual (public, package private, defaults,)
-            // pass the this-parm. However the trees are slightly different
-            int argIndex = 0;
-            int childIndex = 0;
-            if(methodSymbol->isVirtual()) {
-               //the first arg for a virtual call is the load of the VFT, we shall skip that
-               TR::Node *thisParmNode = usefulNode->getSecondChild();
-               set <Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
-               callSitePtg->setArg(0, thisParmValues);
+                  argIndex++;
+                  childIndex += 2;
+               }
+               else if (methodSymbol->isSpecial())
+               {
+                  // no VFTs here, pick off the args directly
+                  TR::Node *thisParmNode = usefulNode->getFirstChild();
+                  set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
+                  callSitePtg->setArg(0, thisParmValues);
 
-               argIndex++;
-               childIndex += 2;
-            } else if(methodSymbol->isSpecial()) {
-               //no VFTs here, pick off the args directly
-               TR::Node *thisParmNode = usefulNode->getFirstChild();
-               set <Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
-               callSitePtg->setArg(0, thisParmValues);
+                  argIndex++;
+                  childIndex++;
+               }
+               else if (methodSymbol->isStatic())
+               {
+                  // no VFT or this-param, pick off the args directly
+                  argIndex++;
+               }
+               else if (methodSymbol->isInterface())
+               {
+                  // invokeinterface do not seem to get resolved - what do we do ??
+                  // TODO: add an assert_fatal here
+                  argIndex++;
+               }
 
-               argIndex++;
-               childIndex++;
-            } else if(methodSymbol->isStatic()) {
-               //no VFT or this-param, pick off the args directly
-               argIndex++;
-            } else if(methodSymbol->isInterface()) {
-               //invokeinterface do not seem to get resolved - what do we do ??
-               //TODO: add an assert_fatal here
-               argIndex++;
-            }
+               // now we can pick off the rest of the arguments from the IL
 
-            //now we can pick off the rest of the arguments from the IL
+               ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
+               TR::SymbolReference *symRef;
+               int paramSlotcount = methodSymbol->getNumParameterSlots();
+               cout << sig << " method has " << paramSlotcount << " params " << endl;
 
-            ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
-            TR::SymbolReference *symRef;
-            int paramSlotcount = methodSymbol->getNumParameterSlots();
-            cout << sig << " method has " << paramSlotcount << " params " << endl;
-            
-            TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
-            if(methodSymbol->isVirtual() || methodSymbol->isSpecial()) { 
-               //the this-param is already mapped, so skip the first one
-               paramCursor = paramIterator.getNext();
-            }
+               TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
+               if (methodSymbol->isVirtual() || methodSymbol->isSpecial())
+               {
+                  // the this-param is already mapped, so skip the first one
+                  paramCursor = paramIterator.getNext();
+               }
 
-
-			   for (; paramCursor != NULL; paramCursor = paramIterator.getNext())
-			   {
+               for (; paramCursor != NULL; paramCursor = paramIterator.getNext())
+               {
                   TR::SymbolReference *symRef;
                   // param at getSlot == 0 is the this-pointer
                   int paramSlot = paramCursor->getSlot();
                   symRef = methodSymbol->getParmSymRef(paramSlot);
                   cout << paramSlot << " ";
-                  cout << (symRef->getSymbol()->getType().isAddress() ? "is address " : "is scalar ") << ( symRef->isThisPointer() ? " is this pointer" : "") << endl;
-                  if(symRef->getSymbol()->getType().isAddress()) {
+                  cout << (symRef->getSymbol()->getType().isAddress() ? "is address " : "is scalar ") << (symRef->isThisPointer() ? " is this pointer" : "") << endl;
+                  if (symRef->getSymbol()->getType().isAddress())
+                  {
                      cout << "attempting to map argIndex " << argIndex << endl;
                      TR::Node *argNode = usefulNode->getChild(childIndex);
-                     set <Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
+                     set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
 
                      callSitePtg->setArg(argIndex, argValues);
                   }
-   //               symRef->isThisPointer();
+                  //               symRef->isThisPointer();
                   argIndex++;
                   childIndex++;
-			   }
+               }
 
-
-
-
-
-
-
-
-//   ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
-//   TR::SymbolReference *symRef;
-//   for (TR::ParameterSymbol *paramCursor = paramIterator.getFirst(); paramCursor != NULL; paramCursor = paramIterator.getNext())
-//   {
-//      // param at getSlot == 0 is the this-pointer
-//      int paramSlot = paramCursor->getSlot();
-//      symRef = methodSymbol->getParmSymRef(paramSlot);
-//      int32_t symRefNumber = symRef->getReferenceNumber();
-//
-//      if (_runtimeVerifierDiagnostics)
-//         cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
-//
-//      set <Entry> argsPointsTo = in->getArgPointsToSet(paramSlot);
-//      in->assign(symRefNumber, argsPointsTo);
-//   }
-
-
-
-
-
-
-
-
-
+               //   ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
+               //   TR::SymbolReference *symRef;
+               //   for (TR::ParameterSymbol *paramCursor = paramIterator.getFirst(); paramCursor != NULL; paramCursor = paramIterator.getNext())
+               //   {
+               //      // param at getSlot == 0 is the this-pointer
+               //      int paramSlot = paramCursor->getSlot();
+               //      symRef = methodSymbol->getParmSymRef(paramSlot);
+               //      int32_t symRefNumber = symRef->getReferenceNumber();
+               //
+               //      if (_runtimeVerifierDiagnostics)
+               //         cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
+               //
+               //      set <Entry> argsPointsTo = in->getArgPointsToSet(paramSlot);
+               //      in->assign(symRefNumber, argsPointsTo);
+               //   }
 
                if (_runtimeVerifierDiagnostics)
                {
-                  cout << "return bottomized, parameters mapped, here is the in ptg" << endl;
+                  cout << "callsite ptg mapped:" << endl;
                   callSitePtg->print();
                }
 
                cout << "peeking method " << sig << " isResolved = " << methodSymbol->isResolvedMethod() << endl;
 
                TR::ResolvedMethodSymbol *resolvedMethodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
-                  if (usefulNode->getSymbol()->isResolvedMethod())
-                  {
-                     bool ilGenFailed = NULL == resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(resolvedMethodSymbol, _runtimeVerifierComp, false);
+               if (usefulNode->getSymbol()->isResolvedMethod())
+               {
 
-                     if(ilGenFailed) cout << "fatal IL gen failed!" << endl;
+                  cout << forceCallsiteArgsForJITCInvocation.size() << endl;
+                  forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callSitePtg));
+                  cout << forceCallsiteArgsForJITCInvocation.size() << endl;
+                  //                     TR_ASSERT_FATAL(forceCallsiteArgsForJITCInvocation.size() <= 1, "a maximum of 1 method can be forced");
 
-                     _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", resolvedMethodSymbol);
+                  bool ilGenFailed = NULL == resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(resolvedMethodSymbol, _runtimeVerifierComp, false);
 
-                     _runtimeVerifierComp->dumpFlowGraph(resolvedMethodSymbol->getFlowGraph());
-                     
-                     verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
-                                     getFormattedCurrentMethodName(resolvedMethodSymbol), callSitePtg, false);
-                  }
-   
+                  // if(ilGenFailed) cout << "fatal IL gen failed!" << endl;
+                  TR_ASSERT_FATAL(!ilGenFailed, "IL Gen failed, cannot peek into method");
+
+                  _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", resolvedMethodSymbol);
+
+                  _runtimeVerifierComp->dumpFlowGraph(resolvedMethodSymbol->getFlowGraph());
+
+                  // given that the ILGen will run optimizations and force invocation of the algorithm by JIT compilation, do we even need this call?
+                  //verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
+                                         //getFormattedCurrentMethodName(resolvedMethodSymbol), callSitePtg, false);
+               }
+               PointsToGraph *outPTG = verifiedMethodSummaries[sig];
+               evaluatedValues = outPTG->getReturnPointsTo();
+               if(_runtimeVerifierDiagnostics) {
+                  cout << "callsite processing for " << sig << " completed, callsite PTG below" << endl;
+                  outPTG->print();
+               }
             }
             else
             {
@@ -2506,75 +2521,101 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
          break;
       }
 
-/*
-      case TR::vcalli:
-      case TR::icalli:
-      case TR::lcalli:
-      case TR::fcalli:
-      case TR::dcalli:
-      case TR::acalli:
-      case TR::calli:
+         /*
+               case TR::vcalli:
+               case TR::icalli:
+               case TR::lcalli:
+               case TR::fcalli:
+               case TR::dcalli:
+               case TR::acalli:
+               case TR::calli:
+               {
+         //usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning();
+                  bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
+                     if(!isHelperMethodCall) {
+                     const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+
+                        PointsToGraph *callSitePtg = new PointsToGraph(*in);
+                        //kill all the locals and return local (i.e. retain only the Heap)
+                        //TODO: confirm - does this simply mean set the Rho to empty map ?
+                        callSitePtg->killRho();
+                        callSitePtg->setBotReturn();
+
+                     if(usefulNode->getSymbol()->isResolvedMethod()) {
+                        cout << "the method is resolved" << endl;
+                        string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
+                        cout << sig << " is resolved" << endl;
+
+                        //TODO: called method is resolved. map the arguments and peek into it
+                        if(_runtimeVerifierDiagnostics) {
+                           cout << "return bottomized, parameters mapped, here is the in ptg" << endl;
+                           callSitePtg->print();
+                        }
+                     } else {
+                        cout << "found an unresolved method " << methodName << endl;
+                        //TODO: method is not resolved, do
+                        //1. set return to BOT
+                        //2. set all fields of all arguments to BOT (this includes the receiver, if applicable) - this involves the escape map
+                        //bottomize all heap references reachable from the arguments
+                     }
+                  }
+                  break;
+
+               }
+
+               case TR::icall:
+               case TR::lcall:
+               case TR::fcall:
+               case TR::dcall:
+               case TR::acall:
+               case TR::call:
+               case TR::vcall:
+               {
+                  bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
+                     if(!isHelperMethodCall) {
+                     const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+
+                     if(usefulNode->getSymbol()->isResolvedMethod()) {
+                        cout << "the method is resolved" << endl;
+                        string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
+                        cout << sig << " is resolved" << endl;
+                     } else {
+                        cout << "found an unresolved method " << methodName << endl;
+                     }
+                  }
+                  break;
+               }
+         */
+
+      case TR::Return:
+      case TR::lreturn:
+      case TR::ireturn:
+      case TR::dreturn:
+      case TR::freturn:
+      case TR::areturn:
+      case TR::vreturn:
       {
-//usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning();
-         bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
-	         if(!isHelperMethodCall) {
-	         const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-	         
-               PointsToGraph *callSitePtg = new PointsToGraph(*in);
-               //kill all the locals and return local (i.e. retain only the Heap)
-               //TODO: confirm - does this simply mean set the Rho to empty map ?
-               callSitePtg->killRho();
-               callSitePtg->setBotReturn();
+         // handle the return value. We use a magic number (-99) to represent the pseudo-symref of the return var
+         // also, we only need to worry about the areturn. So why do we have the others here? Maybe want to process some cleanup
+         //   actions on encountering a return op
 
-	         if(usefulNode->getSymbol()->isResolvedMethod()) {
-	            cout << "the method is resolved" << endl;
-	            string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
-	            cout << sig << " is resolved" << endl;
+         if (opCode == TR::areturn)
+         {
+            set<Entry> returnPointees = evaluateNode(in, usefulNode->getFirstChild(), evaluatedNodeValues, visitCount, methodIndex);
+            in->assignReturn(returnPointees);
 
-               //TODO: called method is resolved. map the arguments and peek into it
-               if(_runtimeVerifierDiagnostics) {
-                  cout << "return bottomized, parameters mapped, here is the in ptg" << endl;
-                  callSitePtg->print();
-               }  
-	         } else {
-	            cout << "found an unresolved method " << methodName << endl;
-               //TODO: method is not resolved, do
-               //1. set return to BOT
-               //2. set all fields of all arguments to BOT (this includes the receiver, if applicable) - this involves the escape map
-               //bottomize all heap references reachable from the arguments
-	         } 
+            if (_runtimeVerifierDiagnostics)
+            {
+               cout << "processed areturn" << endl;
+               in->print();
+            }
          }
          break;
-
       }
-
-      case TR::icall:
-      case TR::lcall:
-      case TR::fcall:
-      case TR::dcall:
-      case TR::acall:
-      case TR::call:
-      case TR::vcall:
-      {
-         bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
-	         if(!isHelperMethodCall) {
-	         const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-	         
-	         if(usefulNode->getSymbol()->isResolvedMethod()) {
-	            cout << "the method is resolved" << endl;
-	            string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
-	            cout << sig << " is resolved" << endl;
-	         } else {
-	            cout << "found an unresolved method " << methodName << endl;
-	         } 
-         }
-         break;
-      }
-*/
 
       default:
       {
-//         TR_ASSERT_FATAL(true, "opcode %s not recognized", usefulNode->getOpCode().getName());
+         //         TR_ASSERT_FATAL(true, "opcode %s not recognized", usefulNode->getOpCode().getName());
          break;
       }
       }
@@ -2585,30 +2626,35 @@ set <Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *,
    return evaluatedValues;
 }
 
-void pseudoTopoSort(TR::Block * currentBlock, vector<TR::Block*>& gray, vector<TR::Block*>& black, stack<TR::Block*>& sorted){
-   if(find(gray.begin(), gray.end(), currentBlock) != gray.end()) {
+void pseudoTopoSort(TR::Block *currentBlock, vector<TR::Block *> &gray, vector<TR::Block *> &black, stack<TR::Block *> &sorted)
+{
+   if (find(gray.begin(), gray.end(), currentBlock) != gray.end())
+   {
       return;
-   } else {
+   }
+   else
+   {
       gray.push_back(currentBlock);
    }
 
-      TR::CFGEdgeList successors = currentBlock->getSuccessors();
-      for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
+   TR::CFGEdgeList successors = currentBlock->getSuccessors();
+   for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
+   {
+      TR::Block *successorBlock = toBlock((*successorIt)->getTo());
+
+      if (find(black.begin(), black.end(), successorBlock) != black.end())
       {
-         TR::Block *successorBlock = toBlock((*successorIt)->getTo());
-
-         if(find(black.begin(), black.end(), successorBlock) != black.end()) {
-            continue;
-         } else {
-            pseudoTopoSort(successorBlock, gray, black, sorted);
-         }
-
+         continue;
       }
+      else
+      {
+         pseudoTopoSort(successorBlock, gray, black, sorted);
+      }
+   }
 
-      gray.erase(find(gray.begin(),gray.end(),currentBlock));
-      black.push_back(currentBlock);
-      sorted.push(currentBlock);
-   
+   gray.erase(find(gray.begin(), gray.end(), currentBlock));
+   black.push_back(currentBlock);
+   sorted.push(currentBlock);
 }
 
 /*
@@ -2618,24 +2664,28 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 {
    if (_runtimeVerifierDiagnostics)
       inFlow->print();
-   //instatiate the outFlow as a copy of the inFlow
+   // instatiate the outFlow as a copy of the inFlow
    PointsToGraph *outFlow = new PointsToGraph(*inFlow);
 
-   cout << "initial outflow at entry is " << endl;
-   outFlow->print();
+   string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
+   if (_runtimeVerifierDiagnostics)
+   {
+      cout << "performing runtime PTA for " << methodSignature << endl;
+      cout << "in-PTG:" << endl;
+      outFlow->print();
+   }
 
-   //TODO: 'kill' the locals, args and return of the caller.
+   // TODO: 'kill' the locals, args and return of the caller.
 
    // load in the loop invariants for this method
-      string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
    int methodIndex = getOrInsertMethodIndex(methodSignature);
    string loopInvariantFileName = "invariants/li" + std::to_string(methodIndex) + ".txt";
    IFDIAGPRINT << "attempting to read loop invariant " << loopInvariantFileName << " " << methodSignature << endl;
    std::map<int, PointsToGraph> staticLoopInvariants; /* = readLoopInvariant(loopInvariantFileName); */
 
    string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
-   IFDIAGPRINT << "attempting to read callsite invariant " << callsiteInvariantFileName <<  " " << methodSignature << endl;
-   std::map<int, set <Entry> > staticCallSiteInvariant; /*= readCallsiteInvariant(callsiteInvariantFileName); */
+   IFDIAGPRINT << "attempting to read callsite invariant " << callsiteInvariantFileName << " " << methodSignature << endl;
+   std::map<int, set<Entry>> staticCallSiteInvariant; /*= readCallsiteInvariant(callsiteInvariantFileName); */
 
    // TODO: it'd be nice to encapsulate both of these into a context of sorts
    // a collection of all the in-PTGs, keyed by the bci of the instruction
@@ -2648,23 +2698,24 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    map<TR::Block *, PointsToGraph *> basicBlockOuts;
 
    // we begin from the start node of the CFG
-   //TODO: perform the topological sort of the CFG here, to identify the order in which the basic blocks are to be processed
+   // TODO: perform the topological sort of the CFG here, to identify the order in which the basic blocks are to be processed
    TR::CFG *cfg = methodSymbol->getFlowGraph();
-   if(!cfg) cout << "cfg is null!" << endl;
+   if (!cfg)
+      cout << "cfg is null!" << endl;
    TR::Block *start = cfg->getStart()->asBlock();
 
-   //perform a topological sort of the CFG to determine the order in which the basic blocks are to be processed
-   vector<TR::Block*> gray;
-   vector<TR::Block*> black;
-   stack<TR::Block*> blockProcessingOrder;
+   // perform a topological sort of the CFG to determine the order in which the basic blocks are to be processed
+   vector<TR::Block *> gray;
+   vector<TR::Block *> black;
+   stack<TR::Block *> blockProcessingOrder;
    pseudoTopoSort(start, gray, black, blockProcessingOrder);
-   
-//   queue<TR::Block *> workList;
-//   workList.push(start);
+
+   //   queue<TR::Block *> workList;
+   //   workList.push(start);
 
    // not technically needed. We can look to see if this block has an Out-PTG
    // set<int> visitedBlocks;
-   std::map<TR::Node *, set <Entry> > evaluatedNodeValues;
+   std::map<TR::Node *, set<Entry>> evaluatedNodeValues;
 
    while (!blockProcessingOrder.empty())
    {
@@ -2679,12 +2730,15 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       // if(visitedBlocks)
 
       PointsToGraph *inForBasicBlock;
-      
-      if(currentBB == start) {
+
+      if (currentBB == start)
+      {
          inForBasicBlock = inFlow;
-      } else {
+      }
+      else
+      {
          inForBasicBlock = getPredecessorMeet(currentBB, basicBlockOuts);
-      } 
+      }
 
       PointsToGraph *localRunningPTG = inForBasicBlock;
 
@@ -2706,7 +2760,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                break;
 
             int nodeBCI = node->getByteCodeInfo().getByteCodeIndex();
-            if(staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end()) {
+            if (staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end())
+            {
                IFDIAGPRINT << "found static loop invariant at bci " << nodeBCI << endl;
             }
 
@@ -2724,23 +2779,20 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             //  }
 
             // if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
-           set <Entry> evaluatedValuesForNode = evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount, methodIndex);
-            //quick test to make sure values are persisting b/w calls
-            //UPDATE: they are!
-//            if(_runtimeVerifierDiagnostics) {
-//	           for(Entry e : evaluatedValuesForNode) {
-//	              cout << e.getString() << endl;
-//	           }
-//            }
-            
+            set<Entry> evaluatedValuesForNode = evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount, methodIndex);
+            // quick test to make sure values are persisting b/w calls
+            // UPDATE: they are!
+            //            if(_runtimeVerifierDiagnostics) {
+            //	           for(Entry e : evaluatedValuesForNode) {
+            //	              cout << e.getString() << endl;
+            //	           }
+            //            }
 
-            if(_runtimeVerifierDiagnostics) {
+            if (_runtimeVerifierDiagnostics)
+            {
                cout << "processed evaluate node" << endl;
                localRunningPTG->print();
             }
-
-
-
 
             // lets store away the running ptg as the out of the current bci
             // by design of the algorithm, the outs of any BB will/should never change
@@ -2749,24 +2801,27 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       }
 
       /* we now look at the successors of this block, if any successor has already been
-         * analyzed, we check for invariance
-         *
-         * the subsumes relation is 
-         * if static invariant is present:
-         *    ptg_invariant <subsumes> ( ptg_in_of_successor <meet> ptg_out_of_current )
-         * else 
-         *    ptg_in_of_successor <subsumes> ptg_out_of_current
-         */
+       * analyzed, we check for invariance
+       *
+       * the subsumes relation is
+       * if static invariant is present:
+       *    ptg_invariant <subsumes> ( ptg_in_of_successor <meet> ptg_out_of_current )
+       * else
+       *    ptg_in_of_successor <subsumes> ptg_out_of_current
+       */
       for (TR::CFGEdgeList::iterator successorIt = currentBB->getSuccessors().begin(); successorIt != currentBB->getSuccessors().end(); ++successorIt)
       {
          TR::Block *successorBlock = toBlock((*successorIt)->getTo());
-         if(basicBlockOuts.find(successorBlock) != basicBlockOuts.end()) {
+         if (basicBlockOuts.find(successorBlock) != basicBlockOuts.end())
+         {
             cout << "BB " << successorBlock->getNumber() << "already analyzed, invariance check, current BB is " << currentBBNumber << endl;
 
             bool staticInvariantExists = false;
-            if(staticInvariantExists) {
-
-            } else {
+            if (staticInvariantExists)
+            {
+            }
+            else
+            {
                PointsToGraph *ptgRunning = getPredecessorMeet(successorBlock, basicBlockOuts);
                bool subsumes = ptgRunning->subsumes(ptgRunning);
                cout << "subsumes check returned " << subsumes << endl;
@@ -2780,23 +2835,29 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       // re-enable this for verification testing
       // if(out != prevOut) {
 
-         //the below code for adding successors is no longer needed, since the order of processing is determined before hand by the topological sort
-//      TR::CFGEdgeList successors = currentBB->getSuccessors();
-//      for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
-//      {
-//         TR::Block *successorBlock = toBlock((*successorIt)->getTo());
-//
-//         workList.push(successorBlock);
-//      }
+      // the below code for adding successors is no longer needed, since the order of processing is determined before hand by the topological sort
+      //      TR::CFGEdgeList successors = currentBB->getSuccessors();
+      //      for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
+      //      {
+      //         TR::Block *successorBlock = toBlock((*successorIt)->getTo());
+      //
+      //         workList.push(successorBlock);
+      //      }
       // }
    }
 
-   
    TR::Block *end = cfg->getEnd()->asBlock();
-   cout << "here is the out for the method : " << endl;
-   PointsToGraph *outForMethod = basicBlockOuts[end];
-   outForMethod->print();
 
+   PointsToGraph *outForMethod = basicBlockOuts[end];
+
+   //save this away as the summary for this method!
+   verifiedMethodSummaries[methodSignature] = outForMethod;
+   if (_runtimeVerifierDiagnostics)
+   {
+      cout << "completed runtime PTA for " << methodSignature << endl;
+      cout << "out-PTG:" << endl;
+      outForMethod->print();
+   }
    return outForMethod;
 }
 
@@ -2806,31 +2867,43 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
 {
 
    string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
+
+   if (isInvokedByJITC && forceCallsiteArgsForJITCInvocation.find(methodSignature) != forceCallsiteArgsForJITCInvocation.end())
+   {
+      // this method's verification was technically invoked via callsite descent, but due to
+      //  the JITC's plumbing, we are in an InvokedbyJITC mode
+
+      isInvokedByJITC = false;
+      inFlow = forceCallsiteArgsForJITCInvocation[methodSignature];
+      forceCallsiteArgsForJITCInvocation.clear();
+   }
+
    cout << "analyzing method " << methodSignature << endl;
    if (!_runtimeVerifierDiagnostics)
       _runtimeVerifierDiagnostics = feGetEnv("TR_runtimeVerifyDiag") != NULL;
 
    PointsToGraph *outFlow = new PointsToGraph();
 
-   //if we are invoked by the algorithm itself (by descending into call site, then the class/methodname will be populated)
-   if (isInvokedByJITC)
-   {
-      className = getFormattedCurrentClassName(comp->getMethodSymbol());
-      methodName = getFormattedCurrentMethodName(comp->getMethodSymbol());
-   }
+   // if we are invoked by the algorithm itself (by descending into call site, then the class/methodname will be populated)
+   //if (isInvokedByJITC)
+   //{
+      //className = getFormattedCurrentClassName(comp->getMethodSymbol());
+      //methodName = getFormattedCurrentMethodName(comp->getMethodSymbol());
+   //}
 
-   //TODO: use the standardized method signature here, no need for another specially formatted string
-   std::string sig = className + "." + methodName;
+   // TODO: use the standardized method signature here, no need for another specially formatted string
+   //std::string sig = className + "." + methodName;
    bool analyzed = false;
-   if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end()) {
+   if (_runtimeVerifiedMethods.find(methodSignature) != _runtimeVerifiedMethods.end())
+   {
       // this method has already been analyzed
       cout << "\talready analyzed" << endl;
       analyzed = true;
    }
    else
-      _runtimeVerifiedMethods.insert(sig);
+      _runtimeVerifiedMethods.insert(methodSignature);
 
-   //a guarantee that each method is processed at most once
+   // a guarantee that each method is processed at most once
    if (!analyzed)
    {
 
@@ -2858,7 +2931,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
          inFlow = new PointsToGraph();
 
          if (_runtimeVerifierDiagnostics)
-            cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by JIT-C" << endl;
+            cout << "runtime verification of method " << methodSignature << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by JIT-C" << endl;
 
          // verify has been invoked by the JIT-C - so we need to bottomize the incoming arguments
          bottomizeParameters(methodSymbol, inFlow);
@@ -2868,15 +2941,18 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       else
       {
          if (_runtimeVerifierDiagnostics)
-            cout << "runtime verification of method " << sig << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by callsite descent" << endl;
+            cout << "runtime verification of method " << methodSignature << ", index " << getOrInsertMethodIndex(methodSignature) << " invoked by callsite descent" << endl;
          // verify() was invoked by the verification algorithm, so all the required data points should be available.
          // TODO: is there any housekeeping unique to this scenario?
          mapParametersIn(methodSymbol, inFlow);
          if (_runtimeVerifierDiagnostics)
+         {
+            cout << "parameters mapped for method " << methodSignature << endl;
             inFlow->print();
+         }
       }
 
-      //now that we have the inflow adjusted, proceed to perform the runtime points to analysis for this method
+      // now that we have the inflow adjusted, proceed to perform the runtime points to analysis for this method
       outFlow = performRuntimePointsToAnalysis(inFlow, methodSymbol, visitCount);
    }
 
@@ -2889,52 +2965,52 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
 //    return ptg;
 // }
 
-void performRuntimeVerification(TR::Compilation *comp)
-{
-
-   std::string currentClassName = getFormattedCurrentClassName(comp->getMethodSymbol());
-   std::string currentMethodName = getFormattedCurrentMethodName(comp->getMethodSymbol());
-   std::string sig = currentClassName + "." + currentMethodName;
-   if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end())
-      // this method has already been analyzed
-      return;
-   else
-      _runtimeVerifiedMethods.insert(sig);
-
-   // std::cout << "running performRuntimeVerification for " << currentMethodName << endl;
-
-   TR::CFG *cfg = comp->getFlowGraph();
-
-   // traceMsg(comp, "CFG for callee method %s\n", currentMethodName);
-   comp->dumpFlowGraph(cfg);
-   comp->dumpMethodTrees("from OMR::Optimizer::performRuntimeVerification");
-
-   // if (trace())
-   {
-      traceMsg(comp, "*****************************************************\n");
-      traceMsg(comp, "Beginning Runtime Verification for %s.%s\n", currentClassName.c_str(), currentMethodName.c_str());
-
-      // dump the current symbol table, to establish a baseline
-
-      TR::SymbolReferenceTable *tab = comp->getSymRefTab();
-      for (int i = tab->getIndexOfFirstSymRef(); i < tab->getNumSymRefs(); i++)
-      {
-
-         TR::SymbolReference *sym = tab->getSymRef(i);
-
-         if (sym != NULL && sym->getSymbol()->getType().isAddress())
-            traceMsg(comp, "Symref #%d - CPIndex %d, isTemporary: %d, isAuto: %d\n", sym->getReferenceNumber(), sym->getCPIndex(), sym->isTemporary(comp), sym->getSymbol()->isAuto());
-      }
-   }
-
-   // recursively invoke the verification algorithm (calls itself at each callsite to analyze the called method)
-   // verifyStaticMethodInfo(currentClassName, currentMethodName, cfg, comp);
-
-   // if (trace())
-   {
-      traceMsg(comp, "*****************************************************");
-   }
-}
+// void performRuntimeVerification(TR::Compilation *comp)
+//{
+//
+//    std::string currentClassName = getFormattedCurrentClassName(comp->getMethodSymbol());
+//    std::string currentMethodName = getFormattedCurrentMethodName(comp->getMethodSymbol());
+//    std::string sig = currentClassName + "." + currentMethodName;
+//    if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end())
+//       // this method has already been analyzed
+//       return;
+//    else
+//       _runtimeVerifiedMethods.insert(sig);
+//
+//    // std::cout << "running performRuntimeVerification for " << currentMethodName << endl;
+//
+//    TR::CFG *cfg = comp->getFlowGraph();
+//
+//    // traceMsg(comp, "CFG for callee method %s\n", currentMethodName);
+//    comp->dumpFlowGraph(cfg);
+//    comp->dumpMethodTrees("from OMR::Optimizer::performRuntimeVerification");
+//
+//    // if (trace())
+//    {
+//       traceMsg(comp, "*****************************************************\n");
+//       traceMsg(comp, "Beginning Runtime Verification for %s.%s\n", currentClassName.c_str(), currentMethodName.c_str());
+//
+//       // dump the current symbol table, to establish a baseline
+//
+//       TR::SymbolReferenceTable *tab = comp->getSymRefTab();
+//       for (int i = tab->getIndexOfFirstSymRef(); i < tab->getNumSymRefs(); i++)
+//       {
+//
+//          TR::SymbolReference *sym = tab->getSymRef(i);
+//
+//          if (sym != NULL && sym->getSymbol()->getType().isAddress())
+//             traceMsg(comp, "Symref #%d - CPIndex %d, isTemporary: %d, isAuto: %d\n", sym->getReferenceNumber(), sym->getCPIndex(), sym->isTemporary(comp), sym->getSymbol()->isAuto());
+//       }
+//    }
+//
+//    // recursively invoke the verification algorithm (calls itself at each callsite to analyze the called method)
+//    // verifyStaticMethodInfo(currentClassName, currentMethodName, cfg, comp);
+//
+//    // if (trace())
+//    {
+//       traceMsg(comp, "*****************************************************");
+//    }
+// }
 
 int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimization, int32_t firstOptIndex, int32_t lastOptIndex, int32_t doTiming)
 {

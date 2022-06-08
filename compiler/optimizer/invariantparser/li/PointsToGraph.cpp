@@ -24,16 +24,38 @@ set <Entry> PointsToGraph::getPointsToSet(int symRef) {
 
 set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
     set <Entry> res;
+    
+    //dereferencing a global or null yields a global
+    if(target.type == Global || target.type == Null) {
+        Entry globalPointee;
+        globalPointee.type = Global;
+        res.insert(globalPointee);
 
+        return res;
+    }
+
+    bool nullReference = false;
     map <Entry, map <string, set <Entry> > >::iterator it1 = sigma.find(target);
     if(it1 != sigma.end()) {
         map <string, set <Entry> > m = it1->second;
         map <string, set <Entry> > :: iterator it2 = m.find(field);
         if(it2 != m.end()) {
             res = it2->second;
+        } 
+        else {
+            nullReference = true;
         }
+    } else {
+        nullReference = true;
     }
 
+    if(nullReference) {
+        //we interpret the absence of a key in sigma as Null
+        cout << target.getString() << "->" << field << " is null" << endl;
+        Entry pointee;
+        pointee.type = Null;
+        res.insert(pointee);
+    }
     return res;
 }
 
@@ -174,7 +196,7 @@ void PointsToGraph::assign(int symRef, Entry entry) {
     
     set <Entry> entries;
     entries.insert(entry);
-    cout << "inserting at symref " << symRef << endl;
+//    cout << "inserting at symref " << symRef << endl;
     //rho.insert(std::pair <int, vector<Entry> > (symRef, entries));
     //rho.insert(std::pair <int, vector <Entry> > (std::pair <int, vector <Entry> > (symRef, entries)));
     rho[symRef] = entries;
@@ -182,9 +204,10 @@ void PointsToGraph::assign(int symRef, Entry entry) {
 }
 
 void PointsToGraph::assign(int symRef, set <Entry> entries){
-    for(Entry entry : entries) {
-        assign(symRef, entry);
-    }
+//    for(Entry entry : entries) {
+//        assign(symRef, entry);
+//    }
+    rho[symRef] = entries;
 }
 
 void PointsToGraph::assign(Entry target, string field, Entry pointee){
@@ -396,4 +419,12 @@ bool PointsToGraph::subsumes(PointsToGraph *other) {
 
     //if we made it here, lhs subsumes rhs
     return true;
+}
+
+void PointsToGraph::assignReturn(set <Entry> pointees) {
+    assign(RETURNLOCAL, pointees);
+}
+
+set <Entry> PointsToGraph::getReturnPointsTo() {
+    return rho[RETURNLOCAL];
 }

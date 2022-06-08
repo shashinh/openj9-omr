@@ -2,9 +2,9 @@
 #include "structs.h"
 using namespace std;
 
-#define RETURNLOCAL -99
 
 class PointsToGraph {
+#define RETURNLOCAL -99
     private:
         //TODO: why did I make this a vector instead of a set?
         std::map <int, set <Entry> > rho;
@@ -25,6 +25,7 @@ class PointsToGraph {
         set <Entry> getArgPointsToSet(int argIndex);
         set <Entry> getPointsToSet (int symRef);
         set <Entry> getPointsToSet (Entry target, string field);
+        set <Entry> getReturnPointsTo ();
         int assignBot (int symRef);
         int assignBot (int bci, string field);
         void printRho();
@@ -50,6 +51,9 @@ class PointsToGraph {
         void assign(Entry target, string field, Entry entry);
         //assign a collection of bcis to the points-to set of a field
         void assign(Entry target, string field, set <Entry> entries);
+
+        //assign to the return variable
+        void assignReturn(set <Entry> pointees);
 
         //weak updates
         void extend(int symRef, int bci);
