@@ -1601,6 +1601,35 @@ TR::Node *getUsefulNode(TR::Node *node)
             // there are 41 "address" type nodes, out of those - some are handled above. 
             //    create an assert fail for the rest of the address nodes, 
             //    and let the other "safe" nodes trickle through - since they deal with non-ref types
+            if(opCode == TR::aconst ||
+               opCode == TR::ardbar ||
+               opCode == TR::awrtbar ||
+               opCode == TR::i2a ||
+               opCode == TR::iu2a ||
+               opCode == TR::l2a ||
+               opCode == TR::lu2a ||
+               opCode == TR::b2a ||
+               opCode == TR::bu2a ||
+               opCode == TR::s2a ||
+               opCode == TR::su2a ||
+               opCode == TR::loadaddr ||
+               opCode == TR::aRegLoad ||
+               opCode == TR::aRegStore ||
+               opCode == TR::aselect ||
+               opCode == TR::checkcast ||
+               opCode == TR::checkcastAndNULLCHK ||
+               opCode == TR:: newvalue ||
+               opCode == TR::newarray ||
+               opCode == TR::anewarray ||
+               opCode == TR::variableNew ||
+               opCode == TR::variableNewArray ||
+               opCode == TR::multianewarray ||
+               opCode == TR::aiadd ||
+               opCode == TR::aladd ||
+               opCode == TR::ArrayStoreCHK ||
+               opCode == TR::ArrayCHK ) {
+                  TR_ASSERT_FATAL(false, "unexpected op codes");
+               }
          }
       }
    }
