@@ -1598,6 +1598,9 @@ TR::Node *getUsefulNode(TR::Node *node)
          else
          {
             // TODO: Shashin: insert an assert failure here
+            // there are 41 "address" type nodes, out of those - some are handled above. 
+            //    create an assert fail for the rest of the address nodes, 
+            //    and let the other "safe" nodes trickle through - since they deal with non-ref types
          }
       }
    }
