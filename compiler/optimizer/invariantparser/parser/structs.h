@@ -21,6 +21,8 @@ struct Entry {
 
     EntryType type;
 
+    bool escapes;
+
     string getString() {
         string res;
         if(type == Reference) {
@@ -45,7 +47,20 @@ bool operator<(const Entry& e) const {
             return this->type < e.type;
         }
 	}
+
+bool operator==(const Entry& e) const {
+    if(this->type != e.type ){
+        return false;
+    } else if (this->type == Reference) {
+        return this->caller == e.caller && this->bci == e.bci;
+    } else {
+        return true;
+    }
+
+    return true;
+}
 };
+
 
 
 
