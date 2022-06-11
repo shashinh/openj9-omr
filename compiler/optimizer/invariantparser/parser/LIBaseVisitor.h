@@ -8,6 +8,8 @@
 #include "LIVisitor.h"
 
 
+namespace LI {
+
 /**
  * This class provides an empty implementation of LIVisitor, which can be
  * extended to create a visitor which only needs to handle a subset of the available methods.
@@ -70,3 +72,4 @@ public:
 
 };
 
+}  // namespace LI

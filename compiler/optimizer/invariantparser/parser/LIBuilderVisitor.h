@@ -5,6 +5,8 @@
 #include <string.h>
 #include "structs.h"
 
+using namespace LI;
+
 class LIBuilderVisitor : public LIBaseVisitor { 
 
 public:

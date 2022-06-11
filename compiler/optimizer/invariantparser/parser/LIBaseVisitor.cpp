@@ -5,3 +5,5 @@
 #include "LIBaseVisitor.h"
 
 
+using namespace LI;
+

@@ -23,7 +23,7 @@
 
 #include <iostream>
 //#include "ptgparser/structs.h"
-#include "invariantparser/li/PointsToGraph.h"
+#include "invariantparser/parser/PointsToGraph.h"
 #include <map>
 #include <queue>
 #include "il/ParameterSymbol.hpp"
@@ -142,10 +142,9 @@ using namespace OMR; // Note: used here only to avoid having to prepend all opts
 
 #define MAX_LOCAL_OPTS_ITERS 5
 
-extern void testMethod();
 extern map<string, int> readMethodIndices();
-extern map<int, PointsToGraph> readLoopInvariant(string fileName);
-extern map<int, set<Entry>> readCallsiteInvariant(string fileName);
+extern map<int, PointsToGraph> readLoopInvariant(int methodIndex);
+extern PointsToGraph readCallsiteInvariant(int methodIndex);
 
 const OptimizationStrategy localValuePropagationOpts[] =
     {
@@ -2367,7 +2366,15 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // we do not want to process helper method calls (osr, for example)
          if (!isHelperMethodCall)
          {
+            bool descendIntoMethod = true;
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+               //TODO : skip processing if called method is a library method
+               string s = methodName;
+               bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
+               if(isLibraryMethod) {
+                  cout << "bypassing " << s << " - a library method" << endl;
+                  descendIntoMethod = false;
+               }
 
             PointsToGraph *callSitePtg = new PointsToGraph(*in);
             // kill all the locals and return local (i.e. retain only the Heap)
@@ -2376,7 +2383,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             callSitePtg->killArgs();
             callSitePtg->setBotReturn();
 
-            if (usefulNode->getSymbol()->isResolvedMethod())
+            if (descendIntoMethod && usefulNode->getSymbol()->isResolvedMethod())
             {
                TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->castToResolvedMethodSymbol();
                string sig = methodSymbol->signature(_runtimeVerifierComp->trMemory());
@@ -2602,6 +2609,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          if (opCode == TR::areturn)
          {
             set<Entry> returnPointees = evaluateNode(in, usefulNode->getFirstChild(), evaluatedNodeValues, visitCount, methodIndex);
+            //TODO: this is wrong - take the meet with each return, below code is wrongly over-writing the return each time
             in->assignReturn(returnPointees);
 
             if (_runtimeVerifierDiagnostics)
@@ -2679,13 +2687,12 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
    // load in the loop invariants for this method
    int methodIndex = getOrInsertMethodIndex(methodSignature);
-   string loopInvariantFileName = "invariants/li" + std::to_string(methodIndex) + ".txt";
-   IFDIAGPRINT << "attempting to read loop invariant " << loopInvariantFileName << " " << methodSignature << endl;
-   std::map<int, PointsToGraph> staticLoopInvariants; /* = readLoopInvariant(loopInvariantFileName); */
+   IFDIAGPRINT << "attempting to read loop invariant " << methodIndex << " " << methodSignature << endl;
+   std::map<int, PointsToGraph> staticLoopInvariants = readLoopInvariant(methodIndex);
 
-   string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
-   IFDIAGPRINT << "attempting to read callsite invariant " << callsiteInvariantFileName << " " << methodSignature << endl;
-   std::map<int, set<Entry>> staticCallSiteInvariant; /*= readCallsiteInvariant(callsiteInvariantFileName); */
+   //string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
+   IFDIAGPRINT << "attempting to read callsite invariant " << methodIndex << " " << methodSignature << endl;
+   PointsToGraph staticCallSiteInvariant = readCallsiteInvariant(methodIndex);
 
    // TODO: it'd be nice to encapsulate both of these into a context of sorts
    // a collection of all the in-PTGs, keyed by the bci of the instruction

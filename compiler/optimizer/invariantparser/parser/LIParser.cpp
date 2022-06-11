@@ -8,6 +8,7 @@
 
 
 using namespace antlrcpp;
+using namespace LI;
 using namespace antlr4;
 
 LIParser::LIParser(TokenStream *input) : Parser(input) {

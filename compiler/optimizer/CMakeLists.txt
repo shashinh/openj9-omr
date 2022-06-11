@@ -106,17 +106,12 @@ compiler_library(optimizer
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpStack.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpArray.cpp
 	${CMAKE_CURRENT_LIST_DIR}/invariantparser/InvariantParser.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ci/CIBaseVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ci/CIBuilderVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ci/CILexer.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ci/CIParser.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ci/CIVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/li/LIBaseVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/li/LIBuilderVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/li/LIVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/li/LILexer.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/li/LIParser.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/li/PointsToGraph.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIBaseVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIBuilderVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LILexer.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIParser.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/PointsToGraph.cpp
 )
 
 

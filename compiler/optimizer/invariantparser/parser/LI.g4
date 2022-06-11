@@ -26,6 +26,6 @@ STRING: 'S';
 CONST: 'C';
 GLOBAL: 'G';
 NUMS: [0-9]+;
-ALPHAS: [A-Za-z]+;
+ALPHAS: [a-zA-Z0-9$_]+;
 NEWLINE: [\r\n]+;
 ALL: [A-Za-z<>-]+;

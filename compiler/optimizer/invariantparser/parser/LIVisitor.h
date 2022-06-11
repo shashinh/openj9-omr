@@ -8,6 +8,7 @@
 #include "LIParser.h"
 
 
+namespace LI {
 
 /**
  * This class defines an abstract visitor for a parse tree
@@ -48,3 +49,4 @@ public:
 
 };
 
+}  // namespace LI

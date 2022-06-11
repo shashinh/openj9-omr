@@ -1,5 +1,5 @@
 
-// Generated from CI.g4 by ANTLR 4.9.2
+// Generated from LI.g4 by ANTLR 4.9.2
 
 #pragma once
 
@@ -7,24 +7,25 @@
 #include "antlr4-runtime.h"
 
 
-namespace CI {
+namespace LI {
 
 
-class  CIParser : public antlr4::Parser {
+class  LIParser : public antlr4::Parser {
 public:
   enum {
-    T__0 = 1, T__1 = 2, T__2 = 3, NIL = 4, STRING = 5, CONST = 6, GLOBAL = 7, 
-    NUMS = 8, ALPHAS = 9, NEWLINE = 10, ALL = 11
+    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
+    T__7 = 8, NIL = 9, STRING = 10, CONST = 11, GLOBAL = 12, NUMS = 13, 
+    ALPHAS = 14, NEWLINE = 15, ALL = 16
   };
 
   enum {
-    RuleCi = 0, RuleCiEntry = 1, RuleCiBciEntry2 = 2, RuleCiBciEntry = 3, 
-    RuleCiEntries = 4, RuleCallerIndex = 5, RuleBciKey = 6, RuleBciVal = 7, 
-    RuleFieldKey = 8
+    RulePtg = 0, RuleEntry = 1, RuleVars = 2, RuleVarentry = 3, RuleFields = 4, 
+    RuleFieldentry = 5, RuleField = 6, RuleCiBciEntry = 7, RuleCiEntries = 8, 
+    RuleCallerIndex = 9, RuleBciKey = 10, RuleBciVal = 11, RuleFieldKey = 12
   };
 
-  explicit CIParser(antlr4::TokenStream *input);
-  ~CIParser();
+  explicit LIParser(antlr4::TokenStream *input);
+  ~LIParser();
 
   virtual std::string getGrammarFileName() const override;
   virtual const antlr4::atn::ATN& getATN() const override { return _atn; };
@@ -33,9 +34,13 @@ public:
   virtual antlr4::dfa::Vocabulary& getVocabulary() const override;
 
 
-  class CiContext;
-  class CiEntryContext;
-  class CiBciEntry2Context;
+  class PtgContext;
+  class EntryContext;
+  class VarsContext;
+  class VarentryContext;
+  class FieldsContext;
+  class FieldentryContext;
+  class FieldContext;
   class CiBciEntryContext;
   class CiEntriesContext;
   class CallerIndexContext;
@@ -43,27 +48,56 @@ public:
   class BciValContext;
   class FieldKeyContext; 
 
-  class  CiContext : public antlr4::ParserRuleContext {
+  class  PtgContext : public antlr4::ParserRuleContext {
   public:
-    CiContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    PtgContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    std::vector<antlr4::tree::TerminalNode *> NEWLINE();
-    antlr4::tree::TerminalNode* NEWLINE(size_t i);
+    antlr4::tree::TerminalNode *NEWLINE();
     antlr4::tree::TerminalNode *EOF();
-    std::vector<CiEntryContext *> ciEntry();
-    CiEntryContext* ciEntry(size_t i);
+    std::vector<EntryContext *> entry();
+    EntryContext* entry(size_t i);
 
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
   };
 
-  CiContext* ci();
+  PtgContext* ptg();
 
-  class  CiEntryContext : public antlr4::ParserRuleContext {
+  class  EntryContext : public antlr4::ParserRuleContext {
   public:
-    CiEntryContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    EntryContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    BciKeyContext *bciKey();
+    VarsContext *vars();
+    FieldsContext *fields();
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  EntryContext* entry();
+
+  class  VarsContext : public antlr4::ParserRuleContext {
+  public:
+    VarsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<VarentryContext *> varentry();
+    VarentryContext* varentry(size_t i);
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  VarsContext* vars();
+
+  class  VarentryContext : public antlr4::ParserRuleContext {
+  public:
+    VarentryContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    BciKeyContext *bciKey();
     std::vector<CiBciEntryContext *> ciBciEntry();
     CiBciEntryContext* ciBciEntry(size_t i);
 
@@ -72,20 +106,52 @@ public:
    
   };
 
-  CiEntryContext* ciEntry();
+  VarentryContext* varentry();
 
-  class  CiBciEntry2Context : public antlr4::ParserRuleContext {
+  class  FieldsContext : public antlr4::ParserRuleContext {
   public:
-    CiBciEntry2Context(antlr4::ParserRuleContext *parent, size_t invokingState);
+    FieldsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *NUMS();
+    std::vector<FieldentryContext *> fieldentry();
+    FieldentryContext* fieldentry(size_t i);
 
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
    
   };
 
-  CiBciEntry2Context* ciBciEntry2();
+  FieldsContext* fields();
+
+  class  FieldentryContext : public antlr4::ParserRuleContext {
+  public:
+    FieldentryContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    CallerIndexContext *callerIndex();
+    BciKeyContext *bciKey();
+    std::vector<FieldContext *> field();
+    FieldContext* field(size_t i);
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  FieldentryContext* fieldentry();
+
+  class  FieldContext : public antlr4::ParserRuleContext {
+  public:
+    FieldContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    FieldKeyContext *fieldKey();
+    std::vector<CiBciEntryContext *> ciBciEntry();
+    CiBciEntryContext* ciBciEntry(size_t i);
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  FieldContext* field();
 
   class  CiBciEntryContext : public antlr4::ParserRuleContext {
   public:
@@ -192,4 +258,4 @@ private:
   static Initializer _init;
 };
 
-}  // namespace CI
+}  // namespace LI

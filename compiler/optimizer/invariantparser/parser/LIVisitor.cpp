@@ -5,3 +5,5 @@
 #include "LIVisitor.h"
 
 
+using namespace LI;
+

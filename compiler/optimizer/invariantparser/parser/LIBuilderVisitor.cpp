@@ -72,30 +72,38 @@ set <Entry> LIBuilderVisitor::processciBciEntrys(vector<LIParser::CiBciEntryCont
 }
 antlrcpp::Any LIBuilderVisitor::visitVars(LIParser::VarsContext *ctx)
 {
-	map<int, vector<Entry>> varsMap;
+	map<int, set <Entry>> varsMap; //rho
+
+
+
+
+
+
+
+
 	for(auto varEntry : ctx->varentry()){
 		int varKey = varEntry->bciKey()->accept(this).as<int>();
-		vector<Entry> entries;
+		set <Entry> entries;
 		for(auto entry : varEntry->ciBciEntry()){
 			Entry varEntry;
 			
 			if (entry->STRING() != NULL) {
 				//cout << "varEntry is string" << endl;
 				varEntry.type = String;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else if (entry->CONST() != NULL) {
 				//cout << "varEntry is const" << endl;
 				varEntry.type = Constant;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else if (entry->GLOBAL() != NULL) {
 				//cout << "varEntry is global" << endl;
 				varEntry.type = Global;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else if (entry->NIL() != NULL) {
 				//cout << "varEntry is null" << endl;
 				//the value is a NIL;
 				varEntry.type = Null;
-				entries.push_back(varEntry);
+				entries.insert(varEntry);
 			} else {
 				int callerIndex = entry->ciEntries()->callerIndex()->accept(this).as<int>();
 		//cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
@@ -104,19 +112,19 @@ antlrcpp::Any LIBuilderVisitor::visitVars(LIParser::VarsContext *ctx)
 					varEntry.type = Reference;
 					varEntry.caller = callerIndex;
 					varEntry.bci = bciVal;
-					entries.push_back(varEntry);
+					entries.insert(varEntry);
 				}
 			}
 
 		}
 		//cout << "inserting " << entries.size() << " entries into varsMap" << endl;
-		varsMap.insert(pair<int, vector<Entry>>(varKey, entries));
+		varsMap.insert(pair<int, set<Entry>>(varKey, entries));
 	}
 
 	return varsMap;
 }
 
-antlrcpp::Any LIBuilderVisitor::visitFields(LIParser::FieldsContext *ctx)
+antlrcpp::Any LIBuilderVisitor::visitFields(LIParser::FieldsContext *ctx) //build sigma
 {
     map <Entry, map <string, set <Entry>>> fieldsMap;
 

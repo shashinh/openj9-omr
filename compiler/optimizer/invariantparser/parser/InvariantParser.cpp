@@ -1,17 +1,19 @@
-
 #include <iostream>
 #include <fstream>
 #include <strstream>
 #include <string>
 #include "antlr4-runtime.h"
-#include "parser/structs.h"
-#include "parser/PointsToGraph.h"
-#include "parser/LILexer.h"
-#include "parser/LIParser.h"
-#include "parser/LIBuilderVisitor.h"
+#include "structs.h"
+#include "PointsToGraph.h"
+#include "LILexer.h"
+#include "LIParser.h"
+#include "LIBuilderVisitor.h"
+
+
 
 using namespace std;
 using namespace antlr4;
+
 
 map <string, int> readMethodIndices() {
 	map<string, int> ret;
@@ -40,10 +42,19 @@ class ParseErrorListener : public BaseErrorListener
         }
 };
 
-map <int, PointsToGraph> readInvariant(string fileName) {
-	map <int, PointsToGraph> invariant;
 
+
+
+std::map<int, PointsToGraph> readLoopInvariant(string fileName) { 
+    std::map<int, PointsToGraph> li;
+// }
+
+// int main(int argc, char *argv[])
+// {
+
+	//string fileName(argv[1]);
 	ifstream ins(fileName, std::ifstream::in);
+	// ins.open("/home/shashin/antlr/demo/test1/test1.log");
 
 	ANTLRInputStream input(ins);
 
@@ -59,14 +70,25 @@ map <int, PointsToGraph> readInvariant(string fileName) {
 		parser.addErrorListener(&errorListener);
 
 		tree::ParseTree *tree = parser.ptg();
+
+		// Print the parse tree in Lisp format.
+//		cout << endl
+//			 << "Parse succesful, parse tree:" << endl;
+//		std::cout << tree->toStringTree(&parser) << endl;
+
+		// cout << "visiting now\n";
 		LIParser::PtgContext *ctx = parser.ptg();
 
+//		cout << endl;
 
 		LIBuilderVisitor visitor;
-		invariant = visitor.visitPtg((LIParser::PtgContext *)tree).as<std::map<int, PointsToGraph>>();
+		// std::map<int, StaticPtg> res = tree->accept(&visitor).as<std::map<int, StaticPtg>>();
+		li = visitor.visitPtg((LIParser::PtgContext *)tree).as<std::map<int, PointsToGraph>>();
 
-		std::map<int, PointsToGraph>::iterator it = invariant.begin();
-		while (it != invariant.end())
+//		cout << "\n\n"
+//			 << endl;
+		std::map<int, PointsToGraph>::iterator it = li.begin();
+		while (it != li.end())
 		{
 			cout << "bci : " << it->first << endl;
 			map <int, set <Entry> > rho = it->second.getRho();
@@ -80,7 +102,7 @@ map <int, PointsToGraph> readInvariant(string fileName) {
 				set <Entry> pointees = vIt->second;
 				for (Entry pointee : pointees)
 				{
-					cout << pointee.getString();
+					cout << pointee.getString() << " ";
 				}
 
 				cout << endl;
@@ -100,7 +122,7 @@ map <int, PointsToGraph> readInvariant(string fileName) {
 					cout << "\t\t" << fkIt->first << ": ";
 					for (Entry pointee : fkIt->second)
 					{
-						cout << pointee.getString();
+						cout << pointee.getString() << " ";
 					}
 
 					cout << "\t";
@@ -111,31 +133,6 @@ map <int, PointsToGraph> readInvariant(string fileName) {
 			}
 			it++;
 		}
-
-
-	return invariant;
-}
-
-PointsToGraph readCallsiteInvariant(int methodIndex) {
-
-    std::map<int, PointsToGraph> ci;
-	string fileName =  "invariants/ci" + to_string(methodIndex) + ".txt";	
-
-	ci = readInvariant(fileName);
-
-	assert(ci.find(0) != ci.end());
-
-    return ci[0];
-}
-
-
-
-std::map<int, PointsToGraph> readLoopInvariant(int methodIndex) { 
-    std::map<int, PointsToGraph> li;
-
-	string fileName =  "invariants/li" + to_string(methodIndex) + ".txt";	
-
-	li = readInvariant(fileName);
 
 	return li;
 }
