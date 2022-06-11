@@ -1,6 +1,8 @@
 #include "PointsToGraph.h"
 
 
+const Entry PointsToGraph::bottomEntry = { .caller = -1, .bci = -1, .type = Global };
+const Entry PointsToGraph::nullEntry = { .caller = -1, .bci = -1, .type = Null };
 
 std::map <int, std::set <Entry> >  PointsToGraph::getRho() {
     return rho;
@@ -27,11 +29,12 @@ set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
     
     //dereferencing a global or null yields a global
     if(target.type == Global || target.type == Null) {
-        Entry globalPointee;
-        globalPointee.type = Global;
-        res.insert(globalPointee);
+        //Entry globalPointee;
+        //globalPointee.type = Global;
+        //res.insert(globalPointee);
 
-        return res;
+        res.insert(PointsToGraph::bottomEntry);
+        return res; 
     }
 
     bool nullReference = false;
@@ -71,13 +74,12 @@ int PointsToGraph::summarize(Entry *entry) {
 //TODO: this also has to go into the sigma map and 'bottomize' all assigned fields
 int PointsToGraph::assignBot (int symRef) {
     //replace the points to set of the symRef with a singleton - BOT
-    Entry botEntry;
-    botEntry.type = Global;
+    //Entry botEntry;
+    //botEntry.type = Global;
     set <Entry> pointsToSet;
-    pointsToSet.insert(botEntry);
-
-    rho.insert(pair <int,  set <Entry>> (pair <int, set <Entry> >(symRef, pointsToSet)));
-
+    //pointsToSet.insert(botEntry);
+    pointsToSet.insert(PointsToGraph::bottomEntry);
+    rho[symRef] = pointsToSet;
     return 0;
 
 }

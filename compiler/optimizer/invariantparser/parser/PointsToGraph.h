@@ -19,6 +19,8 @@ class PointsToGraph {
         PointsToGraph();
         PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <Entry, std::map <string, set <Entry> > > sigma);
         PointsToGraph(const PointsToGraph &ptg);
+        static const Entry bottomEntry;
+        static const Entry nullEntry;
         std::map <int, std::set <Entry> > getRho();
         std::map <Entry, std::map <string, set <Entry> > > getSigma();
         void setArg(int argIndex, set <Entry> values);

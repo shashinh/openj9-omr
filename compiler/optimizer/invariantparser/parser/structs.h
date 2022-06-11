@@ -16,8 +16,8 @@ enum EntryType {
 
 
 struct Entry {
-    int caller = -1;
-    int bci = -1;
+    int caller;
+    int bci;
 
     EntryType type;
 
