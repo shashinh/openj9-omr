@@ -1628,7 +1628,10 @@ TR::Node *getUsefulNode(TR::Node *node)
                opCode == TR::aladd ||
                opCode == TR::ArrayStoreCHK ||
                opCode == TR::ArrayCHK ) {
+                  cout << "did not expect op code" << node->getOpCode().getName() << endl;
                   TR_ASSERT_FATAL(false, "unexpected op codes");
+               } else {
+                  //just let them go
                }
          }
       }
