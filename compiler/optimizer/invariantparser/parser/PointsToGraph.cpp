@@ -363,7 +363,7 @@ void PointsToGraph::ptgUnion(PointsToGraph *a, PointsToGraph *b) {
 
 }
 
-bool PointsToGraph::subsumes(PointsToGraph *other) {
+bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
 
     cout << "subsumes check requested for ptgs " << endl;
     cout << "lhs : " << endl;
@@ -371,15 +371,22 @@ bool PointsToGraph::subsumes(PointsToGraph *other) {
     cout << "rhs :" << endl;
     other->print();
 
+    map <int, set <Entry> > otherRho;
+    if(callSite) {
+        otherRho = other->args;
+    } else {
+        otherRho = other->rho;
+    }
+
     //this-ptg needs to subsume other-ptg
     
     //1. check rho subsumes
-    for(map<int, set<Entry>>::iterator it = other->rho.begin(); it != other->rho.end(); it++) {
+    for(map<int, set<Entry>>::iterator it = otherRho.begin(); it != otherRho.end(); it++) {
         //we only check subsumes between rho entries that are present in both ptgs
         //because it is entirely possible for the runtime ptg to have extra rho entries (temps, for example)
-        if(this->rho.find(it->first) != this->rho.end()) {
+        if(rho.find(it->first) != rho.end()) {
             set <Entry> rhsPointees = it->second;
-            set <Entry> lhsPointees = this->rho[it->first];
+            set <Entry> lhsPointees = rho[it->first];
             //lhsPointees should be a superset of rhsPointees
             if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
                             rhsPointees.begin(), rhsPointees.end())) {

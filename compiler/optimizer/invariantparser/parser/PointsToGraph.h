@@ -70,7 +70,7 @@ class PointsToGraph {
 
         void summarizeFields(int symRef);
 
-        bool subsumes(PointsToGraph * other);
+        bool subsumes(PointsToGraph * other, bool callSite = false);
 
         void copySigmaFrom(PointsToGraph *other);
         

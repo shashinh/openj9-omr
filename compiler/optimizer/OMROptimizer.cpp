@@ -1617,7 +1617,6 @@ TR::Node *getUsefulNode(TR::Node *node)
                opCode == TR::aRegLoad ||
                opCode == TR::aRegStore ||
                opCode == TR::aselect ||
-               opCode == TR::checkcast ||
                opCode == TR::checkcastAndNULLCHK ||
                opCode == TR:: newvalue ||
                opCode == TR::newarray ||
@@ -1632,6 +1631,9 @@ TR::Node *getUsefulNode(TR::Node *node)
                   TR_ASSERT_FATAL(false, "unexpected op codes");
                } else {
                   //just let them go
+                  
+                  //below were encountered in tests and proven to be "safe"
+                  //opCode == TR::checkcast ||
                }
          }
       }
@@ -2446,13 +2448,21 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          {
             bool descendIntoMethod = true;
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-               //TODO : skip processing if called method is a library method
-               string s = methodName;
-               bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
-               if(isLibraryMethod) {
-                  cout << "bypassing " << s << " - a library method" << endl;
-                  descendIntoMethod = false;
-               }
+            //TODO : skip processing if called method is a library method
+            string s = methodName;
+            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
+            if(isLibraryMethod) {
+               cout << "bypassing " << s << " - a library method" << endl;
+               descendIntoMethod = false;
+            }
+            
+            PointsToGraph callSiteInvariant;
+            //fetch the callsite invariant for this method
+            if(!isLibraryMethod) {
+               int methodIndex = getOrInsertMethodIndex(methodName);
+               IFDIAGPRINT << "attempting to read callsite invariant " << methodIndex << " " << methodName << endl;
+               callSiteInvariant = readCallsiteInvariant(methodIndex);
+            }
 
             PointsToGraph *callSitePtg = new PointsToGraph(*in);
             // kill all the locals and return local (i.e. retain only the Heap)
@@ -2464,7 +2474,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             {
                TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->castToResolvedMethodSymbol();
                string sig = methodSymbol->signature(_runtimeVerifierComp->trMemory());
-               cout << sig << " is resolved" << endl;
+               cout << sig << " is resolved" << ", methodName: " << methodName << endl;
 
                // TODO: called method is resolved. map the arguments and peek into it
                //               mapParameters(in, callSitePtg, usefulNode);
@@ -2478,6 +2488,14 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   // the first arg for a virtual call is the load of the VFT, we shall skip that
                   TR::Node *thisParmNode = usefulNode->getSecondChild();
                   set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
+
+                  //callsite verification for this-param
+                  //set <Entry> thisParamInvariant = callSiteInvariant.getPointsToSet(0);
+                  //bool subsumes = includes(thisParamInvariant.begin(), thisParamInvariant.end(),
+                                                //thisParmValues.begin(), thisParmValues.end());
+                  //if(!subsumes) 
+                     //TR_ASSERT_FATAL(false, "callsite verification failed");
+
                   callSitePtg->setArg(0, thisParmValues);
 
                   argIndex++;
@@ -2489,6 +2507,13 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   TR::Node *thisParmNode = usefulNode->getFirstChild();
                   set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
                   callSitePtg->setArg(0, thisParmValues);
+
+                  //callsite verification for this-param
+                  //set <Entry> thisParamInvariant = callSiteInvariant.getPointsToSet(0);
+                  //bool subsumes = includes(thisParamInvariant.begin(), thisParamInvariant.end(),
+                                                //thisParmValues.begin(), thisParmValues.end());
+                  //if(!subsumes) 
+                     //TR_ASSERT_FATAL(false, "callsite verification failed");
 
                   argIndex++;
                   childIndex++;
@@ -2533,6 +2558,13 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      TR::Node *argNode = usefulNode->getChild(childIndex);
                      set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
 
+                     //callsite verification for param
+                     //set <Entry> paramInvariant = callSiteInvariant.getPointsToSet(argIndex);
+                     //bool subsumes = includes(paramInvariant.begin(), paramInvariant.end(),
+                                                   //argValues.begin(), argValues.end());
+                     //if(!subsumes) 
+                        //TR_ASSERT_FATAL(false, "callsite verification failed");
+
                      callSitePtg->setArg(argIndex, argValues);
                   }
                   //               symRef->isThisPointer();
@@ -2560,6 +2592,19 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                {
                   cout << "callsite ptg mapped:" << endl;
                   callSitePtg->print();
+               }
+
+               bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
+               if(!callSiteVerified) {
+                  if(_runtimeVerifierDiagnostics) {
+                     cout << "callsite verification failed!" << endl;
+                     cout << "expected: " << endl;
+                     callSiteInvariant.print();
+                     cout << "actual: " << endl;
+                     callSitePtg->print();
+                  }
+
+                  TR_ASSERT_FATAL(false, "callsite verification failed!");
                }
 
                cout << "peeking method " << sig << " isResolved = " << methodSymbol->isResolvedMethod() << endl;
@@ -2776,8 +2821,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    std::map<int, PointsToGraph> staticLoopInvariants = readLoopInvariant(methodIndex);
 
    //string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
-   IFDIAGPRINT << "attempting to read callsite invariant " << methodIndex << " " << methodSignature << endl;
-   PointsToGraph staticCallSiteInvariant = readCallsiteInvariant(methodIndex);
+   //PointsToGraph staticCallSiteInvariant = readCallsiteInvariant(methodIndex);
 
    // TODO: it'd be nice to encapsulate both of these into a context of sorts
    // a collection of all the in-PTGs, keyed by the bci of the instruction
