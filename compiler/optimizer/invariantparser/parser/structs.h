@@ -5,8 +5,8 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-
-enum EntryType {
+enum EntryType
+{
     String,
     Constant,
     Null,
@@ -14,8 +14,8 @@ enum EntryType {
     Reference
 };
 
-
-struct Entry {
+struct Entry
+{
     int caller;
     int bci;
 
@@ -23,45 +23,62 @@ struct Entry {
 
     bool escapes;
 
-    string getString() {
+    string getString()
+    {
         string res;
-        if(type == Reference) {
+        if (type == Reference)
+        {
             res.append(to_string(caller)).append("-").append(to_string(bci));
-        } else if (type == String) {
+        }
+        else if (type == String)
+        {
             res = "s";
-        } else if (type == Constant) {
+        }
+        else if (type == Constant)
+        {
             res = "c";
-        } else if (type == Global) {
+        }
+        else if (type == Global)
+        {
             res = "BOT";
-        } else {
+        }
+        else
+        {
             res = "NULL";
         }
 
         return res;
     }
-bool operator<(const Entry& e) const {
+    bool operator<(const Entry &e) const
+    {
 
-	    if(this->type == Reference && e.type == Reference){
+        if (this->type == Reference && e.type == Reference)
+        {
             return this->caller == e.caller ? this->bci < e.bci : this->caller < e.caller;
-        } else {
+        }
+        else
+        {
             return this->type < e.type;
         }
-	}
-
-bool operator==(const Entry& e) const {
-    if(this->type != e.type ){
-        return false;
-    } else if (this->type == Reference) {
-        return this->caller == e.caller && this->bci == e.bci;
-    } else {
-        return true;
     }
 
-    return true;
-}
+    bool operator==(const Entry &e) const
+    {
+        if (this->type != e.type)
+        {
+            return false;
+        }
+        else if (this->type == Reference)
+        {
+            return this->caller == e.caller && this->bci == e.bci;
+        }
+        else
+        {
+            return true;
+        }
+
+        return true;
+    }
 };
-
-
-
 
 #endif

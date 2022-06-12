@@ -223,22 +223,12 @@ void PointsToGraph::assign(Entry target, string field, set <Entry> pointees){
     sigma[target][field] = pointees;
 }
 
-void PointsToGraph::extend(int symRef, int bci){
-    set <Entry> entries = rho[symRef];
-    Entry entry;
-    entry.bci = bci;
-    entry.caller = 99;
-    entry.type = Reference;
-
-    entries.insert(entry);
-
-    rho[symRef] = entries;
+void PointsToGraph::extend(int symRef, Entry pointee){
+    rho[symRef].insert(pointee);
 }
 
-void PointsToGraph::extend(int symRef, vector<int> bcis){
-    for(auto bci : bcis) {
-        extend(symRef, bci);
-    }
+void PointsToGraph::extend(int symRef, set <Entry> pointees){
+    rho[symRef].insert(pointees.begin(), pointees.end());
 }
 
 void PointsToGraph::setArg(int argIndex, set <Entry> values) {
@@ -430,3 +420,16 @@ void PointsToGraph::assignReturn(set <Entry> pointees) {
 set <Entry> PointsToGraph::getReturnPointsTo() {
     return rho[RETURNLOCAL];
 }
+
+set <Entry> PointsToGraph::getBotSet() {
+    set <Entry> ret;
+    ret.insert(bottomEntry);
+
+    return ret;
+}
+
+void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
+    this->sigma = other->sigma;
+}
+
+const int PointsToGraph::RETURNLOCAL = 99;

@@ -4,7 +4,6 @@ using namespace std;
 
 
 class PointsToGraph {
-#define RETURNLOCAL -99
     private:
         //TODO: why did I make this a vector instead of a set?
         std::map <int, set <Entry> > rho;
@@ -21,6 +20,8 @@ class PointsToGraph {
         PointsToGraph(const PointsToGraph &ptg);
         static const Entry bottomEntry;
         static const Entry nullEntry;
+        static const int RETURNLOCAL;
+        static set<Entry> getBotSet();
         std::map <int, std::set <Entry> > getRho();
         std::map <Entry, std::map <string, set <Entry> > > getSigma();
         void setArg(int argIndex, set <Entry> values);
@@ -58,9 +59,9 @@ class PointsToGraph {
         void assignReturn(set <Entry> pointees);
 
         //weak updates
-        void extend(int symRef, int bci);
+        void extend(int symRef, Entry pointee);
         //weak updates
-        void extend(int symRef, vector<int> bcis);
+        void extend(int symRef, set <Entry> pointees);
         void killArgs();
 
         void killRho();
@@ -70,5 +71,7 @@ class PointsToGraph {
         void summarizeFields(int symRef);
 
         bool subsumes(PointsToGraph * other);
+
+        void copySigmaFrom(PointsToGraph *other);
         
 };

@@ -1590,6 +1590,7 @@ TR::Node *getUsefulNode(TR::Node *node)
              opCode == TR::calli ||
              opCode == TR::awrtbari ||
              opCode == TR::ardbari ||
+             opCode == TR::anewarray ||
              node->getOpCode().isCall())
          {
             IFDIAGPRINT << "found useful node at n" << node->getGlobalIndex() << "n" << endl;
@@ -1620,7 +1621,6 @@ TR::Node *getUsefulNode(TR::Node *node)
                opCode == TR::checkcastAndNULLCHK ||
                opCode == TR:: newvalue ||
                opCode == TR::newarray ||
-               opCode == TR::anewarray ||
                opCode == TR::variableNew ||
                opCode == TR::variableNewArray ||
                opCode == TR::multianewarray ||
@@ -2254,6 +2254,14 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          break;
       }
 
+      case TR::anewarray:
+      {
+         //process anewarray
+         Entry e = PointsToGraph::bottomEntry;
+         evaluatedValues.insert(e);
+         break;
+      }
+
       case TR::astore:
       {
          // process store here
@@ -2272,47 +2280,82 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       case TR::aload:
       {
          // process load here
-         // an aload's evaluated value is simply the list of objects in the points-to set of its symref
-         int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
-         set<Entry> pointsToSet = in->getPointsToSet(loadSymRef);
-         for (Entry entry : pointsToSet)
-         {
-            // TODO: use copy here
-            evaluatedValues.insert(entry);
+
+         //TODO - static field reads appear as follows:
+//         n1n       BBStart <block_2>                                            
+//         n4n       astore  <auto slot 1>[#357  Auto] [flags 0x7 0x0 ]           
+//         n3n         aload  B.a LA;[#356  notAccessed Static] [flags 0x307 0x0 ]
+//         n5n       return                                                       
+//         n2n       BBEnd </block_2> =====                                       
+         //we need a way to identify if the symref is a static or no
+         bool isStaticFieldRead = usefulNode->getSymbol()->isStaticField();
+         cout << " isStatic = " << isStaticFieldRead << endl;
+         if(isStaticFieldRead) {
+            evaluatedValues.insert(PointsToGraph::bottomEntry);   
+         } else {
+            // an aload's evaluated value is simply the list of objects in the points-to set of its symref
+            int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
+            set<Entry> pointsToSet = in->getPointsToSet(loadSymRef);
+            for (Entry entry : pointsToSet)
+            {
+               // TODO: use copy here
+               evaluatedValues.insert(entry);
+            }
          }
+
+
          break;
       }
 
       case TR::aloadi:
       {
-         TR::SymbolReference *symRef = usefulNode->getSymbolReference();
-         bool isUnresolved = symRef->isUnresolved();
-         IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
+         //TODO:
+         //array subs look like this:
+//         n21n      compressedRefs                                                                      
+//         n19n        aloadi  <array-shadow>[#232  Shadow] [flags 0x80000607 0x0 ]                      
+//         n18n          aladd (internalPtr sharedMemory )                                               
+//         n8n             ==>aload
+//         n17n            ladd                                                                          
+//         n15n              lshl                                                                        
+//         n14n                i2l (X>=0 )                                                               
+//         n9n                   ==>iconst 9
+//         n13n                iconst 2                                                                  
+//         n16n              lconst 16                                                                   
+//         n20n        lconst 0  
 
-         bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
-         IFDIAGPRINT << "isShadow = " << isShadow << endl;
+         if(usefulNode->getSymbol()->isArrayShadowSymbol()) {
+            //array loads always evaluate to a bot
+            evaluatedValues.insert(PointsToGraph::bottomEntry);   
+         } else {
+            TR::SymbolReference *symRef = usefulNode->getSymbolReference();
+            bool isUnresolved = symRef->isUnresolved();
+            IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
 
-         int cpIndex = symRef->getCPIndex();
-         IFDIAGPRINT << "cp index = " << cpIndex << endl;
+            bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
+            IFDIAGPRINT << "isShadow = " << isShadow << endl;
 
-         if (/* !isUnresolved && */ isShadow && cpIndex > 0)
-         {
-            // this is most certainly a field access, until proven otherwise
+            int cpIndex = symRef->getCPIndex();
+            IFDIAGPRINT << "cp index = " << cpIndex << endl;
 
-            int32_t len;
-            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-
-            IFDIAGPRINT << "field access for " << fieldName << endl;
-
-            // receiver
-            TR::Node *receiverNode = usefulNode->getFirstChild();
-            set<Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
-
-            for (Entry receiver : receiverNodeVals)
+            if (/* !isUnresolved && */ isShadow && cpIndex > 0)
             {
-               // we fetch the requested field for each of the receiver pointees, then union
-               set<Entry> rhsPointees = in->getPointsToSet(receiver, fieldName);
-               evaluatedValues.insert(rhsPointees.begin(), rhsPointees.end());
+               // this is most certainly a field access, until proven otherwise
+
+               int32_t len;
+               const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
+
+               IFDIAGPRINT << "field access for " << fieldName << endl;
+
+               // receiver
+               TR::Node *receiverNode = usefulNode->getFirstChild();
+               set<Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
+
+               for (Entry receiver : receiverNodeVals)
+               {
+                  // we fetch the requested field for each of the receiver pointees, then union
+                  set<Entry> rhsPointees = in->getPointsToSet(receiver, fieldName);
+                  evaluatedValues.insert(rhsPointees.begin(), rhsPointees.end());
+               }
             }
          }
 
@@ -2416,7 +2459,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             // TODO: confirm - does this simply mean set the Rho to empty map ?
             callSitePtg->killRho();
             callSitePtg->killArgs();
-            callSitePtg->setBotReturn();
 
             if (descendIntoMethod && usefulNode->getSymbol()->isResolvedMethod())
             {
@@ -2531,6 +2573,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   cout << forceCallsiteArgsForJITCInvocation.size() << endl;
                   //                     TR_ASSERT_FATAL(forceCallsiteArgsForJITCInvocation.size() <= 1, "a maximum of 1 method can be forced");
 
+                  //due to the design of the IL Gen, optimizations get called automatically - which means that the below calls invokes our runtime verify algorithm as well
                   bool ilGenFailed = NULL == resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(resolvedMethodSymbol, _runtimeVerifierComp, false);
 
                   // if(ilGenFailed) cout << "fatal IL gen failed!" << endl;
@@ -2545,6 +2588,10 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                          //getFormattedCurrentMethodName(resolvedMethodSymbol), callSitePtg, false);
                }
                PointsToGraph *outPTG = verifiedMethodSummaries[sig];
+
+               //TODO: here, project the callee out-heap to the callsite heap - done
+               in->copySigmaFrom(outPTG);
+               
                evaluatedValues = outPTG->getReturnPointsTo();
                if(_runtimeVerifierDiagnostics) {
                   cout << "callsite processing for " << sig << " completed, callsite PTG below" << endl;
@@ -2558,6 +2605,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                // 1. set return to BOT
                // 2. summarize the reachable heap - this involves use of the escape map
                // bottomize all heap references reachable from the arguments
+               callSitePtg->setBotReturn();
+               //callSitePtg->summarizeFields();
             }
          }
          break;
@@ -2645,7 +2694,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          {
             set<Entry> returnPointees = evaluateNode(in, usefulNode->getFirstChild(), evaluatedNodeValues, visitCount, methodIndex);
             //TODO: this is wrong - take the meet with each return, below code is wrongly over-writing the return each time
-            in->assignReturn(returnPointees);
+            //in->assignReturn(returnPointees);
+            in->extend(PointsToGraph::RETURNLOCAL, returnPointees);
 
             if (_runtimeVerifierDiagnostics)
             {
