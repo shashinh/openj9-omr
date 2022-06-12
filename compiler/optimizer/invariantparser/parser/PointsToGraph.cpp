@@ -394,7 +394,7 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
             }
         }
     }
-
+    cout << "rho subsumes passed" << endl;
     //2. check sigma subsumes
     for(map <Entry, map <string, set<Entry>>>::iterator it = other->sigma.begin(); it != other->sigma.end(); it++) {
        if(this->sigma.find(it->first) != this->sigma.end()) {

@@ -2597,7 +2597,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
                if(!callSiteVerified) {
                   if(_runtimeVerifierDiagnostics) {
-                     cout << "callsite verification failed!" << endl;
+                     cout << "ERROR: callsite verification for method " << methodIndex << endl;
                      cout << "expected: " << endl;
                      callSiteInvariant.print();
                      cout << "actual: " << endl;
