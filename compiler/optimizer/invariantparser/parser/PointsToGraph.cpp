@@ -33,8 +33,7 @@ set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
         //globalPointee.type = Global;
         //res.insert(globalPointee);
 
-        res.insert(PointsToGraph::bottomEntry);
-        return res; 
+        return PointsToGraph::getBotSet();
     }
 
     bool nullReference = false;
@@ -372,6 +371,8 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
     other->print();
 
     map <int, set <Entry> > otherRho;
+    //if the subsumes check if requested at a callsite, then we compare rho_LHS with args_RHS
+    //else rho_LHS with rho_RHS
     if(callSite) {
         otherRho = other->args;
     } else {
@@ -387,10 +388,17 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
         if(rho.find(it->first) != rho.end()) {
             set <Entry> rhsPointees = it->second;
             set <Entry> lhsPointees = rho[it->first];
-            //lhsPointees should be a superset of rhsPointees
-            if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
-                            rhsPointees.begin(), rhsPointees.end())) {
-                return false;
+            if(lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end() ||
+                            rhsPointees.find(PointsToGraph::bottomEntry) != rhsPointees.end()) {
+                //Bot subsumes anything, no need to check RHS
+                //do we need messaging?
+                cout << "found BOT in LHS pointees" << endl;
+            } else {
+                //lhsPointees should be a superset of rhsPointees
+                if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
+                                rhsPointees.begin(), rhsPointees.end())) {
+                    return false;
+                }
             }
         }
     }
@@ -406,15 +414,22 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
                if(lhsFields.find(i->first) != lhsFields.end()) {
                    set <Entry> rhsPointees = i->second;
                    set <Entry> lhsPointees = lhsFields[i->first];
-                    //lhsPointees should be a superset of rhsPointees
-                    if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
-                                    rhsPointees.begin(), rhsPointees.end())) {
-                        return false;
+                    if(lhsPointees.size() == 1 && lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()) {
+                        //Bot subsumes anything, no need to check RHS
+                        //do we need messaging?
+                    } else {
+                            //lhsPointees should be a superset of rhsPointees
+                            if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
+                                            rhsPointees.begin(), rhsPointees.end())) {
+                                return false;
+                            }
                     }
                }
            }
        } 
     }
+
+    cout << "sigma subsumes passed" << endl;
 
     //if we made it here, lhs subsumes rhs
     return true;
@@ -440,3 +455,40 @@ void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
 }
 
 const int PointsToGraph::RETURNLOCAL = 99;
+
+//summarizes the heap objects reachable from the given abstract object
+void PointsToGraph::summarizeReachableHeap (Entry target) {
+    map <string, set <Entry> > reachableHeap = this->sigma[target];
+
+    map <string, set <Entry> > :: iterator reachableHeapIterator = reachableHeap.begin();
+    while(reachableHeapIterator != reachableHeap.end()) {
+        set <Entry> targets = reachableHeapIterator->second;
+        this->sigma[target][reachableHeapIterator->first] = PointsToGraph::getBotSet();
+
+        for(Entry target : targets) {
+            this->summarizeReachableHeap(target);
+        }
+
+        reachableHeapIterator++;
+    }
+
+}
+
+void PointsToGraph::summarizeReachableHeapAtCallSite() {
+    //for each reference type argument, summarize its reachable heap
+    //summarizing is achieved by marking the abstract object as "escaping"
+
+    cout << "summarize reachable heap requested for : \n";
+    this->print();
+
+    map <int, set <Entry> > :: iterator argsIterator = this->args.begin();
+    while(argsIterator != this->args.end()) {
+        for(Entry target : argsIterator->second) {
+            this->summarizeReachableHeap(target);
+        }
+        argsIterator++;
+    }
+    cout << "summarize reachable heap completed : \n";
+    this->print();
+
+}

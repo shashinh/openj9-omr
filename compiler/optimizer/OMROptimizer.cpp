@@ -1613,7 +1613,6 @@ TR::Node *getUsefulNode(TR::Node *node)
                opCode == TR::bu2a ||
                opCode == TR::s2a ||
                opCode == TR::su2a ||
-               opCode == TR::loadaddr ||
                opCode == TR::aRegLoad ||
                opCode == TR::aRegStore ||
                opCode == TR::aselect ||
@@ -1634,6 +1633,7 @@ TR::Node *getUsefulNode(TR::Node *node)
                   
                   //below were encountered in tests and proven to be "safe"
                   //opCode == TR::checkcast ||
+                  // opCode == TR::loadaddr ||
                }
          }
       }
@@ -2443,34 +2443,34 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       {
          // usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning();
          bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
+         PointsToGraph *outPTG;
+         
          // we do not want to process helper method calls (osr, for example)
          if (!isHelperMethodCall)
          {
-            bool descendIntoMethod = true;
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
             //TODO : skip processing if called method is a library method
             string s = methodName;
             bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
-            if(isLibraryMethod) {
+            if(_runtimeVerifierDiagnostics && isLibraryMethod) {
                cout << "bypassing " << s << " - a library method" << endl;
-               descendIntoMethod = false;
             }
-            
             PointsToGraph callSiteInvariant;
             //fetch the callsite invariant for this method
+            //we want to read the callsite invariant for unresolved methdos as well (right?)
+            int calleeMethodIndex = getOrInsertMethodIndex(methodName);
             if(!isLibraryMethod) {
-               int methodIndex = getOrInsertMethodIndex(methodName);
-               IFDIAGPRINT << "attempting to read callsite invariant " << methodIndex << " " << methodName << endl;
-               callSiteInvariant = readCallsiteInvariant(methodIndex);
+               IFDIAGPRINT << "attempting to read callsite invariant " << calleeMethodIndex << " " << methodName << endl;
+               callSiteInvariant = readCallsiteInvariant(calleeMethodIndex);
             }
 
             PointsToGraph *callSitePtg = new PointsToGraph(*in);
             // kill all the locals and return local (i.e. retain only the Heap)
-            // TODO: confirm - does this simply mean set the Rho to empty map ?
+            // TODO: confirm - does this simply mean set the Rho to empty map ? - YES, this seems to be sound!
             callSitePtg->killRho();
             callSitePtg->killArgs();
 
-            if (descendIntoMethod && usefulNode->getSymbol()->isResolvedMethod())
+            if (! isLibraryMethod && usefulNode->getSymbol()->isResolvedMethod())
             {
                TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->castToResolvedMethodSymbol();
                string sig = methodSymbol->signature(_runtimeVerifierComp->trMemory());
@@ -2479,7 +2479,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                // TODO: called method is resolved. map the arguments and peek into it
                //               mapParameters(in, callSitePtg, usefulNode);
 
-               // invokespecial (private instance calls, constructors, etc - labeled 'special' in the IL tree) and invokevirtual (public, package private, defaults,)
+               // invokespecial (private instance calls, constructors, etc - labeled 'special' in the IL tree) and 
+               //    invokevirtual (public, package private, defaults,)
                //  pass the this-parm. However the trees are slightly different
                int argIndex = 0;
                int childIndex = 0;
@@ -2496,7 +2497,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   //if(!subsumes) 
                      //TR_ASSERT_FATAL(false, "callsite verification failed");
 
-                  callSitePtg->setArg(0, thisParmValues);
+                  callSitePtg->setArg(argIndex, thisParmValues);
 
                   argIndex++;
                   childIndex += 2;
@@ -2532,6 +2533,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                // now we can pick off the rest of the arguments from the IL
 
+               //TODO - There is a MUCH better way to pull arguments off of a callsite
+               //look here - TR_PrexArgInfo* TR_PrexArgInfo::argInfoFromCaller(TR::Node* callNode, TR_PrexArgInfo* callerArgInfo)
                ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
                TR::SymbolReference *symRef;
                int paramSlotcount = methodSymbol->getNumParameterSlots();
@@ -2547,7 +2550,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                for (; paramCursor != NULL; paramCursor = paramIterator.getNext())
                {
                   TR::SymbolReference *symRef;
-                  // param at getSlot == 0 is the this-pointer
                   int paramSlot = paramCursor->getSlot();
                   symRef = methodSymbol->getParmSymRef(paramSlot);
                   cout << paramSlot << " ";
@@ -2558,35 +2560,12 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      TR::Node *argNode = usefulNode->getChild(childIndex);
                      set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
 
-                     //callsite verification for param
-                     //set <Entry> paramInvariant = callSiteInvariant.getPointsToSet(argIndex);
-                     //bool subsumes = includes(paramInvariant.begin(), paramInvariant.end(),
-                                                   //argValues.begin(), argValues.end());
-                     //if(!subsumes) 
-                        //TR_ASSERT_FATAL(false, "callsite verification failed");
-
                      callSitePtg->setArg(argIndex, argValues);
                   }
-                  //               symRef->isThisPointer();
+
                   argIndex++;
                   childIndex++;
                }
-
-               //   ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
-               //   TR::SymbolReference *symRef;
-               //   for (TR::ParameterSymbol *paramCursor = paramIterator.getFirst(); paramCursor != NULL; paramCursor = paramIterator.getNext())
-               //   {
-               //      // param at getSlot == 0 is the this-pointer
-               //      int paramSlot = paramCursor->getSlot();
-               //      symRef = methodSymbol->getParmSymRef(paramSlot);
-               //      int32_t symRefNumber = symRef->getReferenceNumber();
-               //
-               //      if (_runtimeVerifierDiagnostics)
-               //         cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << endl;
-               //
-               //      set <Entry> argsPointsTo = in->getArgPointsToSet(paramSlot);
-               //      in->assign(symRefNumber, argsPointsTo);
-               //   }
 
                if (_runtimeVerifierDiagnostics)
                {
@@ -2597,7 +2576,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
                if(!callSiteVerified) {
                   if(_runtimeVerifierDiagnostics) {
-                     cout << "ERROR: callsite verification for method " << methodIndex << endl;
+                     cout << "ERROR: callsite verification for method " << calleeMethodIndex << endl;
                      cout << "expected: " << endl;
                      callSiteInvariant.print();
                      cout << "actual: " << endl;
@@ -2616,7 +2595,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   cout << forceCallsiteArgsForJITCInvocation.size() << endl;
                   forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callSitePtg));
                   cout << forceCallsiteArgsForJITCInvocation.size() << endl;
-                  //                     TR_ASSERT_FATAL(forceCallsiteArgsForJITCInvocation.size() <= 1, "a maximum of 1 method can be forced");
+                  //TR_ASSERT_FATAL(forceCallsiteArgsForJITCInvocation.size() <= 1, "a maximum of 1 method can be forced");
 
                   //due to the design of the IL Gen, optimizations get called automatically - which means that the below calls invokes our runtime verify algorithm as well
                   bool ilGenFailed = NULL == resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(resolvedMethodSymbol, _runtimeVerifierComp, false);
@@ -2632,12 +2611,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   //verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
                                          //getFormattedCurrentMethodName(resolvedMethodSymbol), callSitePtg, false);
                }
-               PointsToGraph *outPTG = verifiedMethodSummaries[sig];
 
-               //TODO: here, project the callee out-heap to the callsite heap - done
-               in->copySigmaFrom(outPTG);
-               
-               evaluatedValues = outPTG->getReturnPointsTo();
+               outPTG = verifiedMethodSummaries[sig];
+
                if(_runtimeVerifierDiagnostics) {
                   cout << "callsite processing for " << sig << " completed, callsite PTG below" << endl;
                   outPTG->print();
@@ -2645,83 +2621,51 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             }
             else
             {
+               //if we are here, we are either looking at a library method, or unresolved/opaque methods
                cout << "found an unresolved method " << methodName << endl;
-               // TODO: method is not resolved, do
+               // TODO: method is not analyzable, so
                // 1. set return to BOT
                // 2. summarize the reachable heap - this involves use of the escape map
                // bottomize all heap references reachable from the arguments
                callSitePtg->setBotReturn();
-               //callSitePtg->summarizeFields();
+
+               //for an unresolved method, we cannot get the actual parameter indices, so just load in all the callsite args without worrying
+               // about indices, because we only need it to summarize the reachable heap.
+
+               TR::MethodSymbol * unresolvedMethodSymbol = usefulNode->getSymbol()->castToMethodSymbol();
+
+
+               int32_t firstArgIndex = usefulNode->getFirstArgumentIndex();
+               int32_t numArgs = usefulNode->getNumArguments();
+               int32_t numChildren = usefulNode->getNumChildren();
+               int argIndex = 0;
+               for (int32_t i = firstArgIndex; i < numChildren; i++)
+                  {
+                     TR::Node* argNode = usefulNode->getChild(i);
+                     set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
+
+                     callSitePtg->setArg(argIndex, argValues);
+
+                     argIndex++;
+
+                  }
+
+
+
+               callSitePtg->summarizeReachableHeapAtCallSite(); //in other words, mark escaping
+               outPTG = callSitePtg;
+            }
+
+            //TODO: here, project the callee out-heap to the callsite heap - done
+            in->copySigmaFrom(outPTG);
+
+            //we want to save away the return value whether the method is resolved or not
+            if(! usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning()) {
+                  evaluatedValues = outPTG->getReturnPointsTo();
             }
          }
          break;
       }
-
-         /*
-               case TR::vcalli:
-               case TR::icalli:
-               case TR::lcalli:
-               case TR::fcalli:
-               case TR::dcalli:
-               case TR::acalli:
-               case TR::calli:
-               {
-         //usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning();
-                  bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
-                     if(!isHelperMethodCall) {
-                     const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-
-                        PointsToGraph *callSitePtg = new PointsToGraph(*in);
-                        //kill all the locals and return local (i.e. retain only the Heap)
-                        //TODO: confirm - does this simply mean set the Rho to empty map ?
-                        callSitePtg->killRho();
-                        callSitePtg->setBotReturn();
-
-                     if(usefulNode->getSymbol()->isResolvedMethod()) {
-                        cout << "the method is resolved" << endl;
-                        string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
-                        cout << sig << " is resolved" << endl;
-
-                        //TODO: called method is resolved. map the arguments and peek into it
-                        if(_runtimeVerifierDiagnostics) {
-                           cout << "return bottomized, parameters mapped, here is the in ptg" << endl;
-                           callSitePtg->print();
-                        }
-                     } else {
-                        cout << "found an unresolved method " << methodName << endl;
-                        //TODO: method is not resolved, do
-                        //1. set return to BOT
-                        //2. set all fields of all arguments to BOT (this includes the receiver, if applicable) - this involves the escape map
-                        //bottomize all heap references reachable from the arguments
-                     }
-                  }
-                  break;
-
-               }
-
-               case TR::icall:
-               case TR::lcall:
-               case TR::fcall:
-               case TR::dcall:
-               case TR::acall:
-               case TR::call:
-               case TR::vcall:
-               {
-                  bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
-                     if(!isHelperMethodCall) {
-                     const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-
-                     if(usefulNode->getSymbol()->isResolvedMethod()) {
-                        cout << "the method is resolved" << endl;
-                        string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
-                        cout << sig << " is resolved" << endl;
-                     } else {
-                        cout << "found an unresolved method " << methodName << endl;
-                     }
-                  }
-                  break;
-               }
-         */
 
       case TR::Return:
       case TR::lreturn:
@@ -2737,6 +2681,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
          if (opCode == TR::areturn)
          {
+            //the evaluated value of the first child (ie. the call node) will hold the respective call's return value - simply fetch and assign
             set<Entry> returnPointees = evaluateNode(in, usefulNode->getFirstChild(), evaluatedNodeValues, visitCount, methodIndex);
             //TODO: this is wrong - take the meet with each return, below code is wrongly over-writing the return each time
             //in->assignReturn(returnPointees);

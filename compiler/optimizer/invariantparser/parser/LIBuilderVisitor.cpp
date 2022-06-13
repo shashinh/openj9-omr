@@ -47,6 +47,8 @@ set <Entry> LIBuilderVisitor::processciBciEntrys(vector<LIParser::CiBciEntryCont
 				entries.insert(varEntry);
 			} else if (entry->GLOBAL() != NULL) {
 				//cout << "varEntry is global" << endl;
+				varEntry.bci = -1;
+				varEntry.caller = -1;
 				varEntry.type = Global;
 				entries.insert(varEntry);
 			} else if (entry->NIL() != NULL) {

@@ -73,5 +73,9 @@ class PointsToGraph {
         bool subsumes(PointsToGraph * other, bool callSite = false);
 
         void copySigmaFrom(PointsToGraph *other);
+
+        void summarizeReachableHeapAtCallSite();
+
+        void summarizeReachableHeap(Entry target);
         
 };
