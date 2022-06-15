@@ -2345,8 +2345,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                int32_t len;
                const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-
-               IFDIAGPRINT << "field access for " << fieldName << endl;
+               string field(fieldName, fieldName + len);
 
                // receiver
                TR::Node *receiverNode = usefulNode->getFirstChild();
@@ -2355,7 +2354,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                for (Entry receiver : receiverNodeVals)
                {
                   // we fetch the requested field for each of the receiver pointees, then union
-                  set<Entry> rhsPointees = in->getPointsToSet(receiver, fieldName);
+                  set<Entry> rhsPointees = in->getPointsToSet(receiver, field);
                   evaluatedValues.insert(rhsPointees.begin(), rhsPointees.end());
                }
             }
@@ -2396,13 +2395,14 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                int32_t len;
                const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
+               string field(fieldName, fieldName + len);
 
                IFDIAGPRINT << "field access for " << fieldName << endl;
 
                for (Entry receiver : receiverNodeVals)
                {
                   //TODO : weak updates here
-                  in->assign(receiver, fieldName, valueNodeVals);
+                  in->assign(receiver, field, valueNodeVals);
                }
             }
             // fetch the field being written to
@@ -2689,6 +2689,10 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             set<Entry> returnPointees = evaluateNode(in, usefulNode->getFirstChild(), evaluatedNodeValues, visitCount, methodIndex);
             //TODO: this is wrong - take the meet with each return, below code is wrongly over-writing the return each time
             //in->assignReturn(returnPointees);
+            cout << "areturn's pointees are :" << endl;
+            for (Entry e : returnPointees) {
+               cout << e.getString() << " ";
+            } cout << endl;
             in->extend(PointsToGraph::RETURNLOCAL, returnPointees);
 
             if (_runtimeVerifierDiagnostics)
@@ -2828,6 +2832,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          inForBasicBlock = getPredecessorMeet(currentBB, basicBlockOuts);
       }
 
+      basicBlockIns[currentBB] = inForBasicBlock;
+
       PointsToGraph *localRunningPTG = inForBasicBlock;
 
       TR::TreeTop *tt = currentBB->getEntry();
@@ -2876,8 +2882,11 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                   //now just copy over the sigma from the invariant as-is
                   localRunningPTG->copySigmaFrom(&staticLoopInvariant);
                   cout << "mapped in the loop invariant" << endl;
+
+                  //lets also store this mapped PTG back in the static invariants collection, for later use in the subsumes check
+                  staticLoopInvariants[nodeBCI] = *localRunningPTG;
                   localRunningPTG->print();
-                  basicBlockIns[currentBB] = localRunningPTG;
+                  // basicBlockIns[currentBB] = localRunningPTG;
                }
                continue;
             }
@@ -2940,21 +2949,49 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          {
             cout << "BB " << successorBlock->getNumber() << "already analyzed, invariance check, current BB is " << currentBBNumber << endl;
 
-<<<<<<< HEAD
-            PointsToGraph *prevIn = basicBlockOuts[successorBlock];
-            bool subsumes = prevIn->subsumes(localRunningPTG);
-            if(!subsumes) {
-               TR_ASSERT_FATAL(false, "loop invariance check failed");
-=======
-            //fetch the in for the basic block
-            PointsToGraph* inForBB = basicBlockIns[successorBlock];
 
-            //now apply subsumes
-            bool subsumes = inForBB->subsumes(localRunningPTG);
-            if(!subsumes) {
-               cout << "loop invariant verification failed for BB " << successorBlock->getNumber() << "from BB " << currentBBNumber << endl;
->>>>>>> 3850f458b55f33855ec9f2fc5d3ff190b86ee1fe
+            //if the successor BB has an invariant available, then perform invariant MEET prevIn(successor) to get the RHS of the subsumes check
+            //1. get the BBStart of the successor block
+            //2. get the BBStart's BCI
+            //3. check if a static invariant is available for that BCI (it will, if it is a loop header)
+            //4. get the IN for the successor BB
+            //5. if 3 exists, then
+            //    subsumes = Invariant <subsumes> ( OUT(currentBB) <meet> IN(successorBB))
+            //6. ELSE
+            //    subsumes = IN(successorBB) <subsumes> OUT(currentBB)
+
+            //1. get the BBStart of the successor block
+            TR::Node * bbStartOfSuccessor = successorBlock->getEntry()->getNode();
+            int successorBCI = bbStartOfSuccessor->getByteCodeIndex();
+            bool subsumes = true;
+            if(staticLoopInvariants.find(successorBCI) != staticLoopInvariants.end()) {
+               //fetch the IN for this BB
+               PointsToGraph * in = getPredecessorMeet(successorBlock, basicBlockOuts);
+               PointsToGraph staticLoopInvariantForBCI = staticLoopInvariants[successorBCI];
+               PointsToGraph * temp = meet(in, localRunningPTG);
+
+               subsumes = staticLoopInvariantForBCI.subsumes(temp);
+            } else {
+               PointsToGraph *in = getPredecessorMeet(successorBlock, basicBlockOuts);
+               subsumes = in->subsumes(localRunningPTG);
             }
+
+            if(!subsumes) {
+               // IFDIAGPRINT << "loop invariance check failed";
+               TR_ASSERT_FATAL(false, "loop invariance check failed");
+            }
+            // PointsToGraph *prevIn = basicBlockOuts[successorBlock];
+            // bool subsumes = prevIn->subsumes(localRunningPTG);
+            // if(!subsumes) {
+            //    TR_ASSERT_FATAL(false, "loop invariance check failed");
+            // //fetch the in for the basic block
+            // PointsToGraph* inForBB = basicBlockIns[successorBlock];
+
+            // //now apply subsumes
+            // bool subsumes = inForBB->subsumes(localRunningPTG);
+            // if(!subsumes) {
+            //    cout << "loop invariant verification failed for BB " << successorBlock->getNumber() << "from BB " << currentBBNumber << endl;
+            // }
 
 
             // bool staticInvariantExists = false;

@@ -37,13 +37,13 @@ set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
     }
 
     bool nullReference = false;
-    map <Entry, map <string, set <Entry> > >::iterator it1 = sigma.find(target);
-    if(it1 != sigma.end()) {
-        map <string, set <Entry> > m = it1->second;
-        map <string, set <Entry> > :: iterator it2 = m.find(field);
-        if(it2 != m.end()) {
-            res = it2->second;
-        } 
+    // map <Entry, map <string, set <Entry> > >::iterator it1 = sigma.find(target);
+    if(sigma.find(target) != sigma.end()) {
+        map <string, set <Entry> > m = sigma[target];
+        if(m.find(field) != m.end()) {
+            cout << "found " << field << " in sigma" << endl;
+            res = m[field];
+        }
         else {
             nullReference = true;
         }
