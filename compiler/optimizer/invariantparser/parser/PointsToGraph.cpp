@@ -388,8 +388,8 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
         if(rho.find(it->first) != rho.end()) {
             set <Entry> rhsPointees = it->second;
             set <Entry> lhsPointees = rho[it->first];
-            if(lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end() ||
-                            rhsPointees.find(PointsToGraph::bottomEntry) != rhsPointees.end()) {
+            if(lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()  ) {
+            // ||                             rhsPointees.find(PointsToGraph::bottomEntry) != rhsPointees.end()) {
                 //Bot subsumes anything, no need to check RHS
                 //do we need messaging?
                 cout << "found BOT in LHS pointees" << endl;
@@ -454,7 +454,7 @@ void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
     this->sigma = other->sigma;
 }
 
-const int PointsToGraph::RETURNLOCAL = 99;
+const int PointsToGraph::RETURNLOCAL = -99;
 
 //summarizes the heap objects reachable from the given abstract object
 void PointsToGraph::summarizeReachableHeap (Entry target) {
