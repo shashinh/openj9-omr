@@ -2897,15 +2897,10 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          {
             cout << "BB " << successorBlock->getNumber() << "already analyzed, invariance check, current BB is " << currentBBNumber << endl;
 
-            bool staticInvariantExists = false;
-            if (staticInvariantExists)
-            {
-            }
-            else
-            {
-               PointsToGraph *ptgRunning = getPredecessorMeet(successorBlock, basicBlockOuts);
-               bool subsumes = ptgRunning->subsumes(ptgRunning);
-               cout << "subsumes check returned " << subsumes << endl;
+            PointsToGraph *prevIn = basicBlockOuts[successorBlock];
+            bool subsumes = prevIn->subsumes(localRunningPTG);
+            if(!subsumes) {
+               TR_ASSERT_FATAL(false, "loop invariance check failed");
             }
          }
       }
