@@ -2401,6 +2401,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                for (Entry receiver : receiverNodeVals)
                {
+                  //TODO : weak updates here
                   in->assign(receiver, fieldName, valueNodeVals);
                }
             }
@@ -2452,6 +2453,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             //TODO : skip processing if called method is a library method
             string s = methodName;
             bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
+            //TODO: guard this with an environment variable
             if(_runtimeVerifierDiagnostics && isLibraryMethod) {
                cout << "bypassing " << s << " - a library method" << endl;
             }
@@ -2607,9 +2609,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                   _runtimeVerifierComp->dumpFlowGraph(resolvedMethodSymbol->getFlowGraph());
 
+                  //TODO: if we are here, callee shoould be analyzed, else invoke verify via callsite
+
                   // given that the ILGen will run optimizations and force invocation of the algorithm by JIT compilation, do we even need this call?
-                  //verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
-                                         //getFormattedCurrentMethodName(resolvedMethodSymbol), callSitePtg, false);
+                  verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
+                                         getFormattedCurrentMethodName(resolvedMethodSymbol), callSitePtg, false);
                }
 
                outPTG = verifiedMethodSummaries[sig];
@@ -2758,6 +2762,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       outFlow->print();
    }
 
+   bool stackSlotSymRefMapped = false;
+   map <int, int> stackSlotSymRefMap;
    // TODO: 'kill' the locals, args and return of the caller.
 
    // load in the loop invariants for this method
@@ -2776,6 +2782,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
    // a convenience collection of the out-PTGs of each basic block. Obviously this is the same as the out-PTG of the last viable statement in that block -
    // unfortunately there isn't a way to map them, out of the box
+   map<TR::Block *, PointsToGraph *> basicBlockIns;
    map<TR::Block *, PointsToGraph *> basicBlockOuts;
 
    // we begin from the start node of the CFG
@@ -2833,14 +2840,50 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          {
             TR::Node *node = tt->getNode();
             IFDIAGPRINT << "*** now processing node n" << node->getGlobalIndex() << "n, with opcode " << node->getOpCode().getName() << endl;
+            int nodeBCI = node->getByteCodeInfo().getByteCodeIndex();
             // unfortunately it appears that the Start and End nodes are also valid treetops.
             // TODO: is there a way around this check?
-            if (node->getOpCodeValue() == TR::BBStart)
+            if (node->getOpCodeValue() == TR::BBStart){
+               //the static loop invariant, if any, will map to the bci of the BBStart.
+               if(staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end()) {
+                  //hooray, we have a static loop invariant!
+                  IFDIAGPRINT << "static loop invariant found for node " << node->getGlobalIndex() << endl;
+                  //now since we have a static loop invariant for the bci (or, block), we use it as the in-PTG
+                  PointsToGraph staticLoopInvariant = staticLoopInvariants[nodeBCI];
+
+                  //Now we need to map the loop invariant PTG to the running PTG via the stack slots
+                  //step 1. create a mapping of local symrefs to their stack slots. This is an expensive affair, so lets do it just once
+                  // if(!stackSlotSymRefMapped) {
+                  // TR_Array<List<TR::SymbolReference> > *autosListArray = methodSymbol->getAutoSymRefs();
+                  map <int, set <Entry> > invariantRho = staticLoopInvariant.getRho();
+                  map <int, set <Entry> > :: iterator invariantIterator = invariantRho.begin();
+                  while(invariantIterator != invariantRho.end()) {
+                     int slot = invariantIterator->first;
+                     // TR_Array<List<TR::SymbolReference> > *autosListArray = methodSymbol->getAutoSymRefs(slot);
+                     cout << "the local symref corresponding to stack slot " << slot << "is/are:" << endl;
+
+                     ListIterator<TR::SymbolReference> autos(&methodSymbol->getAutoSymRefs(slot));
+                     //assert autos.size == 1
+                     for (TR::SymbolReference * sr = autos.getFirst(); sr; sr = autos.getNext()) {
+                           cout << sr->getReferenceNumber() << " ";
+                           localRunningPTG->assign(sr->getReferenceNumber(), invariantIterator->second);
+                     }
+                     cout << endl;
+
+
+                     invariantIterator++;
+                  }
+                  //now just copy over the sigma from the invariant as-is
+                  localRunningPTG->copySigmaFrom(&staticLoopInvariant);
+                  cout << "mapped in the loop invariant" << endl;
+                  localRunningPTG->print();
+                  basicBlockIns[currentBB] = localRunningPTG;
+               }
                continue;
+            }
             else if (node->getOpCodeValue() == TR::BBEnd)
                break;
 
-            int nodeBCI = node->getByteCodeInfo().getByteCodeIndex();
             if (staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end())
             {
                IFDIAGPRINT << "found static loop invariant at bci " << nodeBCI << endl;
@@ -2897,34 +2940,32 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          {
             cout << "BB " << successorBlock->getNumber() << "already analyzed, invariance check, current BB is " << currentBBNumber << endl;
 
-            bool staticInvariantExists = false;
-            if (staticInvariantExists)
-            {
+            //fetch the in for the basic block
+            PointsToGraph* inForBB = basicBlockIns[successorBlock];
+
+            //now apply subsumes
+            bool subsumes = inForBB->subsumes(localRunningPTG);
+            if(!subsumes) {
+               cout << "loop invariant verification failed for BB " << successorBlock->getNumber() << "from BB " << currentBBNumber << endl;
             }
-            else
-            {
-               PointsToGraph *ptgRunning = getPredecessorMeet(successorBlock, basicBlockOuts);
-               bool subsumes = ptgRunning->subsumes(ptgRunning);
-               cout << "subsumes check returned " << subsumes << endl;
-            }
+
+
+            // bool staticInvariantExists = false;
+            // if (staticInvariantExists)
+            // {
+            // }
+            // else
+            // {
+            //    PointsToGraph *ptgRunning = getPredecessorMeet(successorBlock, basicBlockOuts);
+            //    bool subsumes = ptgRunning->subsumes(ptgRunning);
+            //    cout << "subsumes check returned " << subsumes << endl;
+            // }
          }
       }
 
       // if we have reached here, the localRunningPTG now represents the out-flow of the current basic block. Store it away for later use
       basicBlockOuts[currentBB] = localRunningPTG;
 
-      // re-enable this for verification testing
-      // if(out != prevOut) {
-
-      // the below code for adding successors is no longer needed, since the order of processing is determined before hand by the topological sort
-      //      TR::CFGEdgeList successors = currentBB->getSuccessors();
-      //      for (TR::CFGEdgeList::iterator successorIt = successors.begin(); successorIt != successors.end(); ++successorIt)
-      //      {
-      //         TR::Block *successorBlock = toBlock((*successorIt)->getTo());
-      //
-      //         workList.push(successorBlock);
-      //      }
-      // }
    }
 
    TR::Block *end = cfg->getEnd()->asBlock();
