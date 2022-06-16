@@ -2298,11 +2298,12 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             // an aload's evaluated value is simply the list of objects in the points-to set of its symref
             int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
             set<Entry> pointsToSet = in->getPointsToSet(loadSymRef);
-            for (Entry entry : pointsToSet)
-            {
-               // TODO: use copy here
-               evaluatedValues.insert(entry);
-            }
+            evaluatedValues.insert(pointsToSet.begin(), pointsToSet.end());
+            // for (Entry entry : pointsToSet)
+            // {
+            //    // TODO: use copy here
+            //    evaluatedValues.insert(entry);
+            // }
          }
 
 
@@ -2402,7 +2403,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                for (Entry receiver : receiverNodeVals)
                {
                   //TODO : weak updates here
-                  in->assign(receiver, field, valueNodeVals);
+                  // in->assign(receiver, field, valueNodeVals);
+                  in->extend(receiver, field, valueNodeVals);
                }
             }
             // fetch the field being written to
