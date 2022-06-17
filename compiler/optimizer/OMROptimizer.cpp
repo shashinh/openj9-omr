@@ -2453,6 +2453,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             //TODO : skip processing if called method is a library method
             string s = methodName;
             bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
+            if(s.rfind("java/lang/Object.<init>", 0) == 0) {
+               isLibraryMethod = false;
+            }
             //TODO: guard this with an environment variable
             if(_runtimeVerifierDiagnostics && isLibraryMethod) {
                cout << "bypassing " << s << " - a library method" << endl;
@@ -2578,7 +2581,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
                if(!callSiteVerified) {
                   if(_runtimeVerifierDiagnostics) {
-                     cout << "ERROR: callsite verification for method " << calleeMethodIndex << endl;
+                     cout << "ERROR: callsite verification for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
                      cout << "expected: " << endl;
                      callSiteInvariant.print();
                      cout << "actual: " << endl;
@@ -2588,14 +2591,18 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   TR_ASSERT_FATAL(false, "callsite verification failed!");
                }
 
+               //if the callsite is verified, we want to analyze the method using the callsite invariant in the in-flow
+
                cout << "peeking method " << sig << " isResolved = " << methodSymbol->isResolvedMethod() << endl;
 
                TR::ResolvedMethodSymbol *resolvedMethodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
                if (usefulNode->getSymbol()->isResolvedMethod())
                {
 
+                  PointsToGraph * callsitePtgInv = new PointsToGraph(callSiteInvariant);
+
                   cout << forceCallsiteArgsForJITCInvocation.size() << endl;
-                  forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callSitePtg));
+                  forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callsitePtgInv));
                   cout << forceCallsiteArgsForJITCInvocation.size() << endl;
                   //TR_ASSERT_FATAL(forceCallsiteArgsForJITCInvocation.size() <= 1, "a maximum of 1 method can be forced");
 
@@ -2613,7 +2620,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                   // given that the ILGen will run optimizations and force invocation of the algorithm by JIT compilation, do we even need this call?
                   verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
-                                         getFormattedCurrentMethodName(resolvedMethodSymbol), callSitePtg, false);
+                                         getFormattedCurrentMethodName(resolvedMethodSymbol), callsitePtgInv, false);
                }
 
                outPTG = verifiedMethodSummaries[sig];
