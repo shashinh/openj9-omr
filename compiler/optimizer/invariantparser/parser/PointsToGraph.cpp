@@ -54,9 +54,10 @@ set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
     if(nullReference) {
         //we interpret the absence of a key in sigma as Null
         cout << target.getString() << "->" << field << " is null" << endl;
-        Entry pointee;
-        pointee.type = Null;
-        res.insert(pointee);
+        // Entry pointee;
+        // pointee.type = Null;
+        // res.insert(pointee);
+        return PointsToGraph::getBotSet();
     }
     return res;
 }
@@ -228,6 +229,13 @@ void PointsToGraph::extend(int symRef, Entry pointee){
 
 void PointsToGraph::extend(int symRef, set <Entry> pointees){
     rho[symRef].insert(pointees.begin(), pointees.end());
+}
+
+void PointsToGraph::extend(Entry target, string field, Entry pointee) {
+    sigma[target][field].insert(pointee);
+}
+void PointsToGraph::extend(Entry target, string field, set<Entry> pointees) {
+    sigma[target][field].insert(pointees.begin(), pointees.end());
 }
 
 void PointsToGraph::setArg(int argIndex, set <Entry> values) {

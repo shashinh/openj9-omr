@@ -62,6 +62,11 @@ class PointsToGraph {
         void extend(int symRef, Entry pointee);
         //weak updates
         void extend(int symRef, set <Entry> pointees);
+        //weak updates sigma
+        void extend(Entry target, string field, Entry pointee);
+        //weak updates sigma
+        void extend(Entry target, string field, set <Entry> pointees);
+
         void killArgs();
 
         void killRho();
