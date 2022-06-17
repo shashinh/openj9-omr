@@ -21,7 +21,7 @@ map <string, int> readMethodIndices() {
 	string methodName;
 	int index = 1;
 	while(file >> methodName) {
-		cout << methodName << ":" << index << endl;
+		// cout << methodName << ":" << index << endl;
 
 		ret[methodName] = index;
 		index++;
@@ -65,6 +65,7 @@ map <int, PointsToGraph> readInvariant(string fileName) {
 		LIBuilderVisitor visitor;
 		invariant = visitor.visitPtg((LIParser::PtgContext *)tree).as<std::map<int, PointsToGraph>>();
 
+	/*
 		std::map<int, PointsToGraph>::iterator it = invariant.begin();
 		while (it != invariant.end())
 		{
@@ -111,7 +112,7 @@ map <int, PointsToGraph> readInvariant(string fileName) {
 			}
 			it++;
 		}
-
+		*/
 
 	return invariant;
 }

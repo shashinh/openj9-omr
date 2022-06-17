@@ -41,7 +41,7 @@ set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
     if(sigma.find(target) != sigma.end()) {
         map <string, set <Entry> > m = sigma[target];
         if(m.find(field) != m.end()) {
-            cout << "found " << field << " in sigma" << endl;
+            // cout << "found " << field << " in sigma" << endl;
             res = m[field];
         }
         else {
@@ -53,7 +53,7 @@ set <Entry> PointsToGraph::getPointsToSet(Entry target, string field) {
 
     if(nullReference) {
         //we interpret the absence of a key in sigma as Null
-        cout << target.getString() << "->" << field << " is null" << endl;
+        // cout << target.getString() << "->" << field << " is null" << endl;
         // Entry pointee;
         // pointee.type = Null;
         // res.insert(pointee);
@@ -365,18 +365,18 @@ void PointsToGraph::ptgUnion(PointsToGraph *a, PointsToGraph *b) {
     }
 
     this->sigma = sigma;
-    cout << "printing ptg from ptgunion" << endl;
-    this->print();
+    // cout << "printing ptg from ptgunion" << endl;
+    // this->print();
 
 }
 
 bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
 
-    cout << "subsumes check requested for ptgs " << endl;
-    cout << "lhs : " << endl;
-    this->print();
-    cout << "rhs :" << endl;
-    other->print();
+    // cout << "subsumes check requested for ptgs " << endl;
+    // cout << "lhs : " << endl;
+    // this->print();
+    // cout << "rhs :" << endl;
+    // other->print();
 
     map <int, set <Entry> > otherRho;
     //if the subsumes check if requested at a callsite, then we compare rho_LHS with args_RHS
@@ -400,7 +400,7 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
             // ||                             rhsPointees.find(PointsToGraph::bottomEntry) != rhsPointees.end()) {
                 //Bot subsumes anything, no need to check RHS
                 //do we need messaging?
-                cout << "found BOT in LHS pointees" << endl;
+                // cout << "found BOT in LHS pointees" << endl;
             } else {
                 //lhsPointees should be a superset of rhsPointees
                 if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
@@ -410,7 +410,7 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
             }
         }
     }
-    cout << "rho subsumes passed" << endl;
+    // cout << "rho subsumes passed" << endl;
     //2. check sigma subsumes
     for(map <Entry, map <string, set<Entry>>>::iterator it = other->sigma.begin(); it != other->sigma.end(); it++) {
        if(this->sigma.find(it->first) != this->sigma.end()) {
@@ -437,7 +437,7 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
        } 
     }
 
-    cout << "sigma subsumes passed" << endl;
+    // cout << "sigma subsumes passed" << endl;
 
     //if we made it here, lhs subsumes rhs
     return true;
@@ -553,8 +553,8 @@ void PointsToGraph::summarizeReachableHeapAtCallSite() {
     //for each reference type argument, summarize its reachable heap
     //summarizing is achieved by marking the abstract object as "escaping"
 
-    cout << "summarize reachable heap requested for : \n";
-    this->print();
+    // cout << "summarize reachable heap requested for : \n";
+    // this->print();
 
     map <int, set <Entry> > :: iterator argsIterator = this->args.begin();
     while(argsIterator != this->args.end()) {
@@ -563,7 +563,7 @@ void PointsToGraph::summarizeReachableHeapAtCallSite() {
         }
         argsIterator++;
     }
-    cout << "summarize reachable heap completed : \n";
-    this->print();
+    // cout << "summarize reachable heap completed : \n";
+    // this->print();
 
 }
