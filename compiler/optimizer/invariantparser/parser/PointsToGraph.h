@@ -83,4 +83,6 @@ class PointsToGraph {
 
         void summarizeReachableHeap(Entry target);
         
+        void projectReachableHeapFromCallSite(PointsToGraph *other);
+        
 };

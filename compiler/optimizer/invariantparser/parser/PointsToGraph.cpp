@@ -462,6 +462,73 @@ void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
     this->sigma = other->sigma;
 }
 
+map <Entry, map <string, set <Entry> > > getReachableHeap (Entry target, map <Entry, map <string, set <Entry> > > sigma) {
+    map <Entry, map <string, set<Entry> > > res;
+
+    if(sigma.find(target) != sigma.end()) {
+        map <string, set<Entry> > fields = sigma[target];
+        res[target] = fields;
+    
+        map <string, set<Entry> > :: iterator fieldsIt = fields.begin();
+        while(fieldsIt != fields.end()) {
+            set <Entry> reachableObjects = fieldsIt->second;
+            for(Entry reachable : reachableObjects) {
+                map <Entry, map <string, set <Entry> > > reachableHeap = getReachableHeap(reachable, sigma);
+                res.insert(reachableHeap.begin(), reachableHeap.end());
+            }
+            fieldsIt++;
+        }
+    }
+
+    return res;
+
+}
+
+void PointsToGraph::projectReachableHeapFromCallSite(PointsToGraph *other) {
+    map <Entry, map <string, set <Entry> > > inSigma = this->sigma;
+    map <Entry, map <string, set <Entry>  > > outSigma = other->sigma;
+
+    //weak updates here as well!
+
+    // map <int, set <Entry> > inRho = this->rho;
+    map <int, set <Entry> > outRho = other->args;
+
+    //for each arg at the call site, we want to map the reachable heap back to the in-ptg's sigma
+    map <int, set <Entry> > :: iterator outRhoIt = outRho.begin();
+    while(outRhoIt != outRho.end()) {
+        int argIndex = outRhoIt->first;
+        set <Entry> argsPointsTo = outRhoIt->second;
+
+        for(Entry pointee : argsPointsTo) {
+            //fetch the reachable heap
+            map <Entry, map <string, set <Entry> > > reachableHeap = getReachableHeap(pointee, outSigma);
+            map <Entry, map <string, set <Entry> > > :: iterator reachableHeapIt = reachableHeap.begin();
+            while(reachableHeapIt != reachableHeap.end()) {
+                Entry target = reachableHeapIt->first;
+                map <string, set <Entry> > targetFields = reachableHeapIt->second;
+                map <string, set <Entry> > :: iterator targetFieldsIt = targetFields.begin();
+
+                while(targetFieldsIt != targetFields.end()) {
+                    string field = targetFieldsIt->first;
+                    set <Entry> pointees = targetFieldsIt->second;
+
+                    //weak updates only!
+                    this->sigma[target][field].insert(pointees.begin(), pointees.end());
+
+                    targetFieldsIt++;
+                }
+
+                reachableHeapIt++;
+            }
+            
+
+        }
+
+        outRhoIt++;
+    }
+
+}
+
 const int PointsToGraph::RETURNLOCAL = -99;
 
 //summarizes the heap objects reachable from the given abstract object

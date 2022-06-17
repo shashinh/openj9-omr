@@ -2454,7 +2454,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
             //TODO : skip processing if called method is a library method
             string s = methodName;
-            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
+            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.rfind("soot/", 0) == 0;
             if(s.rfind("java/lang/Object.<init>", 0) == 0) {
                isLibraryMethod = false;
             }
@@ -2616,11 +2616,12 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                   _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", resolvedMethodSymbol);
 
-                  _runtimeVerifierComp->dumpFlowGraph(resolvedMethodSymbol->getFlowGraph());
+                  // _runtimeVerifierComp->dumpFlowGraph(resolvedMethodSymbol->getFlowGraph());
 
                   //TODO: if we are here, callee shoould be analyzed, else invoke verify via callsite
 
                   // given that the ILGen will run optimizations and force invocation of the algorithm by JIT compilation, do we even need this call?
+                  // ANSWER - it is okay to leave it in, since there is a check for analysed methods anyway.
                   verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
                                          getFormattedCurrentMethodName(resolvedMethodSymbol), callsitePtgInv, false);
                }
@@ -2670,7 +2671,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             }
 
             //TODO: here, project the callee out-heap to the callsite heap - done
-            in->copySigmaFrom(outPTG);
+            //TODO: copy only the reachable heap!
+            // in->copySigmaFrom(outPTG);
+            in->projectReachableHeapFromCallSite(outPTG);
 
             //we want to save away the return value whether the method is resolved or not
             if(! usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning()) {
@@ -2858,6 +2861,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             int nodeBCI = node->getByteCodeInfo().getByteCodeIndex();
             // unfortunately it appears that the Start and End nodes are also valid treetops.
             // TODO: is there a way around this check?
+
             if (node->getOpCodeValue() == TR::BBStart){
                //the static loop invariant, if any, will map to the bci of the BBStart.
                if(staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end()) {
@@ -2878,7 +2882,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                      cout << "the local symref corresponding to stack slot " << slot << "is/are:" << endl;
 
                      ListIterator<TR::SymbolReference> autos(&methodSymbol->getAutoSymRefs(slot));
-                     //assert autos.size == 1
+                     //TODO: assert autos.size == 1
                      for (TR::SymbolReference * sr = autos.getFirst(); sr; sr = autos.getNext()) {
                            cout << sr->getReferenceNumber() << " ";
                            localRunningPTG->assign(sr->getReferenceNumber(), invariantIterator->second);
@@ -2893,7 +2897,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                   cout << "mapped in the loop invariant" << endl;
 
                   //lets also store this mapped PTG back in the static invariants collection, for later use in the subsumes check
-                  staticLoopInvariants[nodeBCI] = *localRunningPTG;
+                  staticLoopInvariants[nodeBCI] = PointsToGraph(*localRunningPTG);
                   localRunningPTG->print();
                   // basicBlockIns[currentBB] = localRunningPTG;
                }
@@ -2902,10 +2906,10 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             else if (node->getOpCodeValue() == TR::BBEnd)
                break;
 
-            if (staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end())
-            {
-               IFDIAGPRINT << "found static loop invariant at bci " << nodeBCI << endl;
-            }
+            // if (staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end())
+            // {
+            //    IFDIAGPRINT << "found static loop invariant at bci " << nodeBCI << endl;
+            // }
 
             // if there is an invariant available for this bci, map it in
             // mapStaticInvariantToRunningPTG(invariantPTG, localRunningPTG);
@@ -2956,7 +2960,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          TR::Block *successorBlock = toBlock((*successorIt)->getTo());
          if (basicBlockOuts.find(successorBlock) != basicBlockOuts.end())
          {
-            cout << "BB " << successorBlock->getNumber() << "already analyzed, invariance check, current BB is " << currentBBNumber << endl;
+            cout << "method " << methodIndex <<" BB " << successorBlock->getNumber() << "already analyzed, invariance check, current BB is " << currentBBNumber << endl;
 
 
             //if the successor BB has an invariant available, then perform invariant MEET prevIn(successor) to get the RHS of the subsumes check
@@ -2974,9 +2978,13 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             int successorBCI = bbStartOfSuccessor->getByteCodeIndex();
             bool subsumes = true;
             if(staticLoopInvariants.find(successorBCI) != staticLoopInvariants.end()) {
+               cout << "found static loop invariant for this block @bci " << successorBCI << endl;
                //fetch the IN for this BB
                PointsToGraph * in = getPredecessorMeet(successorBlock, basicBlockOuts);
                PointsToGraph staticLoopInvariantForBCI = staticLoopInvariants[successorBCI];
+               // cout << "static loop invaraint is: " << endl;
+               // staticLoopInvariantForBCI.print();
+
                PointsToGraph * temp = meet(in, localRunningPTG);
 
                subsumes = staticLoopInvariantForBCI.subsumes(temp);
@@ -3042,6 +3050,8 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
 {
 
    string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
+
+   _runtimeVerifierComp->dumpMethodTrees("verifyStaticMethodInfo", methodSymbol);
 
    if (isInvokedByJITC && forceCallsiteArgsForJITCInvocation.find(methodSignature) != forceCallsiteArgsForJITCInvocation.end())
    {
