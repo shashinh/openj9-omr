@@ -121,7 +121,8 @@ using namespace std;
 #include "env/RegionProfiler.hpp"
 //#include "il/ParameterSymbol.hpp"
 
-static std::set<string> _runtimeVerifiedMethods;
+// static std::set<string> _runtimeVerifiedMethods;
+static std::set<TR::ResolvedMethodSymbol *> _runtimeVerifiedMethods;
 static std::map<string, int> _methodIndices;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation *_runtimeVerifierComp;
@@ -1591,6 +1592,8 @@ TR::Node *getUsefulNode(TR::Node *node)
              opCode == TR::awrtbari ||
              opCode == TR::ardbari ||
              opCode == TR::anewarray ||
+             //this is needed for calls where the arg is null - it appears to map to aconst_null in bytecode
+             opCode == TR::aconst ||
              node->getOpCode().isCall())
          {
             IFDIAGPRINT << "found useful node at n" << node->getGlobalIndex() << "n" << endl;
@@ -1602,7 +1605,7 @@ TR::Node *getUsefulNode(TR::Node *node)
             // there are 41 "address" type nodes, out of those - some are handled above. 
             //    create an assert fail for the rest of the address nodes, 
             //    and let the other "safe" nodes trickle through - since they deal with non-ref types
-            if(opCode == TR::aconst ||
+            if(
                opCode == TR::ardbar ||
                opCode == TR::awrtbar ||
                opCode == TR::i2a ||
@@ -1624,16 +1627,16 @@ TR::Node *getUsefulNode(TR::Node *node)
                opCode == TR::multianewarray ||
                opCode == TR::aiadd ||
                opCode == TR::aladd ||
-               opCode == TR::ArrayStoreCHK ||
                opCode == TR::ArrayCHK ) {
-                  cout << "did not expect op code" << node->getOpCode().getName() << endl;
+                  cout << "did not expect op code" << node->getOpCode().getName() << " node " << node->getGlobalIndex() << endl;
                   TR_ASSERT_FATAL(false, "unexpected op codes");
                } else {
                   //just let them go
                   
-                  //below were encountered in tests and proven to be "safe"
+                  //below were encountered in tests and determined to be "safe" (i.e., not relevant to PTA)
                   //opCode == TR::checkcast ||
                   // opCode == TR::loadaddr ||
+                  // opCode == TR::ArrayStoreCHK || -- encountered in Harness.Main (avrora)
                }
          }
       }
@@ -1943,28 +1946,6 @@ TR::Node *getUsefulNode(TR::Node *node)
 
 // }
 
-void performRuntimeVerification2(TR::Compilation *comp)
-{
-   std::string currentClassName = getFormattedCurrentClassName(comp->getMethodSymbol());
-   std::string currentMethodName = getFormattedCurrentMethodName(comp->getMethodSymbol());
-   std::string sig = currentClassName + "." + currentMethodName;
-   if (_runtimeVerifiedMethods.find(sig) != _runtimeVerifiedMethods.end())
-      // this method has already been analyzed
-      return;
-   else
-      _runtimeVerifiedMethods.insert(sig);
-
-   // std::cout << "running performRuntimeVerification for " << currentMethodName << endl;
-
-   TR::CFG *cfg = comp->getFlowGraph();
-
-   // traceMsg(comp, "CFG for callee method %s\n", currentMethodName);
-   comp->dumpFlowGraph(cfg);
-   comp->dumpMethodTrees("from OMR::Optimizer::performRuntimeVerification");
-
-   // recursively invoke the verification algorithm (calls itself at each callsite to analyze the called method)
-   // verifyStaticMethodInfo(currentClassName, currentMethodName, cfg, comp);
-}
 
 void printRuntimeVerifierDiagnostic(string message)
 {
@@ -2247,6 +2228,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       TR::ILOpCodes opCode = usefulNode->getOpCodeValue();
       switch (opCode)
       {
+      case TR::aconst:
+      {
+         evaluatedValues.insert(PointsToGraph::nullEntry);
+         break;
+      }
       case TR::New:
       {
          // process new here
@@ -2370,60 +2356,63 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // first we obtain the children of awrtbari
          // obviously we only process if the RHS of the field write is a ref type
 
-         TR::Node *valueNode = usefulNode->getSecondChild();
-         if (valueNode->getDataType() == TR::Address)
-         {
-            // receiver
-            TR::Node *receiverNode = usefulNode->getFirstChild();
-            set<Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
-
-            // value
-            set<Entry> valueNodeVals = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount, methodIndex);
-
-            TR::SymbolReference *symRef = usefulNode->getSymbolReference();
-            bool isUnresolved = symRef->isUnresolved();
-            IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
-
-            bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
-            IFDIAGPRINT << "isShadow = " << isShadow << endl;
-
-            int cpIndex = symRef->getCPIndex();
-            IFDIAGPRINT << "cp index = " << cpIndex << endl;
-
-            if (/* !isUnresolved && */ isShadow && cpIndex > 0)
+         //awrtbari also performs array writes!
+         if(! usefulNode->getSymbol()->isArrayShadowSymbol()) {
+            TR::Node *valueNode = usefulNode->getSecondChild();
+            if (valueNode->getDataType() == TR::Address)
             {
-               // this is most certainly a field access, until proven otherwise
+               // receiver
+               TR::Node *receiverNode = usefulNode->getFirstChild();
+               set<Entry> receiverNodeVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
 
-               int32_t len;
-               const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-               string field(fieldName, fieldName + len);
+               // value
+               set<Entry> valueNodeVals = evaluateNode(in, valueNode, evaluatedNodeValues, visitCount, methodIndex);
 
-               IFDIAGPRINT << "field access for " << fieldName << endl;
+               TR::SymbolReference *symRef = usefulNode->getSymbolReference();
+               bool isUnresolved = symRef->isUnresolved();
+               IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
 
-               for (Entry receiver : receiverNodeVals)
+               bool isShadow = symRef->getSymbol()->getKind() == TR::Symbol::IsShadow;
+               IFDIAGPRINT << "isShadow = " << isShadow << endl;
+
+               int cpIndex = symRef->getCPIndex();
+               IFDIAGPRINT << "cp index = " << cpIndex << endl;
+
+               if (/* !isUnresolved && */ isShadow && cpIndex > 0)
                {
-                  //TODO : weak updates here
-                  // in->assign(receiver, field, valueNodeVals);
-                  in->extend(receiver, field, valueNodeVals);
+                  // this is most certainly a field access, until proven otherwise
+
+                  int32_t len;
+                  const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
+                  string field(fieldName, fieldName + len);
+
+                  IFDIAGPRINT << "field access for " << fieldName << endl;
+
+                  for (Entry receiver : receiverNodeVals)
+                  {
+                     //TODO : weak updates here
+                     // in->assign(receiver, field, valueNodeVals);
+                     in->extend(receiver, field, valueNodeVals);
+                  }
                }
+               // fetch the field being written to
+               //            // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
+               //            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+               //            // char *field = strtok((char *)fieldSig, ". ");
+               //            // field = strtok(NULL, ". ");
+               //
+               //            int32_t len;
+               //            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
+               //
+               //            for (Entry receiverBCI : receiverNodeVals)
+               //            {
+               //               in->assign(receiverBCI, fieldName, valueNodeVals);
+               //            }
             }
-            // fetch the field being written to
-            //            // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
-            //            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-            //            // char *field = strtok((char *)fieldSig, ". ");
-            //            // field = strtok(NULL, ". ");
-            //
-            //            int32_t len;
-            //            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-            //
-            //            for (Entry receiverBCI : receiverNodeVals)
-            //            {
-            //               in->assign(receiverBCI, fieldName, valueNodeVals);
-            //            }
-         }
-         else
-         {
-            // we do not care, this is not storing a ref type
+            else
+            {
+               // we do not care, this is not storing a ref type
+            }
          }
 
          break;
@@ -2454,7 +2443,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
             //TODO : skip processing if called method is a library method
             string s = methodName;
-            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.rfind("soot/", 0) == 0;
+            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
             if(s.rfind("java/lang/Object.<init>", 0) == 0) {
                isLibraryMethod = false;
             }
@@ -3080,14 +3069,14 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
    // TODO: use the standardized method signature here, no need for another specially formatted string
    //std::string sig = className + "." + methodName;
    bool analyzed = false;
-   if (_runtimeVerifiedMethods.find(methodSignature) != _runtimeVerifiedMethods.end())
+   if (_runtimeVerifiedMethods.find(methodSymbol) != _runtimeVerifiedMethods.end())
    {
       // this method has already been analyzed
       // cout << "\talready analyzed" << endl;
       analyzed = true;
    }
    else
-      _runtimeVerifiedMethods.insert(methodSignature);
+      _runtimeVerifiedMethods.insert(methodSymbol);
 
    // a guarantee that each method is processed at most once
    if (!analyzed)
