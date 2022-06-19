@@ -395,6 +395,9 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
         //because it is entirely possible for the runtime ptg to have extra rho entries (temps, for example)
         if(rho.find(it->first) != rho.end()) {
             set <Entry> rhsPointees = it->second;
+            //hack-begin - to account for library functions being summarized
+            rhsPointees.erase(PointsToGraph::bottomEntry);
+            //hack-end
             set <Entry> lhsPointees = rho[it->first];
             if(lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()  ) {
             // ||                             rhsPointees.find(PointsToGraph::bottomEntry) != rhsPointees.end()) {
@@ -422,6 +425,9 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
                if(lhsFields.find(i->first) != lhsFields.end()) {
                    set <Entry> rhsPointees = i->second;
                    set <Entry> lhsPointees = lhsFields[i->first];
+                    //hack-begin - to account for library functions being summarized
+                    rhsPointees.erase(PointsToGraph::bottomEntry);
+                    //hack-end
                     if(lhsPointees.size() == 1 && lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()) {
                         //Bot subsumes anything, no need to check RHS
                         //do we need messaging?

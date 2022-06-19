@@ -1590,6 +1590,7 @@ TR::Node *getUsefulNode(TR::Node *node)
              opCode == TR::acall ||
              opCode == TR::calli ||
              opCode == TR::awrtbari ||
+             opCode == TR::awrtbar || //this should be only static
              opCode == TR::ardbari ||
              opCode == TR::anewarray ||
              //this is needed for calls where the arg is null - it appears to map to aconst_null in bytecode
@@ -1601,13 +1602,12 @@ TR::Node *getUsefulNode(TR::Node *node)
          }
          else
          {
-            // TODO: Shashin: insert an assert failure here
+            // TODO: Shashin: insert an assert failure here - done
             // there are 41 "address" type nodes, out of those - some are handled above. 
             //    create an assert fail for the rest of the address nodes, 
             //    and let the other "safe" nodes trickle through - since they deal with non-ref types
             if(
                opCode == TR::ardbar ||
-               opCode == TR::awrtbar ||
                opCode == TR::i2a ||
                opCode == TR::iu2a ||
                opCode == TR::l2a ||
@@ -1637,6 +1637,7 @@ TR::Node *getUsefulNode(TR::Node *node)
                   //opCode == TR::checkcast ||
                   // opCode == TR::loadaddr ||
                   // opCode == TR::ArrayStoreCHK || -- encountered in Harness.Main (avrora)
+                  // opCode == TR::awrtbar || -- encountered dacapo TestHarness - added an assert that awrtbar's correspond to static writes
                }
          }
       }
@@ -1977,6 +1978,10 @@ int bottomizeParameters(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *i
 int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
 {
 
+   string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
+   cout << "in flow for method " << methodSignature << "\n";
+   in->print();
+
    ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
    TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
    TR::SymbolReference *symRef;
@@ -2014,7 +2019,12 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
          if (_runtimeVerifierDiagnostics)
             cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << " will be mapped to param " << argIndex << endl;
 
-         set<Entry> argsPointsTo = in->getArgPointsToSet(argIndex);
+         // set<Entry> argsPointsTo = in->getArgPointsToSet(argIndex);
+         set <Entry> argsPointsTo = in->getPointsToSet(argIndex);
+         // cout << "the argspointsto for arg " << argIndex << " is\n" ;
+         // for (Entry e : argsPointsTo) {
+         //    cout << e.getString()  << " ";
+         // } cout << "\n";
          in->assign(symRefNumber, argsPointsTo);
          argIndex++;
       }
@@ -2349,7 +2359,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
          break;
       }
-
+      case TR::awrtbar:
+      {
+         bool isStatic = usefulNode->getSymbol()->isStatic();
+         TR_ASSERT_FATAL(isStatic, "found an awrtbar node that isn't Static!");
+      }
       case TR::awrtbari:
       {
          // process field store
@@ -2443,7 +2457,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
             //TODO : skip processing if called method is a library method
             string s = methodName;
-            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 || s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0;
+            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
+                         s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.find("org/apache", 0) == 0 || s.find("org/slf4j", 0) == 0 ||
+                         s.rfind("soot/rtlib/tamiflex/UnexpectedReflectiveCall.methodInvoke", 0) == 0;
             if(s.rfind("java/lang/Object.<init>", 0) == 0) {
                isLibraryMethod = false;
             }
@@ -2622,7 +2638,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   outPTG->print();
                }
             }
-            else
+            else if (isLibraryMethod)
             {
                //if we are here, we are either looking at a library method, or unresolved/opaque methods
                // cout << "found an unresolved method " << methodName << endl;
@@ -2657,6 +2673,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                callSitePtg->summarizeReachableHeapAtCallSite(); //in other words, mark escaping
                outPTG = callSitePtg;
+            } else {
+               //we are looking at an unresolved application method. this should never happen in practice - assert fatal!
+               cout << "application method " << methodName << " is not resolved!" << endl;
+               TR_ASSERT_FATAL(false, "application method not resolved");
+
             }
 
             //TODO: here, project the callee out-heap to the callsite heap - done
@@ -2967,24 +2988,38 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             TR::Node * bbStartOfSuccessor = successorBlock->getEntry()->getNode();
             int successorBCI = bbStartOfSuccessor->getByteCodeIndex();
             bool subsumes = true;
+            PointsToGraph *lhs;
+            PointsToGraph *rhs;
             if(staticLoopInvariants.find(successorBCI) != staticLoopInvariants.end()) {
                // cout << "found static loop invariant for this block @bci " << successorBCI << endl;
                //fetch the IN for this BB
                PointsToGraph * in = getPredecessorMeet(successorBlock, basicBlockOuts);
                PointsToGraph staticLoopInvariantForBCI = staticLoopInvariants[successorBCI];
+               cout << "loop invariant for bci " << successorBCI << " available\n";
                // cout << "static loop invaraint is: " << endl;
                // staticLoopInvariantForBCI.print();
 
                PointsToGraph * temp = meet(in, localRunningPTG);
 
                subsumes = staticLoopInvariantForBCI.subsumes(temp);
+               lhs = &staticLoopInvariantForBCI;
+               rhs = temp;
             } else {
+               cout << "loop invariant for bci " << successorBCI << " not available\n";
                PointsToGraph *in = getPredecessorMeet(successorBlock, basicBlockOuts);
                subsumes = in->subsumes(localRunningPTG);
+
+               lhs = in;
+               rhs = localRunningPTG;
             }
 
             if(!subsumes) {
                // IFDIAGPRINT << "loop invariance check failed";
+               cout << "loop invariance check failed for \n";
+               cout << "lhs: \n";
+               lhs->print();
+               cout << "rhs: \n";
+               rhs->print();
                TR_ASSERT_FATAL(false, "loop invariance check failed");
             }
             // PointsToGraph *prevIn = basicBlockOuts[successorBlock];
