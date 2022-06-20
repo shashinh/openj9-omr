@@ -1979,8 +1979,8 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
 {
 
    string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
-   cout << "in flow for method " << methodSignature << "\n";
-   in->print();
+   // cout << "in flow for method " << methodSignature << "\n";
+   // in->print();
 
    ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
    TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
@@ -2459,8 +2459,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             string s = methodName;
             bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
                          s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.find("org/apache", 0) == 0 || s.find("org/slf4j", 0) == 0 ||
-                         s.rfind("soot/rtlib/tamiflex/UnexpectedReflectiveCall.methodInvoke", 0) == 0;
-            if(s.rfind("java/lang/Object.<init>", 0) == 0) {
+                         s.rfind("soot", 0) == 0;
+            /* if(s.rfind("java/lang/Object.<init>", 0) == 0) {
+               isLibraryMethod = false;
+            } else*/ if (s.rfind("soot.rtlib.tamiflex.ReflectiveCallsWrapper", 0) == 0 ) {
+               //we want to treat the reflectivecallswrapper as an application method, as it contains callsites for the actual benchmark
                isLibraryMethod = false;
             }
             //TODO: guard this with an environment variable
@@ -2595,7 +2598,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      callSitePtg->print();
                   }
 
-                  TR_ASSERT_FATAL(false, "callsite verification failed!");
+                  TR_ASSERT_FATAL(false, "callsite verification failed for callee method %s, index %i, caller method %i", methodName, calleeMethodIndex, methodIndex);
                }
 
                //if the callsite is verified, we want to analyze the method using the callsite invariant in the in-flow
@@ -2631,6 +2634,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                          getFormattedCurrentMethodName(resolvedMethodSymbol), callsitePtgInv, false);
                }
 
+               //TODO: this is not correct. PROJECT the summary back as per the current callsite.
+               // i.e. map only the reachable heap back, else there will be issues
                outPTG = verifiedMethodSummaries[sig];
 
                if(_runtimeVerifierDiagnostics) {
@@ -2993,23 +2998,23 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             if(staticLoopInvariants.find(successorBCI) != staticLoopInvariants.end()) {
                // cout << "found static loop invariant for this block @bci " << successorBCI << endl;
                //fetch the IN for this BB
-               PointsToGraph * in = getPredecessorMeet(successorBlock, basicBlockOuts);
+               PointsToGraph * prevIn = getPredecessorMeet(successorBlock, basicBlockOuts);
+               PointsToGraph * inMeetOut = meet(prevIn, localRunningPTG);
                PointsToGraph staticLoopInvariantForBCI = staticLoopInvariants[successorBCI];
-               cout << "loop invariant for bci " << successorBCI << " available\n";
+               // cout << "loop invariant for bci " << successorBCI << " available\n";
                // cout << "static loop invaraint is: " << endl;
                // staticLoopInvariantForBCI.print();
 
-               PointsToGraph * temp = meet(in, localRunningPTG);
 
-               subsumes = staticLoopInvariantForBCI.subsumes(temp);
+               subsumes = staticLoopInvariantForBCI.subsumes(inMeetOut);
                lhs = &staticLoopInvariantForBCI;
-               rhs = temp;
+               rhs = inMeetOut;
             } else {
                cout << "loop invariant for bci " << successorBCI << " not available\n";
-               PointsToGraph *in = getPredecessorMeet(successorBlock, basicBlockOuts);
-               subsumes = in->subsumes(localRunningPTG);
+               PointsToGraph *prevIn = getPredecessorMeet(successorBlock, basicBlockOuts);
+               subsumes = prevIn->subsumes(localRunningPTG);
 
-               lhs = in;
+               lhs = prevIn;
                rhs = localRunningPTG;
             }
 
@@ -3020,7 +3025,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                lhs->print();
                cout << "rhs: \n";
                rhs->print();
-               TR_ASSERT_FATAL(false, "loop invariance check failed");
+               TR_ASSERT_FATAL(false, "loop invariance check failed for method %s, index %i", methodSignature.c_str(), methodIndex);
             }
             // PointsToGraph *prevIn = basicBlockOuts[successorBlock];
             // bool subsumes = prevIn->subsumes(localRunningPTG);

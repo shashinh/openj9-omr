@@ -397,6 +397,7 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
             set <Entry> rhsPointees = it->second;
             //hack-begin - to account for library functions being summarized
             rhsPointees.erase(PointsToGraph::bottomEntry);
+            rhsPointees.erase(PointsToGraph::nullEntry);
             //hack-end
             set <Entry> lhsPointees = rho[it->first];
             if(lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()  ) {
@@ -427,6 +428,7 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
                    set <Entry> lhsPointees = lhsFields[i->first];
                     //hack-begin - to account for library functions being summarized
                     rhsPointees.erase(PointsToGraph::bottomEntry);
+                    rhsPointees.erase(PointsToGraph::nullEntry);
                     //hack-end
                     if(lhsPointees.size() == 1 && lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()) {
                         //Bot subsumes anything, no need to check RHS

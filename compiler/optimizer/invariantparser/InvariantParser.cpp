@@ -41,7 +41,7 @@ class ParseErrorListener : public BaseErrorListener
 };
 
 map <int, PointsToGraph> readInvariant(string fileName) {
-	cout << "reading " << fileName << endl;
+	// cout << "reading " << fileName << endl;
 	map <int, PointsToGraph> invariant;
 
 	ifstream ins(fileName, std::ifstream::in);
