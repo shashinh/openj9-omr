@@ -2457,14 +2457,27 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
             //TODO : skip processing if called method is a library method
             string s = methodName;
-            bool isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
+            bool isLibraryMethod = false;
+            isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
                          s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.find("org/apache", 0) == 0 || s.find("org/slf4j", 0) == 0 ||
                          s.rfind("soot", 0) == 0;
-            /* if(s.rfind("java/lang/Object.<init>", 0) == 0) {
-               isLibraryMethod = false;
-            } else*/ if (s.rfind("soot.rtlib.tamiflex.ReflectiveCallsWrapper", 0) == 0 ) {
+            
+            if (s.rfind("soot.rtlib.tamiflex.ReflectiveCallsWrapper", 0) == 0 ) {
                //we want to treat the reflectivecallswrapper as an application method, as it contains callsites for the actual benchmark
                isLibraryMethod = false;
+            }
+
+            bool isTransparentMethod = false;
+            /*
+             * there are certain library methods that are known to have no effect on the reachable heap at a call site,
+             * we cannot treat such library methods as opaque, and end up summarizing the reachable heap. This will cause
+             * issues in later verification sites
+             */
+            isTransparentMethod = s.rfind("java/lang/Object", 0) == 0;
+
+            if(isTransparentMethod) {
+               //TODO: simulate out = in here.
+               //anything else?
             }
             //TODO: guard this with an environment variable
             if(_runtimeVerifierDiagnostics && isLibraryMethod) {
