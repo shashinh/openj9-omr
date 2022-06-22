@@ -2474,15 +2474,25 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
              * issues in later verification sites
              */
             isTransparentMethod = s.rfind("java/lang/Object", 0) == 0;
+            isTransparentMethod = false;
 
             if(isTransparentMethod) {
                //TODO: simulate out = in here.
                //anything else?
+               if(_runtimeVerifierDiagnostics) {
+                  cout << methodName << " treated as transparent\n";
+               }
+               
+               outPTG = new PointsToGraph(*in);
+            } else {
+               //TODO: determine which of the remaining functionality below needs to go in here
+               // all the way, to the return?
             }
-            //TODO: guard this with an environment variable
-            if(_runtimeVerifierDiagnostics && isLibraryMethod) {
-               cout << "bypassing " << s << " - a library method" << endl;
-            }
+
+            // if(_runtimeVerifierDiagnostics && isLibraryMethod) {
+            //    cout << "bypassing " << s << " - a library method" << endl;
+            // }
+
             PointsToGraph callSiteInvariant;
             //fetch the callsite invariant for this method
             //we want to read the callsite invariant for unresolved methdos as well (right?)
@@ -2497,6 +2507,10 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             // TODO: confirm - does this simply mean set the Rho to empty map ? - YES, this seems to be sound!
             callSitePtg->killRho();
             callSitePtg->killArgs();
+            /*
+             * TODO: even the heap has to be killed here, and only that part of the heap that is reachable is to be passed in
+             *       later on, when the callsite returns, we can simply copy over the heap as-is since it is only the reachable heap.
+             */
 
             if (! isLibraryMethod && usefulNode->getSymbol()->isResolvedMethod())
             {
@@ -2517,14 +2531,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   // the first arg for a virtual call is the load of the VFT, we shall skip that
                   TR::Node *thisParmNode = usefulNode->getSecondChild();
                   set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
-
-                  //callsite verification for this-param
-                  //set <Entry> thisParamInvariant = callSiteInvariant.getPointsToSet(0);
-                  //bool subsumes = includes(thisParamInvariant.begin(), thisParamInvariant.end(),
-                                                //thisParmValues.begin(), thisParmValues.end());
-                  //if(!subsumes) 
-                     //TR_ASSERT_FATAL(false, "callsite verification failed");
-
                   callSitePtg->setArg(argIndex, thisParmValues);
 
                   argIndex++;
@@ -2536,13 +2542,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   TR::Node *thisParmNode = usefulNode->getFirstChild();
                   set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
                   callSitePtg->setArg(0, thisParmValues);
-
-                  //callsite verification for this-param
-                  //set <Entry> thisParamInvariant = callSiteInvariant.getPointsToSet(0);
-                  //bool subsumes = includes(thisParamInvariant.begin(), thisParamInvariant.end(),
-                                                //thisParmValues.begin(), thisParmValues.end());
-                  //if(!subsumes) 
-                     //TR_ASSERT_FATAL(false, "callsite verification failed");
 
                   argIndex++;
                   childIndex++;
@@ -2561,7 +2560,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                // now we can pick off the rest of the arguments from the IL
 
-               //TODO - There is a MUCH better way to pull arguments off of a callsite
+               //TODO - There is a MUCH better way to pull arguments off of a callsite - and this will probably also take care of the VFTs and jump to the actual arguments directly
                //look here - TR_PrexArgInfo* TR_PrexArgInfo::argInfoFromCaller(TR::Node* callNode, TR_PrexArgInfo* callerArgInfo)
                ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
                TR::SymbolReference *symRef;
@@ -2691,7 +2690,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                callSitePtg->summarizeReachableHeapAtCallSite(); //in other words, mark escaping
                outPTG = callSitePtg;
-            } else {
+
+            } //end isLibraryMethod
+            else {
                //we are looking at an unresolved application method. this should never happen in practice - assert fatal!
                cout << "application method " << methodName << " is not resolved!" << endl;
                TR_ASSERT_FATAL(false, "application method not resolved");
@@ -2707,7 +2708,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             if(! usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning()) {
                   evaluatedValues = outPTG->getReturnPointsTo();
             }
-         }
+         } //end isHelperCall
          break;
       }
 
