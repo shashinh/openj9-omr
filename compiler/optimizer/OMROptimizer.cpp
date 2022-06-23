@@ -126,6 +126,7 @@ static std::set<TR::ResolvedMethodSymbol *> _runtimeVerifiedMethods;
 static std::map<string, int> _methodIndices;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation *_runtimeVerifierComp;
+static int verifiedMethodCount = 0;
 std::map<string, PointsToGraph *> forceCallsiteArgsForJITCInvocation;
 std::map <string, PointsToGraph *> verifiedMethodSummaries;
 
@@ -1593,6 +1594,7 @@ TR::Node *getUsefulNode(TR::Node *node)
              opCode == TR::awrtbar || //this should be only static
              opCode == TR::ardbari ||
              opCode == TR::anewarray ||
+             opCode == TR::newarray ||
              //this is needed for calls where the arg is null - it appears to map to aconst_null in bytecode
              opCode == TR::aconst ||
              node->getOpCode().isCall())
@@ -1621,7 +1623,6 @@ TR::Node *getUsefulNode(TR::Node *node)
                opCode == TR::aselect ||
                opCode == TR::checkcastAndNULLCHK ||
                opCode == TR:: newvalue ||
-               opCode == TR::newarray ||
                opCode == TR::variableNew ||
                opCode == TR::variableNewArray ||
                opCode == TR::multianewarray ||
@@ -2253,6 +2254,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       }
 
       case TR::anewarray:
+      case TR::newarray:
       {
          //process anewarray
          Entry e = PointsToGraph::bottomEntry;
@@ -2498,7 +2500,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             //we want to read the callsite invariant for unresolved methdos as well (right?)
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
             if(!isLibraryMethod) {
-               IFDIAGPRINT << "attempting to read callsite invariant " << calleeMethodIndex << " " << methodName << endl;
+               cout << "attempting to read callsite invariant " << calleeMethodIndex << endl;
                callSiteInvariant = readCallsiteInvariant(calleeMethodIndex);
             }
 
@@ -2602,13 +2604,13 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
                if(!callSiteVerified) {
-                  if(_runtimeVerifierDiagnostics) {
+                  // if(_runtimeVerifierDiagnostics) {
                      cout << "ERROR: callsite verification for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
                      cout << "expected: " << endl;
                      callSiteInvariant.print();
                      cout << "actual: " << endl;
                      callSitePtg->print();
-                  }
+                  // }
 
                   TR_ASSERT_FATAL(false, "callsite verification failed for callee method %s, index %i, caller method %i", methodName, calleeMethodIndex, methodIndex);
                }
@@ -3024,7 +3026,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                lhs = &staticLoopInvariantForBCI;
                rhs = inMeetOut;
             } else {
-               cout << "loop invariant for bci " << successorBCI << " not available\n";
+               IFDIAGPRINT << "loop invariant for bci " << successorBCI << " not available\n";
                PointsToGraph *prevIn = getPredecessorMeet(successorBlock, basicBlockOuts);
                subsumes = prevIn->subsumes(localRunningPTG);
 
@@ -3079,12 +3081,15 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
    //save this away as the summary for this method!
    verifiedMethodSummaries[methodSignature] = outForMethod;
+   verifiedMethodCount++;
    if (_runtimeVerifierDiagnostics)
    {
       cout << "completed runtime PTA for " << methodSignature << endl;
       cout << "out-PTG:" << endl;
       outForMethod->print();
    }
+
+   cout << "verified method count " << verifiedMethodCount << endl;
    return outForMethod;
 }
 
