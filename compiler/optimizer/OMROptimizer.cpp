@@ -2500,7 +2500,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             //we want to read the callsite invariant for unresolved methdos as well (right?)
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
             if(!isLibraryMethod) {
-               cout << "attempting to read callsite invariant " << calleeMethodIndex << endl;
+               // cout << "attempting to read callsite invariant " << calleeMethodIndex << endl;
                callSiteInvariant = readCallsiteInvariant(calleeMethodIndex);
             }
 
@@ -3089,7 +3089,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       outForMethod->print();
    }
 
-   cout << "verified method count " << verifiedMethodCount << endl;
+   // cout << "verified method count " << verifiedMethodCount << endl;
    return outForMethod;
 }
 
