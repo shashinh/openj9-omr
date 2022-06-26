@@ -21,6 +21,7 @@ class PointsToGraph {
         static const Entry bottomEntry;
         static const Entry nullEntry;
         static const int RETURNLOCAL;
+        static const PointsToGraph topValue;
         static set<Entry> getBotSet();
         std::map <int, std::set <Entry> > getRho();
         std::map <Entry, std::map <string, set <Entry> > > getSigma();
@@ -84,5 +85,7 @@ class PointsToGraph {
         void summarizeReachableHeap(Entry target);
         
         void projectReachableHeapFromCallSite(PointsToGraph *other);
+
+        bool isTop();
         
 };

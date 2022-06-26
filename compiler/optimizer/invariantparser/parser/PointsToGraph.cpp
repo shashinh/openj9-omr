@@ -575,3 +575,7 @@ void PointsToGraph::summarizeReachableHeapAtCallSite() {
     // this->print();
 
 }
+
+bool PointsToGraph::isTop() {
+    return rho.empty() && sigma.empty() && args.empty();
+}

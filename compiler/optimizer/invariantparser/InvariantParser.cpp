@@ -120,14 +120,19 @@ map <int, PointsToGraph> readInvariant(string fileName) {
 
 PointsToGraph readCallsiteInvariant(int methodIndex) {
 
-    std::map<int, PointsToGraph> ci;
+	PointsToGraph ci;
+    std::map<int, PointsToGraph> ciMap;
 	string fileName =  "invariants/ci" + to_string(methodIndex) + ".txt";	
 
-	ci = readInvariant(fileName);
+	ciMap = readInvariant(fileName);
 
-	assert(ci.find(0) != ci.end());
+	if(ciMap.find(0) == ciMap.end()) {
+		cout << "could not find callsite invariant for " << methodIndex << endl;
+	} else {
+ 	   ci = ciMap[0];
+	}
 
-    return ci[0];
+	return ci;
 }
 
 

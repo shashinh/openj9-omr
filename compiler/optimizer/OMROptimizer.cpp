@@ -2500,7 +2500,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             //we want to read the callsite invariant for unresolved methdos as well (right?)
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
             if(!isLibraryMethod) {
-               // cout << "attempting to read callsite invariant " << calleeMethodIndex << endl;
+               cout << "attempting to read callsite invariant " << calleeMethodIndex << " " << methodName << endl;
                callSiteInvariant = readCallsiteInvariant(calleeMethodIndex);
             }
 
@@ -2602,17 +2602,24 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   callSitePtg->print();
                }
 
-               bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
-               if(!callSiteVerified) {
-                  // if(_runtimeVerifierDiagnostics) {
-                     cout << "ERROR: callsite verification for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
-                     cout << "expected: " << endl;
-                     callSiteInvariant.print();
-                     cout << "actual: " << endl;
-                     callSitePtg->print();
-                  // }
+               PointsToGraph * callsitePtgInv;
+               if(callSiteInvariant.isTop()) {
+                  bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
+                  if(!callSiteVerified) {
+                     // if(_runtimeVerifierDiagnostics) {
+                        cout << "ERROR: callsite verification for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
+                        cout << "expected: " << endl;
+                        callSiteInvariant.print();
+                        cout << "actual: " << endl;
+                        callSitePtg->print();
+                     // }
 
-                  TR_ASSERT_FATAL(false, "callsite verification failed for callee method %s, index %i, caller method %i", methodName, calleeMethodIndex, methodIndex);
+                     TR_ASSERT_FATAL(false, "callsite verification failed for callee method %s, index %i, caller method %i", methodName, calleeMethodIndex, methodIndex);
+                  }
+                  
+                  callsitePtgInv = new PointsToGraph(callSiteInvariant);
+               } else {
+                  callsitePtgInv = callSitePtg;
                }
 
                //if the callsite is verified, we want to analyze the method using the callsite invariant in the in-flow
@@ -2623,7 +2630,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                if (usefulNode->getSymbol()->isResolvedMethod())
                {
 
-                  PointsToGraph * callsitePtgInv = new PointsToGraph(callSiteInvariant);
 
                   // cout << forceCallsiteArgsForJITCInvocation.size() << endl;
                   forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callsitePtgInv));
@@ -3088,6 +3094,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       cout << "out-PTG:" << endl;
       outForMethod->print();
    }
+
+   cout << "analyzed " << methodSignature << " " << methodIndex << endl;
 
    // cout << "verified method count " << verifiedMethodCount << endl;
    return outForMethod;
