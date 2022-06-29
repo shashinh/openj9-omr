@@ -21,7 +21,7 @@ map <string, int> readMethodIndices() {
 	string methodName;
 	int index = 1;
 	while(file >> methodName) {
-		// cout << methodName << ":" << index << endl;
+		cout << methodName << ":" << index << endl;
 
 		ret[methodName] = index;
 		index++;
@@ -127,10 +127,31 @@ PointsToGraph readCallsiteInvariant(int methodIndex) {
 	ciMap = readInvariant(fileName);
 
 	if(ciMap.find(0) == ciMap.end()) {
+		// cout << "could not find callsite invariant for " << methodIndex << endl;
+	} else {
+ 	   ci = ciMap[0];
+	}
+
+	return ci;
+}
+
+PointsToGraph readCallsiteOut(int methodIndex) {
+
+	PointsToGraph ci;
+    std::map<int, PointsToGraph> ciMap;
+	string fileName =  "invariants/co" + to_string(methodIndex) + ".txt";	
+
+	ciMap = readInvariant(fileName);
+
+	if(ciMap.find(0) == ciMap.end()) {
 		cout << "could not find callsite invariant for " << methodIndex << endl;
 	} else {
  	   ci = ciMap[0];
 	}
+
+	set<Entry> returnPointees = ci.getPointsToSet(99);
+	ci.killRho();
+	ci.assign(-99, returnPointees);
 
 	return ci;
 }
