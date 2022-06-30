@@ -1600,6 +1600,7 @@ TR::Node *getUsefulNode(TR::Node *node)
              opCode == TR::newarray ||
              //this is needed for calls where the arg is null - it appears to map to aconst_null in bytecode
              opCode == TR::aconst ||
+            opCode == TR::aladd ||
              node->getOpCode().isCall())
          {
             IFDIAGPRINT << "found useful node at n" << node->getGlobalIndex() << "n" << endl;
@@ -1630,7 +1631,6 @@ TR::Node *getUsefulNode(TR::Node *node)
                opCode == TR::variableNewArray ||
                opCode == TR::multianewarray ||
                opCode == TR::aiadd ||
-               opCode == TR::aladd ||
                opCode == TR::ArrayCHK ) {
                   cout << "did not expect op code" << node->getOpCode().getName() << " node " << node->getGlobalIndex() << endl;
                   TR_ASSERT_FATAL(false, "unexpected op codes");
@@ -1946,6 +1946,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          evaluatedValues.insert(PointsToGraph::nullEntry);
          break;
       }
+      case TR::aladd:
+      {
+         evaluatedValues.insert(PointsToGraph::bottomEntry);
+         break;
+      }
       case TR::New:
       {
          // process new here
@@ -1974,6 +1979,14 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // note that this is a strong update
          int storeSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
          in->assign(storeSymRef, evaluatedValues);
+         if(usefulNode->getGlobalIndex() == 22842) {
+            cout << "storesymref: " << storeSymRef << endl;
+            cout << "child node: " << storeChild->getGlobalIndex() << endl;
+            for(Entry e : evaluatedValues) {
+               cout << e.getString() << " ";
+            } cout << endl;
+            in->print();
+         }
          // TODO: do astore's need an evaluated value? can there be pointers to astore nodes?
 
          // if(_runtimeVerifierDiagnostics) in->print();
@@ -1997,12 +2010,12 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          } else {
             // an aload's evaluated value is simply the list of objects in the points-to set of its symref
             int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
-               cout << "load requested on symref " << loadSymRef << endl;
+            //    cout << "load requested on symref " << loadSymRef << endl;
             set<Entry> pointsToSet = in->getPointsToSet(loadSymRef);
-               cout << "pointstoSet is \n";
-               for(Entry e : pointsToSet) {
-                  cout << e.getString() << " ";
-               } cout << endl;
+            //    cout << "pointstoSet is \n";
+            //    for(Entry e : pointsToSet) {
+            //       cout << e.getString() << " ";
+            //    } cout << endl;
             evaluatedValues.insert(pointsToSet.begin(), pointsToSet.end());
             // for (Entry entry : pointsToSet)
             // {
@@ -2184,11 +2197,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		            //TODO : skip processing if called method is a library method
 		            string s = methodName;
 		            bool isLibraryMethod = false;
-		            isLibraryMethod = s.rfind("java/", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
+		            isLibraryMethod = s.rfind("java", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
 		                         s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.find("org/apache", 0) == 0 || s.find("org/slf4j", 0) == 0 ||
 		                         s.rfind("soot", 0) == 0;
 		            
-		            if (s.rfind("soot.rtlib.tamiflex.ReflectiveCallsWrapper", 0) == 0 ) {
+		            if (s.rfind("soot/rtlib/tamiflex/ReflectiveCallsWrapper", 0) == 0 ) {
 		               //we want to treat the reflectivecallswrapper as an application method, as it contains callsites for the actual benchmark
 		               isLibraryMethod = false;
 		            }
@@ -2573,8 +2586,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    cout << "beginning to analyze " << methodSignature << " " << methodIndex << endl;
    cout << "verifiedmethods map size: " << _runtimeVerifiedMethods.size() << endl;
 
-   string str = "getSize()";
-   bool isGetSize = methodSignature.find(str) != string::npos;
+   // string str = "getSize()";
+   // bool isGetSize = methodSignature.find(str) != string::npos;
 
    if (_runtimeVerifierDiagnostics)
    {
@@ -2618,9 +2631,19 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    stack<TR::Block *> blockProcessingOrder;
    pseudoTopoSort(start, gray, black, blockProcessingOrder);
 
-   if(isGetSize) {
-      cout << "completed topo sort for getSize()\n";
+   if(methodIndex == 229) {
+      cout << "process order for method 229 is \n";
+      stack<TR::Block *> s = blockProcessingOrder;
+      while(!s.empty()) {
+         TR::Block * b = s.top();
+         cout << b->getNumber() << " ";
+         s.pop();
+      } cout << endl;
    }
+
+   // if(isGetSize) {
+   //    cout << "completed topo sort for getSize()\n";
+   // }
 
    //   queue<TR::Block *> workList;
    //   workList.push(start);
@@ -2635,7 +2658,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       blockProcessingOrder.pop();
 
       int currentBBNumber = currentBB->getNumber();
-      if (_runtimeVerifierDiagnostics || isGetSize)
+      if (_runtimeVerifierDiagnostics || methodIndex == 229)
          cout << "popped BB" << currentBBNumber << " from the worklist" << endl;
 
       // do we need to mark the block as visited?
@@ -2650,6 +2673,9 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       else
       {
          inForBasicBlock = getPredecessorMeet(currentBB, basicBlockOuts);
+         if(currentBBNumber == 6 && methodIndex == 229) {
+            inForBasicBlock->print();
+         }
       }
 
       basicBlockIns[currentBB] = inForBasicBlock;
@@ -2735,6 +2761,15 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
             // if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
             set<Entry> evaluatedValuesForNode = evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount, methodIndex);
+            if(methodIndex == 229 && currentBBNumber == 3) {
+               for (Entry e : evaluatedValuesForNode) {
+                  cout << e.getString() << " ";
+               } cout << endl;
+
+               cout << "processed node " << node->getGlobalIndex() << "\n";
+               cout << "current PTG\n";
+               localRunningPTG->print();
+            }
             // quick test to make sure values are persisting b/w calls
             // UPDATE: they are!
             //            if(_runtimeVerifierDiagnostics) {
@@ -2888,15 +2923,15 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
    string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
 
    _runtimeVerifierComp->dumpMethodTrees("verifyStaticMethodInfo", methodSymbol);
-   string str = "getSize()";
-   bool isGetSize = methodSignature.find(str) != string::npos;
-   if(isGetSize) {
-      cout << "started analyzing " << methodSignature << "\n";
-      if(forceCallsiteArgsForJITCInvocation.find(methodSignature) != forceCallsiteArgsForJITCInvocation.end()) {
-         cout << "forced jit invocation\n";
-         // forceCallsiteArgsForJITCInvocation[methodSignature]->print();
-      }
-   }
+   // string str = "getSize()";
+   // bool isGetSize = methodSignature.find(str) != string::npos;
+   // if(isGetSize) {
+   //    cout << "started analyzing " << methodSignature << "\n";
+   //    if(forceCallsiteArgsForJITCInvocation.find(methodSignature) != forceCallsiteArgsForJITCInvocation.end()) {
+   //       cout << "forced jit invocation\n";
+   //       // forceCallsiteArgsForJITCInvocation[methodSignature]->print();
+   //    }
+   // }
 
    if (isInvokedByJITC && forceCallsiteArgsForJITCInvocation.find(methodSignature) != forceCallsiteArgsForJITCInvocation.end())
    {
@@ -2935,10 +2970,6 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       // this method has already been analyzed
       //  cout << "\talready analyzed" << endl;
       analyzed = true;
-      if(isGetSize) {
-         cout << "get size is analyzed, summary:\n";
-         verifiedMethodSummaries[methodSignature]->print();
-      }
    }
    // else
    //    _runtimeVerifiedMethods.insert(methodSignature);
@@ -2947,7 +2978,10 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
    if (!analyzed)
    {
       int methodIndex = getOrInsertMethodIndex(methodSignature);
-
+      // if(isGetSize) {
+      //    cout << "get size is analyzed, summary:\n";
+      //    verifiedMethodSummaries[methodSignature]->print();
+      // }
       _methodsBeingAnalyzed.insert(methodIndex);
       
 

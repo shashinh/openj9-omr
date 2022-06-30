@@ -382,11 +382,11 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
     //if the subsumes check if requested at a callsite, then we compare rho_LHS with args_RHS
     //else rho_LHS with rho_RHS
     if(callSite) {
-        cout << "callsite subsumes requested\n";
-        cout << "lhs\n";
-        this->print();
-        cout << "rhs\n";
-        other->print();
+        // cout << "callsite subsumes requested\n";
+        // cout << "lhs\n";
+        // this->print();
+        // cout << "rhs\n";
+        // other->print();
         otherRho = other->args;
     } else {
         otherRho = other->rho;
