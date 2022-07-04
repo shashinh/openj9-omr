@@ -2131,19 +2131,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      in->extend(receiver, field, valueNodeVals);
                   }
                }
-               // fetch the field being written to
-               //            // TODO - there is definitely a better way to do this! Look in Walker and TreeEvaluator
-               //            // const char *fieldSig = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-               //            // char *field = strtok((char *)fieldSig, ". ");
-               //            // field = strtok(NULL, ". ");
-               //
-               //            int32_t len;
-               //            const char *fieldName = usefulNode->getSymbolReference()->getOwningMethod(_runtimeVerifierComp)->fieldNameChars(usefulNode->getSymbolReference()->getCPIndex(), len);
-               //
-               //            for (Entry receiverBCI : receiverNodeVals)
-               //            {
-               //               in->assign(receiverBCI, fieldName, valueNodeVals);
-               //            }
             }
             else
             {
@@ -2256,6 +2243,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
 		               // TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->castToResolvedMethodSymbol();
 		               TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
+                     
 
 		               int32_t firstArgIndex = usefulNode->getFirstArgumentIndex();
 		               int32_t numArgs = usefulNode->getNumArguments();
@@ -2398,10 +2386,17 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		               // cout << "peeking method " << sig << " isResolved = " << methodSymbol->isResolvedMethod() << endl;
 		
 		               TR::ResolvedMethodSymbol *resolvedMethodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
+
 		               if (usefulNode->getSymbol()->isResolvedMethod())
 		               {
 		
-                        if(isRunBenchmark) cout << "made it here3\n";
+                        if(resolvedMethodSymbol->getResolvedMethod()->isAbstract()) {
+                        }
+                           //TODO: assert that abstract methods always have a receiver
+                           //1. abstract methods cannot be static
+                           //2. abstract methods are either virtual or special
+                           //3. what about interface?
+                           // receiverNode->getSymbol()->castToStaticSymbol()->getStaticAddress();
 		
 		                  // cout << forceCallsiteArgsForJITCInvocation.size() << endl;
 		                  forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callsitePtgInv));
@@ -2410,6 +2405,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		
 		                  //due to the design of the IL Gen, optimizations get called automatically - which means that the below calls invokes our runtime verify algorithm as well
                         // resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeeking()
+                        //1. List<Class> = readStaticCallGraphForCallSite();
+                        //2. for each class in collection, fej9()->getMethodBySignature(class, methodname);
+                        //       2a. peek
 		                  bool ilGenFailed = NULL == resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(resolvedMethodSymbol, _runtimeVerifierComp, false);
 		
 		                  // if(ilGenFailed) cout << "fatal IL gen failed!" << endl;
@@ -2429,6 +2427,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		
 		               //TODO: this is not correct. PROJECT the summary back as per the current callsite.
 		               // i.e. map only the reachable heap back, else there will be issues
+                     //1. for each class in collection , outPTG MEET= summary[sig];
 		               outPTG = verifiedMethodSummaries[sig];
 		
 		               if(_runtimeVerifierDiagnostics) {

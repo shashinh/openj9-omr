@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <bits/stdc++.h>
+#include <env/jittypes.h>
 using namespace std;
 
 enum EntryType
@@ -21,7 +22,8 @@ struct Entry
 
     EntryType type;
 
-    bool escapes;
+    TR_OpaqueClassBlock *clazz;
+
 
     string getString()
     {

@@ -4,11 +4,11 @@
 #include <strstream>
 #include <string>
 #include "antlr4-runtime.h"
-#include "parser/structs.h"
-#include "parser/PointsToGraph.h"
-#include "parser/LILexer.h"
-#include "parser/LIParser.h"
-#include "parser/LIBuilderVisitor.h"
+#include "ptgparser/structs.h"
+#include "ptgparser/PointsToGraph.h"
+#include "ptgparser/LILexer.h"
+#include "ptgparser/LIParser.h"
+#include "ptgparser/LIBuilderVisitor.h"
 
 using namespace std;
 using namespace antlr4;
