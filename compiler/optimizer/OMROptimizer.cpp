@@ -23,7 +23,7 @@
 
 #include <iostream>
 //#include "ptgparser/structs.h"
-#include "invariantparser/parser/PointsToGraph.h"
+#include "invariantparser/ptgparser/PointsToGraph.h"
 #include <map>
 #include <queue>
 #include "il/ParameterSymbol.hpp"
@@ -124,6 +124,7 @@ using namespace std;
 static std::set<string> _runtimeVerifiedMethods;
 // static std::set<TR::ResolvedMethodSymbol *> _runtimeVerifiedMethods;
 static std::map<string, int> _methodIndices;
+static std::map<int, string> _classIndices;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation *_runtimeVerifierComp;
 static int verifiedMethodCount = 0;
@@ -131,6 +132,7 @@ std::map<string, PointsToGraph *> forceCallsiteArgsForJITCInvocation;
 std::map <string, PointsToGraph *> verifiedMethodSummaries;
 static set<int> _methodsBeingAnalyzed;
 static set<int> _outsummaryUsed;
+std::map <int, map <int, set <int> > > _callsiteReceivers;
 
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
@@ -146,10 +148,13 @@ using namespace OMR; // Note: used here only to avoid having to prepend all opts
 
 #define MAX_LOCAL_OPTS_ITERS 5
 
+//collection of methods to read static artifacts for runtime verification
 extern map<string, int> readMethodIndices();
 extern map<int, PointsToGraph> readLoopInvariant(int methodIndex);
 extern PointsToGraph readCallsiteInvariant(int methodIndex);
 extern PointsToGraph readCallsiteOut(int methodIndex);
+extern map <int, string> readClassIndices();
+extern map <int, set <int> > readReceivers(int methodIndex);
 
 const OptimizationStrategy localValuePropagationOpts[] =
     {
@@ -2164,6 +2169,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          if (!isHelperMethodCall)
          {
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
+
+
             string t = methodName;
             bool isRunBenchmark = t.find("Benchmark.run(") != string::npos;
             if(isRunBenchmark)
@@ -2239,6 +2246,62 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		
 		            if (! isLibraryMethod && usefulNode->getSymbol()->isResolvedMethod())
 		            {
+                        //read the receivers for the callsite here
+                        map <int, set <int> > receiverInfoForMethod;
+                        if(_callsiteReceivers.find(methodIndex) == _callsiteReceivers.end()) {
+                           //callsite receiver info has not been loaded yet, load it now
+                           receiverInfoForMethod = readReceivers(methodIndex);
+                        } else {
+                           receiverInfoForMethod = _callsiteReceivers[methodIndex];
+                        }
+
+                        //2. for each class in collection, fej9()->getMethodBySignature(class, methodname);
+                        int callsiteBCI = usefulNode->getByteCodeIndex();
+                        //if we are here, there HAS to be receiver info available for this call site, if not error out
+                        if(receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end()) {
+                           TR_ASSERT_FATAL(false, "receivers for caller method %i, callsite bci %i not supplied", methodIndex, callsiteBCI);
+                        }
+
+                        set <int> receiverTypesForCallsite = receiverInfoForMethod[callsiteBCI];
+
+                        cout << "receiver info for caller method " << methodIndex << " callsite bci " << callsiteBCI << endl;
+                        for(int receiverType : receiverTypesForCallsite) {
+                           string receiverTypeName = _classIndices[receiverType];
+                           cout << receiverTypeName << " "; 
+                        } cout << endl;
+
+                        //2. now we have the list of receiver types at this callsite, we want to obtain the resolved method symbols for each of them
+                        for(int receiverType : receiverTypesForCallsite) {
+                           string receiverTypeName = _classIndices[receiverType];
+
+                           int len = strlen(receiverTypeName.c_str());
+                           cout << len << "\n";
+                           cout << "cstring " << receiverTypeName.c_str() << endl;
+                           TR_OpaqueClassBlock * type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+                           TR_ASSERT_FATAL(type != NULL, "Unable to get class pointer for receiver");
+                           // cout << "requesting method signature " << usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory()) << endl;
+                           // string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
+                           // int split = sig.find('(');
+                           // int sigLength = sig.length();
+                           // sig = sig.substr(split, sigLength);
+                           // cout << "requesting method signature " << sig << endl;
+
+
+                           int methodNameLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameLength();
+                           string methodNm = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameChars();
+
+                           methodNm = methodNm.substr(0, methodNameLength);
+
+                           int sigLength  = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->signatureLength();
+                           string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
+                           string sig = signatureChars.substr(0, sigLength);
+                           TR_ResolvedMethod * targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, methodNm.c_str(), sig.c_str());
+                           if(!targetMethod) {
+                              cout << "target method is null\n";
+                           }
+                           TR::ResolvedMethodSymbol* targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+                           _runtimeVerifierComp->dumpMethodTrees("trees for target", targetMethodSymbol);
+                        } 
 
 
 		               // TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->castToResolvedMethodSymbol();
@@ -2263,96 +2326,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		
 		                  }
 
-
-
                      string sig = methodSymbol->signature(_runtimeVerifierComp->trMemory());
-                     /*
-                        if(isRunBenchmark) cout << "made it here1\n";
-                        string sig = methodSymbol->signature(_runtimeVerifierComp->trMemory());
-                        // cout << sig << " is resolved" << ", methodName: " << methodName << endl;
-         
-                        // TODO: called method is resolved. map the arguments and peek into it
-                        //               mapParameters(in, callSitePtg, usefulNode);
-         
-                        // invokespecial (private instance calls, constructors, etc - labeled 'special' in the IL tree) and 
-                        //    invokevirtual (public, package private, defaults,)
-                        //  pass the this-parm. However the trees are slightly different
-                        int argIndex = 0;
-                        int childIndex = 0;
-                        if (methodSymbol->isVirtual())
-                        {
-                           // the first arg for a virtual call is the load of the VFT, we shall skip that
-                           TR::Node *thisParmNode = usefulNode->getSecondChild();
-                           set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
-                           callSitePtg->setArg(argIndex, thisParmValues);
-         
-                           argIndex++;
-                           childIndex += 2;
-                        }
-                        else if (methodSymbol->isSpecial())
-                        {
-                           // no VFTs here, pick off the args directly
-                           TR::Node *thisParmNode = usefulNode->getFirstChild();
-                           set<Entry> thisParmValues = evaluateNode(in, thisParmNode, evaluatedNodeValues, visitCount, methodIndex);
-                           callSitePtg->setArg(0, thisParmValues);
-         
-                           argIndex++;
-                           childIndex++;
-                        }
-                        else if (methodSymbol->isStatic())
-                        {
-                           // no VFT or this-param, pick off the args directly
-                           argIndex++;
-                        }
-                        else if (methodSymbol->isInterface())
-                        {
-                           // invokeinterface do not seem to get resolved - what do we do ??
-                           // TODO: add an assert_fatal here
-                           argIndex++;
-                        }
-         
-                        // now we can pick off the rest of the arguments from the IL
-         
-                        //TODO - There is a MUCH better way to pull arguments off of a callsite - and this will probably also take care of the VFTs and jump to the actual arguments directly
-                        //look here - TR_PrexArgInfo* TR_PrexArgInfo::argInfoFromCaller(TR::Node* callNode, TR_PrexArgInfo* callerArgInfo)
-                        if(isRunBenchmark) cout << "made it here1b\n";
-                        ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
-                        if(isRunBenchmark) cout << "made it here1c\n";
-                        TR::SymbolReference *symRef;
-                        int paramSlotcount = methodSymbol->getNumParameterSlots();
-                        // cout << sig << " method has " << paramSlotcount << " params " << endl;
-         
-                        TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
-                        if (methodSymbol->isVirtual() || methodSymbol->isSpecial())
-                        {
-                           // the this-param is already mapped, so skip the first one
-                           paramCursor = paramIterator.getNext();
-                        }
-         
-                        for (; paramCursor != NULL; paramCursor = paramIterator.getNext())
-                        {
-                           if(isRunBenchmark) cout << "made it here1d\n";
-                           TR::SymbolReference *symRef;
-                           int paramSlot = paramCursor->getSlot();
-                           symRef = methodSymbol->getParmSymRef(paramSlot);
-                           // cout << paramSlot << " ";
-                           // cout << (symRef->getSymbol()->getType().isAddress() ? "is address " : "is scalar ") << (symRef->isThisPointer() ? " is this pointer" : "") << endl;
-                           if (symRef->getSymbol()->getType().isAddress())
-                           {
-                              // cout << "attempting to map argIndex " << argIndex << endl;
-                              TR::Node *argNode = usefulNode->getChild(childIndex);
-                              set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
-         
-                              callSitePtg->setArg(argIndex, argValues);
-                              if(isRunBenchmark) cout << "made it here1e\n";
-                              if(isRunBenchmark) callSitePtg->print();
-                           }
-         
-                           argIndex++;
-                           childIndex++;
-                        }
-
-                     */
 		
 		               if (_runtimeVerifierDiagnostics)
 		               {
@@ -2389,15 +2363,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
 		               if (usefulNode->getSymbol()->isResolvedMethod())
 		               {
-		
-                        if(resolvedMethodSymbol->getResolvedMethod()->isAbstract()) {
-                        }
-                           //TODO: assert that abstract methods always have a receiver
-                           //1. abstract methods cannot be static
-                           //2. abstract methods are either virtual or special
-                           //3. what about interface?
-                           // receiverNode->getSymbol()->castToStaticSymbol()->getStaticAddress();
-		
 		                  // cout << forceCallsiteArgsForJITCInvocation.size() << endl;
 		                  forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callsitePtgInv));
 		                  // cout << forceCallsiteArgsForJITCInvocation.size() << endl;
@@ -2406,7 +2371,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		                  //due to the design of the IL Gen, optimizations get called automatically - which means that the below calls invokes our runtime verify algorithm as well
                         // resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeeking()
                         //1. List<Class> = readStaticCallGraphForCallSite();
-                        //2. for each class in collection, fej9()->getMethodBySignature(class, methodname);
                         //       2a. peek
 		                  bool ilGenFailed = NULL == resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(resolvedMethodSymbol, _runtimeVerifierComp, false);
 		
@@ -3052,6 +3016,11 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
       if (_methodIndices.empty()) {
          cout << "reading method indices" << endl;
          _methodIndices = readMethodIndices();
+      }
+      
+      if(_classIndices.empty()) {
+         cout << "reading class indices" << endl;
+         _classIndices = readClassIndices();
       }
       verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
    }

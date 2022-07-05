@@ -105,13 +105,18 @@ compiler_library(optimizer
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsValue.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpStack.cpp
 	${CMAKE_CURRENT_LIST_DIR}/abstractinterpreter/AbsOpArray.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/InvariantParser.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIBaseVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIBuilderVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIVisitor.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LILexer.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/LIParser.cpp
-	${CMAKE_CURRENT_LIST_DIR}/invariantparser/parser/PointsToGraph.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/Parser.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ptgparser/LIBaseVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ptgparser/LIBuilderVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ptgparser/LIVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ptgparser/LILexer.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ptgparser/LIParser.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/ptgparser/PointsToGraph.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/receiverparser/RECBaseVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/receiverparser/RECBuilderVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/receiverparser/RECVisitor.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/receiverparser/RECLexer.cpp
+	${CMAKE_CURRENT_LIST_DIR}/invariantparser/receiverparser/RECParser.cpp
 )
 
 
