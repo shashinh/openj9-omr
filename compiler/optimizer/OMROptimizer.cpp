@@ -129,10 +129,10 @@ static bool _runtimeVerifierDiagnostics;
 static TR::Compilation *_runtimeVerifierComp;
 static int verifiedMethodCount = 0;
 std::map<string, PointsToGraph *> forceCallsiteArgsForJITCInvocation;
-std::map <string, PointsToGraph *> verifiedMethodSummaries;
+std::map<string, PointsToGraph *> verifiedMethodSummaries;
 static set<int> _methodsBeingAnalyzed;
 static set<int> _outsummaryUsed;
-std::map <int, map <int, set <int> > > _callsiteReceivers;
+std::map<int, map<int, set<int>>> _callsiteReceivers;
 
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
@@ -148,13 +148,13 @@ using namespace OMR; // Note: used here only to avoid having to prepend all opts
 
 #define MAX_LOCAL_OPTS_ITERS 5
 
-//collection of methods to read static artifacts for runtime verification
+// collection of methods to read static artifacts for runtime verification
 extern map<string, int> readMethodIndices();
 extern map<int, PointsToGraph> readLoopInvariant(int methodIndex);
 extern PointsToGraph readCallsiteInvariant(int methodIndex);
 extern PointsToGraph readCallsiteOut(int methodIndex);
-extern map <int, string> readClassIndices();
-extern map <int, set <int> > readReceivers(int methodIndex);
+extern map<int, string> readClassIndices();
+extern map<int, set<int>> readReceivers(int methodIndex);
 
 const OptimizationStrategy localValuePropagationOpts[] =
     {
@@ -1599,13 +1599,13 @@ TR::Node *getUsefulNode(TR::Node *node)
              opCode == TR::acall ||
              opCode == TR::calli ||
              opCode == TR::awrtbari ||
-             opCode == TR::awrtbar || //this should be only static
+             opCode == TR::awrtbar || // this should be only static
              opCode == TR::ardbari ||
              opCode == TR::anewarray ||
              opCode == TR::newarray ||
-             //this is needed for calls where the arg is null - it appears to map to aconst_null in bytecode
+             // this is needed for calls where the arg is null - it appears to map to aconst_null in bytecode
              opCode == TR::aconst ||
-            opCode == TR::aladd ||
+             opCode == TR::aladd ||
              node->getOpCode().isCall())
          {
             IFDIAGPRINT << "found useful node at n" << node->getGlobalIndex() << "n" << endl;
@@ -1614,47 +1614,49 @@ TR::Node *getUsefulNode(TR::Node *node)
          else
          {
             // TODO: Shashin: insert an assert failure here - done
-            // there are 41 "address" type nodes, out of those - some are handled above. 
-            //    create an assert fail for the rest of the address nodes, 
+            // there are 41 "address" type nodes, out of those - some are handled above.
+            //    create an assert fail for the rest of the address nodes,
             //    and let the other "safe" nodes trickle through - since they deal with non-ref types
-            if(
-               opCode == TR::ardbar ||
-               opCode == TR::i2a ||
-               opCode == TR::iu2a ||
-               opCode == TR::l2a ||
-               opCode == TR::lu2a ||
-               opCode == TR::b2a ||
-               opCode == TR::bu2a ||
-               opCode == TR::s2a ||
-               opCode == TR::su2a ||
-               opCode == TR::aRegLoad ||
-               opCode == TR::aRegStore ||
-               opCode == TR::aselect ||
-               opCode == TR::checkcastAndNULLCHK ||
-               opCode == TR:: newvalue ||
-               opCode == TR::variableNew ||
-               opCode == TR::variableNewArray ||
-               opCode == TR::multianewarray ||
-               opCode == TR::aiadd ||
-               opCode == TR::ArrayCHK ) {
-                  cout << "did not expect op code" << node->getOpCode().getName() << " node " << node->getGlobalIndex() << endl;
-                  TR_ASSERT_FATAL(false, "unexpected op codes");
-               } else {
-                  //just let them go
-                  
-                  //below were encountered in tests and determined to be "safe" (i.e., not relevant to PTA)
-                  //opCode == TR::checkcast ||
-                  // opCode == TR::loadaddr ||
-                  // opCode == TR::ArrayStoreCHK || -- encountered in Harness.Main (avrora)
-                  // opCode == TR::awrtbar || -- encountered dacapo TestHarness - added an assert that awrtbar's correspond to static writes
-               }
+            if (
+                opCode == TR::ardbar ||
+                opCode == TR::i2a ||
+                opCode == TR::iu2a ||
+                opCode == TR::l2a ||
+                opCode == TR::lu2a ||
+                opCode == TR::b2a ||
+                opCode == TR::bu2a ||
+                opCode == TR::s2a ||
+                opCode == TR::su2a ||
+                opCode == TR::aRegLoad ||
+                opCode == TR::aRegStore ||
+                opCode == TR::aselect ||
+                opCode == TR::checkcastAndNULLCHK ||
+                opCode == TR::newvalue ||
+                opCode == TR::variableNew ||
+                opCode == TR::variableNewArray ||
+                opCode == TR::multianewarray ||
+                opCode == TR::aiadd ||
+                opCode == TR::ArrayCHK)
+            {
+               cout << "did not expect op code" << node->getOpCode().getName() << " node " << node->getGlobalIndex() << endl;
+               TR_ASSERT_FATAL(false, "unexpected op codes");
+            }
+            else
+            {
+               // just let them go
+
+               // below were encountered in tests and determined to be "safe" (i.e., not relevant to PTA)
+               // opCode == TR::checkcast ||
+               //  opCode == TR::loadaddr ||
+               //  opCode == TR::ArrayStoreCHK || -- encountered in Harness.Main (avrora)
+               //  opCode == TR::awrtbar || -- encountered dacapo TestHarness - added an assert that awrtbar's correspond to static writes
+            }
          }
       }
    }
 
    return ret;
 }
-
 
 void printRuntimeVerifierDiagnostic(string message)
 {
@@ -1728,7 +1730,7 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
             cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << " will be mapped to param " << argIndex << endl;
 
          // set<Entry> argsPointsTo = in->getArgPointsToSet(argIndex);
-         set <Entry> argsPointsTo = in->getPointsToSet(argIndex);
+         set<Entry> argsPointsTo = in->getPointsToSet(argIndex);
          // cout << "the argspointsto for arg " << argIndex << " is\n" ;
          // for (Entry e : argsPointsTo) {
          //    cout << e.getString()  << " ";
@@ -1920,6 +1922,130 @@ void mapParameters(PointsToGraph *pred, PointsToGraph *inFlow, TR::Node *callNod
 {
 }
 
+bool isLibraryMethod(string methodName)
+{
+
+   bool isLibraryMethod = false;
+   isLibraryMethod = methodName.rfind("java", 0) == 0 || methodName.rfind("com/ibm/", 0) == 0 || methodName.rfind("sun/", 0) == 0 ||
+                     methodName.rfind("openj9/", 0) == 0 || methodName.rfind("jdk/", 0) == 0 || methodName.find("org/apache", 0) == 0 || methodName.find("org/slf4j", 0) == 0 ||
+                     methodName.rfind("soot", 0) == 0;
+
+   if (methodName.rfind("soot/rtlib/tamiflex/ReflectiveCallsWrapper", 0) == 0)
+   {
+      // we want to treat the reflectivecallswrapper as an application method, as it contains callsites for the actual benchmark
+      isLibraryMethod = false;
+   }
+
+   return isLibraryMethod;
+}
+
+bool isTransparentMethod(string methodName)
+{
+   bool isTransparentMethod = false;
+   /*
+    * there are certain library methods that are known to have no effect on the reachable heap at a call site,
+    * we cannot treat such library methods as opaque, and end up summarizing the reachable heap. This will cause
+    * issues in later verification sites
+    */
+   isTransparentMethod = methodName.rfind("java/lang/Object", 0) == 0;
+
+   return isTransparentMethod;
+}
+
+// given a call node and a callsite invariant, verifies the callsite and returns the verified status + callsite ptg
+bool isCallsiteVerified(TR::Node *callNode, PointsToGraph *in, PointsToGraph *callsiteInvariant, PointsToGraph *callsitePtg)
+{
+   bool verified = true;
+
+   bool isStatic = callNode->getSymbol()->isStatic();
+   int argIndex = 0;
+   if (isStatic)
+      argIndex = 1;
+
+   int32_t firstArgIndex = callNode->getFirstArgumentIndex();
+   int32_t numArgs = callNode->getNumArguments();
+   int32_t numChildren = callNode->getNumChildren();
+   for (int32_t i = firstArgIndex; i < numChildren; i++)
+   {
+      TR::Node *argNode = callNode->getChild(i);
+      // set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
+
+      // callsitePtg->setArg(argIndex, argValues);
+
+      argIndex++;
+   }
+
+   return verified;
+}
+
+set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex);
+void summarizeCallsite(TR::Node *callNode, PointsToGraph *callSitePtg, PointsToGraph *in, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
+{
+
+   // 1. set return to BOT
+   // 2. summarize the reachable heap - this involves use of the escape map
+   // bottomize all heap references reachable from the arguments
+   callSitePtg->setBotReturn();
+
+   // for an unresolved method, we cannot get the actual parameter indices, so just load in all the callsite args without worrying
+   //  about indices, because we only need it to summarize the reachable heap.
+
+   int32_t firstArgIndex = callNode->getFirstArgumentIndex();
+   int32_t numArgs = callNode->getNumArguments();
+   int32_t numChildren = callNode->getNumChildren();
+   int argIndex = 0;
+   for (int32_t i = firstArgIndex; i < numChildren; i++)
+   {
+      TR::Node *argNode = callNode->getChild(i);
+      set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
+
+      callSitePtg->setArg(argIndex, argValues);
+
+      argIndex++;
+   }
+
+   callSitePtg->summarizeReachableHeapAtCallSite(); // in other words, mark escaping
+}
+
+PointsToGraph *buildCallsitePtg(TR::Node *callNode, PointsToGraph *in, TR::ResolvedMethodSymbol *target, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
+{
+   //if target is not supplied - fetch it direct from the call site. This is the case for library and opaque methods where we need the callsite ptg simply to summarize
+   if(!target) {
+      target = callNode->getSymbol()->getResolvedMethodSymbol();
+      TR_ASSERT_FATAL(target, "target method not resolved, unable to build callsite ptg");
+   }
+
+   int argIndex = 0;
+   if (target->isStatic())
+      argIndex = 1;
+
+   PointsToGraph *callSitePtg = new PointsToGraph(*in);
+   // kill all the locals and return local (i.e. retain only the Heap)
+   // TODO: confirm - does this simply mean set the Rho to empty map ? - YES, this seems to be sound!
+   /*
+    * TODO: even the heap has to be killed here, and only that part of the heap that is reachable is to be passed in
+    *       later on, when the callsite returns, we can simply copy over the heap as-is since it is only the reachable heap.
+    */
+
+   callSitePtg->killRho();
+   callSitePtg->killArgs();
+
+   int32_t firstArgIndex = callNode->getFirstArgumentIndex();
+   int32_t numArgs = callNode->getNumArguments();
+   int32_t numChildren = callNode->getNumChildren();
+   for (int32_t i = firstArgIndex; i < numChildren; i++)
+   {
+      TR::Node *argNode = callNode->getChild(i);
+      set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
+
+      callSitePtg->setArg(argIndex, argValues);
+
+      argIndex++;
+   }
+
+   return callSitePtg;
+}
+
 PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::ResolvedMethodSymbol *methodSymbol, int visitCount);
 // recursively evaluates a node and returns its evaluated value. it may have a side effect of updating the points-to maps.
 set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
@@ -1968,7 +2094,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       case TR::anewarray:
       case TR::newarray:
       {
-         //process anewarray
+         // process anewarray
          Entry e = PointsToGraph::bottomEntry;
          evaluatedValues.insert(e);
          break;
@@ -1984,12 +2110,15 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // note that this is a strong update
          int storeSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
          in->assign(storeSymRef, evaluatedValues);
-         if(usefulNode->getGlobalIndex() == 22842) {
+         if (usefulNode->getGlobalIndex() == 22842)
+         {
             cout << "storesymref: " << storeSymRef << endl;
             cout << "child node: " << storeChild->getGlobalIndex() << endl;
-            for(Entry e : evaluatedValues) {
+            for (Entry e : evaluatedValues)
+            {
                cout << e.getString() << " ";
-            } cout << endl;
+            }
+            cout << endl;
             in->print();
          }
          // TODO: do astore's need an evaluated value? can there be pointers to astore nodes?
@@ -2001,18 +2130,21 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       {
          // process load here
 
-         //TODO - static field reads appear as follows:
-//         n1n       BBStart <block_2>                                            
-//         n4n       astore  <auto slot 1>[#357  Auto] [flags 0x7 0x0 ]           
-//         n3n         aload  B.a LA;[#356  notAccessed Static] [flags 0x307 0x0 ]
-//         n5n       return                                                       
-//         n2n       BBEnd </block_2> =====                                       
-         //we need a way to identify if the symref is a static or no
+         // TODO - static field reads appear as follows:
+         //         n1n       BBStart <block_2>
+         //         n4n       astore  <auto slot 1>[#357  Auto] [flags 0x7 0x0 ]
+         //         n3n         aload  B.a LA;[#356  notAccessed Static] [flags 0x307 0x0 ]
+         //         n5n       return
+         //         n2n       BBEnd </block_2> =====
+         // we need a way to identify if the symref is a static or no
          bool isStaticFieldRead = usefulNode->getSymbol()->isStaticField();
          // cout << " isStatic = " << isStaticFieldRead << endl;
-         if(isStaticFieldRead) {
-            evaluatedValues.insert(PointsToGraph::bottomEntry);   
-         } else {
+         if (isStaticFieldRead)
+         {
+            evaluatedValues.insert(PointsToGraph::bottomEntry);
+         }
+         else
+         {
             // an aload's evaluated value is simply the list of objects in the points-to set of its symref
             int loadSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
             //    cout << "load requested on symref " << loadSymRef << endl;
@@ -2029,30 +2161,32 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
             // }
          }
 
-
          break;
       }
 
       case TR::aloadi:
       {
-         //TODO:
-         //array subs look like this:
-//         n21n      compressedRefs                                                                      
-//         n19n        aloadi  <array-shadow>[#232  Shadow] [flags 0x80000607 0x0 ]                      
-//         n18n          aladd (internalPtr sharedMemory )                                               
-//         n8n             ==>aload
-//         n17n            ladd                                                                          
-//         n15n              lshl                                                                        
-//         n14n                i2l (X>=0 )                                                               
-//         n9n                   ==>iconst 9
-//         n13n                iconst 2                                                                  
-//         n16n              lconst 16                                                                   
-//         n20n        lconst 0  
+         // TODO:
+         // array subs look like this:
+         //         n21n      compressedRefs
+         //         n19n        aloadi  <array-shadow>[#232  Shadow] [flags 0x80000607 0x0 ]
+         //         n18n          aladd (internalPtr sharedMemory )
+         //         n8n             ==>aload
+         //         n17n            ladd
+         //         n15n              lshl
+         //         n14n                i2l (X>=0 )
+         //         n9n                   ==>iconst 9
+         //         n13n                iconst 2
+         //         n16n              lconst 16
+         //         n20n        lconst 0
 
-         if(usefulNode->getSymbol()->isArrayShadowSymbol()) {
-            //array loads always evaluate to a bot
-            evaluatedValues.insert(PointsToGraph::bottomEntry);   
-         } else {
+         if (usefulNode->getSymbol()->isArrayShadowSymbol())
+         {
+            // array loads always evaluate to a bot
+            evaluatedValues.insert(PointsToGraph::bottomEntry);
+         }
+         else
+         {
             TR::SymbolReference *symRef = usefulNode->getSymbolReference();
             bool isUnresolved = symRef->isUnresolved();
             IFDIAGPRINT << "isUnresolved = " << isUnresolved << endl;
@@ -2097,8 +2231,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // first we obtain the children of awrtbari
          // obviously we only process if the RHS of the field write is a ref type
 
-         //awrtbari also performs array writes!
-         if(! usefulNode->getSymbol()->isArrayShadowSymbol()) {
+         // awrtbari also performs array writes!
+         if (!usefulNode->getSymbol()->isArrayShadowSymbol())
+         {
             TR::Node *valueNode = usefulNode->getSecondChild();
             if (valueNode->getDataType() == TR::Address)
             {
@@ -2131,8 +2266,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                   for (Entry receiver : receiverNodeVals)
                   {
-                     //TODO : weak updates here
-                     // in->assign(receiver, field, valueNodeVals);
+                     // TODO : weak updates here
+                     //  in->assign(receiver, field, valueNodeVals);
                      in->extend(receiver, field, valueNodeVals);
                   }
                }
@@ -2164,308 +2299,218 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning();
          bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
          PointsToGraph *outPTG;
-         
-         // we do not want to process helper method calls (osr, for example)
-         if (!isHelperMethodCall)
+
+         // we do not want to process helper method calls (OSR, for example)
+         if (isHelperMethodCall)
          {
-            //1. check if method call is non static (i.e. receiver should be present)
-
-            bool isStatic = usefulNode->getSymbol()->isStatic();
-            if(isStatic) {
-               //perform callsite verification and directly resolve method at callsite               
-            } else {
-               //2. fetch the receiver
-               TR::Node * receiverNode = usefulNode->getFirstArgument();
-               set <Entry> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
-               //3. check if the PTS of receiver contains bot
-               bool containsBot = receiverVals.find(PointsToGraph::bottomEntry) != receiverVals.end();
-               //4. if-else based on bot
-               if(containsBot) {
-
-               } else {
-
-               }
-            }
+            break;
+         }
+         else
+         {
 
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
 
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
-            if(_methodsBeingAnalyzed.find(calleeMethodIndex) != _methodsBeingAnalyzed.end()) {
-               //we have a recursive call, us the out summary and defer verification at the end of the method
-               cout << "recursive call for " << calleeMethodIndex << ", out summary will be used" << endl;
+            // special handling for a recursive call site
+            if (_methodsBeingAnalyzed.find(calleeMethodIndex) != _methodsBeingAnalyzed.end())
+            {
+               // we have a recursive call, us the out summary and defer verification at the end of the method
+               //  cout << "recursive call for " << calleeMethodIndex << ", out summary will be used" << endl;
                PointsToGraph summaryOut = readCallsiteOut(calleeMethodIndex);
-               summaryOut.print();
+               // summaryOut.print();
                outPTG = &summaryOut;
                _outsummaryUsed.insert(calleeMethodIndex);
 
-               //TODO: save the summary of callerMethod -> summaryOut/
-            } else {
+               // TODO: save the summary of callerMethod -> summaryOut
+            }
+            else
+            {
+               bool isLibrary = isLibraryMethod(methodName);
+               bool isTransparent = isTransparentMethod(methodName);
 
-		            string s = methodName;
-		            bool isLibraryMethod = false;
-		            bool isTransparentMethod = false;
-		            isLibraryMethod = s.rfind("java", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
-		                         s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.find("org/apache", 0) == 0 || s.find("org/slf4j", 0) == 0 ||
-		                         s.rfind("soot", 0) == 0;
-		            
-		            if (s.rfind("soot/rtlib/tamiflex/ReflectiveCallsWrapper", 0) == 0 ) {
-		               //we want to treat the reflectivecallswrapper as an application method, as it contains callsites for the actual benchmark
-		               isLibraryMethod = false;
-		            }
-		
-		            /*
-		             * there are certain library methods that are known to have no effect on the reachable heap at a call site,
-		             * we cannot treat such library methods as opaque, and end up summarizing the reachable heap. This will cause
-		             * issues in later verification sites
-		             */
-		            isTransparentMethod = s.rfind("java/lang/Object", 0) == 0;
-		            isTransparentMethod = false;
-		
-		            if(isTransparentMethod) {
-		               //TODO: simulate out = in here.
-		               //anything else?
-		               if(_runtimeVerifierDiagnostics) {
-		                  cout << methodName << " treated as transparent\n";
-		               }
-		               
-		               outPTG = new PointsToGraph(*in);
-		            } else {
-		               //TODO: determine which of the remaining functionality below needs to go in here
-		               // all the way, to the return?
-		            }
-		
-		            // if(_runtimeVerifierDiagnostics && isLibraryMethod) {
-		            //    cout << "bypassing " << s << " - a library method" << endl;
-		            // }
-		
-		            PointsToGraph callSiteInvariant;
-		            //fetch the callsite invariant for this method
-		            //we want to read the callsite invariant for unresolved methdos as well (right?)
-		            if(!isLibraryMethod) {
-		               // cout << "attempting to read callsite invariant " << calleeMethodIndex << " " << methodName << endl;
-		               callSiteInvariant = readCallsiteInvariant(calleeMethodIndex);
-		            }
-		
-		            PointsToGraph *callSitePtg = new PointsToGraph(*in);
-		            // kill all the locals and return local (i.e. retain only the Heap)
-		            // TODO: confirm - does this simply mean set the Rho to empty map ? - YES, this seems to be sound!
-		            callSitePtg->killRho();
-		            callSitePtg->killArgs();
-		            /*
-		             * TODO: even the heap has to be killed here, and only that part of the heap that is reachable is to be passed in
-		             *       later on, when the callsite returns, we can simply copy over the heap as-is since it is only the reachable heap.
-		             */
-		
-		            if (! isLibraryMethod && usefulNode->getSymbol()->isResolvedMethod())
-		            {
-                        //read the receivers for the callsite here
-                        map <int, set <int> > receiverInfoForMethod;
-                        if(_callsiteReceivers.find(methodIndex) == _callsiteReceivers.end()) {
-                           //callsite receiver info has not been loaded yet, load it now
+               // TODO: for transparent methods, there is nothing to process, simply return bot and leave the reachable heap untouched
+               if (isTransparent)
+               {
+                  // TODO: simulate out = in here.
+                  // anything else?
+                  if (_runtimeVerifierDiagnostics)
+                  {
+                     cout << methodName << " treated as transparent\n";
+                  }
+
+                  outPTG = new PointsToGraph(*in);
+               }
+               else
+               {
+
+                  if (isLibraryMethod /*&& isResolvedMethod */)
+                  {
+                     // summarize reachable heap, library methods are considered opaque
+                     PointsToGraph * callSitePtg = buildCallsitePtg(usefulNode, in, NULL, evaluatedNodeValues, visitCount, methodIndex);
+                     summarizeCallsite(usefulNode, callSitePtg, in, evaluatedNodeValues, visitCount, methodIndex);
+                     outPTG = callSitePtg;
+                  }
+                  else
+                  {
+
+                     int callsiteBCI = usefulNode->getByteCodeIndex();
+                     // read the callsite invariant
+                     PointsToGraph callSiteInvariant = readCallsiteInvariant(calleeMethodIndex);
+
+                     // gather all the methods to be peeked
+                     set<TR::ResolvedMethodSymbol *> methodsToPeek;
+                     // 1. check if method call is non static (i.e. receiver should be present)
+                     bool isStatic = usefulNode->getSymbol()->isStatic();
+                     // NOTE - we cannot use the isindirect check here. calls to abstract methods get optimized into direct calls, with the receivr still in place - this will cause issues in arg mapping logic down the line
+                     if (isStatic)
+                     {
+                        // there is no runtime polymorphism when it comes to static methods - so direct resolution of the static type at the callsite is just fine
+                        TR::ResolvedMethodSymbol *staticMethodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
+                        methodsToPeek.insert(staticMethodSymbol);
+                     }
+                     else
+                     {
+                        // read the receivers for the callsite here
+                        map<int, set<int>> receiverInfoForMethod;
+                        if (_callsiteReceivers.find(methodIndex) == _callsiteReceivers.end())
+                        {
+                           // callsite receiver info has not been loaded yet, load it now
                            receiverInfoForMethod = readReceivers(methodIndex);
-                        } else {
+                        }
+                        else
+                        {
                            receiverInfoForMethod = _callsiteReceivers[methodIndex];
                         }
 
-                        //2. for each class in collection, fej9()->getMethodBySignature(class, methodname);
-                        int callsiteBCI = usefulNode->getByteCodeIndex();
-                        //if we are here, there HAS to be receiver info available for this call site, if not error out
-                        if(receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end()) {
-                           TR_ASSERT_FATAL(false, "receivers for caller method %i, callsite bci %i not supplied", methodIndex, callsiteBCI);
+                        // 2. fetch the receiver's evaluated vals
+                        TR::Node *receiverNode = usefulNode->getFirstArgument();
+                        set<Entry> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
+                        // 3. check if the PTS of receiver contains bot
+                        bool containsBot = receiverVals.find(PointsToGraph::bottomEntry) != receiverVals.end();
+                        // 4. if-else based on bot
+                        if (containsBot)
+                        {
+                           if (receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end())
+                           {
+                              // 5. receiver contains bot, static receiver info not supplied - summarize heap and return value (if any)
+                              PointsToGraph * callSitePtg = buildCallsitePtg(usefulNode, in, NULL, evaluatedNodeValues, visitCount, methodIndex);
+                              summarizeCallsite(usefulNode, callSitePtg, in, evaluatedNodeValues, visitCount, methodIndex);
+                              outPTG = callSitePtg;
+                           }
+                           else
+                           {
+                              // 6. receiver contains bot, but static receiver info is supplied - something wrong - verification fault!
+                              TR_ASSERT_FATAL(false, "callsite receiver info supplied for BOT receiver");
+                           }
+                        }
+                        else
+                        {
+                           if (receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end())
+                           {
+                              // 7. verification failure (we expected receiver info, but wasn't supplied)
+                              TR_ASSERT_FATAL(false, "callsite receiver info not supplied");
+                           }
+                           else
+                           {
+                              // 8. static receiver info present, use it
+                              set<int> receiverTypesForCallsite = receiverInfoForMethod[callsiteBCI];
+
+                              for (int receiverType : receiverTypesForCallsite)
+                              {
+                                 string receiverTypeName = _classIndices[receiverType];
+
+                                 int len = strlen(receiverTypeName.c_str());
+                                 cout << len << "\n";
+                                 cout << "cstring " << receiverTypeName.c_str() << endl;
+                                 TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+                                 TR_ASSERT_FATAL(type, "Unable to get class pointer for receiver %s", receiverTypeName.c_str());
+                                 int methodNameLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameLength();
+                                 string methodNm = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameChars();
+
+                                 methodNm = methodNm.substr(0, methodNameLength);
+
+                                 int sigLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->signatureLength();
+                                 string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
+                                 string sig = signatureChars.substr(0, sigLength);
+                                 TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, methodNm.c_str(), sig.c_str());
+                                 TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
+                                 TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+                                 TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
+
+                                 methodsToPeek.insert(targetMethodSymbol);
+                              }
+                           }
+                        }
+                     } // end handling non-statics
+
+                     // now we have a collection of target methods to analyze. verify callsite for each of them and proceed to peek.
+                     for (TR::ResolvedMethodSymbol *target : methodsToPeek)
+                     {
+                        // 1. verify callsite
+                        PointsToGraph *callSitePtg = buildCallsitePtg(usefulNode, in, target, evaluatedNodeValues, visitCount, methodIndex);
+
+                        if (_runtimeVerifierDiagnostics)
+                        {
+                           cout << "callsite ptg mapped:" << endl;
+                           callSitePtg->print();
                         }
 
-                        set <int> receiverTypesForCallsite = receiverInfoForMethod[callsiteBCI];
+                        PointsToGraph *inFlowToTarget;
+                        // if callsite invariant wasn't supplied, just use the callsite ptg
+                        if (!callSiteInvariant.isTop())
+                        {
+                           bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
+                           if (!callSiteVerified)
+                           {
+                              // if(_runtimeVerifierDiagnostics) {
+                              cout << "ERROR: callsite verification for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
+                              cout << "expected: " << endl;
+                              callSiteInvariant.print();
+                              cout << "actual: " << endl;
+                              callSitePtg->print();
+                              // }
 
-                        cout << "receiver info for caller method " << methodIndex << " callsite bci " << callsiteBCI << endl;
-                        for(int receiverType : receiverTypesForCallsite) {
-                           string receiverTypeName = _classIndices[receiverType];
-                           cout << receiverTypeName << " "; 
-                        } cout << endl;
-
-                        //2. now we have the list of receiver types at this callsite, we want to obtain the resolved method symbols for each of them
-                        for(int receiverType : receiverTypesForCallsite) {
-                           string receiverTypeName = _classIndices[receiverType];
-
-                           int len = strlen(receiverTypeName.c_str());
-                           cout << len << "\n";
-                           cout << "cstring " << receiverTypeName.c_str() << endl;
-                           TR_OpaqueClassBlock * type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
-                           TR_ASSERT_FATAL(type != NULL, "Unable to get class pointer for receiver");
-                           // cout << "requesting method signature " << usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory()) << endl;
-                           // string sig = usefulNode->getSymbol()->castToResolvedMethodSymbol()->signature(_runtimeVerifierComp->trMemory());
-                           // int split = sig.find('(');
-                           // int sigLength = sig.length();
-                           // sig = sig.substr(split, sigLength);
-                           // cout << "requesting method signature " << sig << endl;
-
-
-                           int methodNameLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameLength();
-                           string methodNm = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameChars();
-
-                           methodNm = methodNm.substr(0, methodNameLength);
-
-                           int sigLength  = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->signatureLength();
-                           string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
-                           string sig = signatureChars.substr(0, sigLength);
-                           TR_ResolvedMethod * targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, methodNm.c_str(), sig.c_str());
-                           if(!targetMethod) {
-                              cout << "target method is null\n";
+                              TR_ASSERT_FATAL(false, "callsite verification failed for callee method %s, index %i, caller method %i", methodName, calleeMethodIndex, methodIndex);
                            }
-                           TR::ResolvedMethodSymbol* targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
-                           _runtimeVerifierComp->dumpMethodTrees("trees for target", targetMethodSymbol);
-                        } 
 
+                           inFlowToTarget = new PointsToGraph(callSiteInvariant);
+                        }
+                        else
+                        {
+                           inFlowToTarget = new PointsToGraph(*callSitePtg);
+                        }
 
-		               // TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->castToResolvedMethodSymbol();
-		               TR::ResolvedMethodSymbol *methodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
-                     
+                        // 2. peek
+                        string sig = target->signature(_runtimeVerifierComp->trMemory());
+                        forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, inFlowToTarget));
+                        bool ilGenFailed = NULL == target->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(target, _runtimeVerifierComp, false);
 
-		               int32_t firstArgIndex = usefulNode->getFirstArgumentIndex();
-		               int32_t numArgs = usefulNode->getNumArguments();
-		               int32_t numChildren = usefulNode->getNumChildren();
-		               int argIndex;
-                     //for virtual and special calls, we map the this-parm at arg index 0
-                     if(methodSymbol->isVirtual() || methodSymbol->isSpecial()) argIndex = 0;
-                     else argIndex = 1;
-		               for (int32_t i = firstArgIndex; i < numChildren; i++)
-		                  {
-		                     TR::Node* argNode = usefulNode->getChild(i);
-		                     set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
-		
-		                     callSitePtg->setArg(argIndex, argValues);
-		
-		                     argIndex++;
-		
-		                  }
+                        TR_ASSERT_FATAL(!ilGenFailed, "IL Gen failed, cannot peek into method");
 
-                     string sig = methodSymbol->signature(_runtimeVerifierComp->trMemory());
-		
-		               if (_runtimeVerifierDiagnostics)
-		               {
-		                  cout << "callsite ptg mapped:" << endl;
-		                  callSitePtg->print();
-		               }
-		
-		               PointsToGraph * callsitePtgInv;
-		               if(!callSiteInvariant.isTop()) {
-		                  bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
-		                  if(!callSiteVerified) {
-		                     // if(_runtimeVerifierDiagnostics) {
-		                        cout << "ERROR: callsite verification for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
-		                        cout << "expected: " << endl;
-		                        callSiteInvariant.print();
-		                        cout << "actual: " << endl;
-		                        callSitePtg->print();
-		                     // }
-		
-		                     TR_ASSERT_FATAL(false, "callsite verification failed for callee method %s, index %i, caller method %i", methodName, calleeMethodIndex, methodIndex);
-		                  }
-		                  
-		                  callsitePtgInv = new PointsToGraph(callSiteInvariant);
-		               } else {
-		                  callsitePtgInv = callSitePtg;
-		               }
-		
-		               //if the callsite is verified, we want to analyze the method using the callsite invariant in the in-flow
-		
-		               // cout << "peeking method " << sig << " isResolved = " << methodSymbol->isResolvedMethod() << endl;
-		
-		               TR::ResolvedMethodSymbol *resolvedMethodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
+                        _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", target);
 
-		               if (usefulNode->getSymbol()->isResolvedMethod())
-		               {
-		                  // cout << forceCallsiteArgsForJITCInvocation.size() << endl;
-		                  forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, callsitePtgInv));
-		                  // cout << forceCallsiteArgsForJITCInvocation.size() << endl;
-		                  //TR_ASSERT_FATAL(forceCallsiteArgsForJITCInvocation.size() <= 1, "a maximum of 1 method can be forced");
-		
-		                  //due to the design of the IL Gen, optimizations get called automatically - which means that the below calls invokes our runtime verify algorithm as well
-                        // resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeeking()
-                        //1. List<Class> = readStaticCallGraphForCallSite();
-                        //       2a. peek
-		                  bool ilGenFailed = NULL == resolvedMethodSymbol->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(resolvedMethodSymbol, _runtimeVerifierComp, false);
-		
-		                  // if(ilGenFailed) cout << "fatal IL gen failed!" << endl;
-		                  TR_ASSERT_FATAL(!ilGenFailed, "IL Gen failed, cannot peek into method");
-		
-		                  _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", resolvedMethodSymbol);
-		
-		                  // _runtimeVerifierComp->dumpFlowGraph(resolvedMethodSymbol->getFlowGraph());
-		
-		                  //TODO: if we are here, callee shoould be analyzed, else invoke verify via callsite
-		
-		                  // given that the ILGen will run optimizations and force invocation of the algorithm by JIT compilation, do we even need this call?
-		                  // ANSWER - it is okay to leave it in, since there is a check for analysed methods anyway.
-		                  verifyStaticMethodInfo(visitCount, _runtimeVerifierComp, resolvedMethodSymbol, getFormattedCurrentClassName(resolvedMethodSymbol),
-		                                         getFormattedCurrentMethodName(resolvedMethodSymbol), callsitePtgInv, false);
-		               }
-		
-		               //TODO: this is not correct. PROJECT the summary back as per the current callsite.
-		               // i.e. map only the reachable heap back, else there will be issues
-                     //1. for each class in collection , outPTG MEET= summary[sig];
-		               outPTG = verifiedMethodSummaries[sig];
-		
-		               if(_runtimeVerifierDiagnostics) {
-		                  cout << "callsite processing for " << sig << " completed, callsite PTG below" << endl;
-		                  outPTG->print();
-		               }
-		            }
-		            else if (isLibraryMethod)
-		            {
-		               //if we are here, we are either looking at a library method, or unresolved/opaque methods
-		               // cout << "found an unresolved method " << methodName << endl;
-		               // TODO: method is not analyzable, so
-		               // 1. set return to BOT
-		               // 2. summarize the reachable heap - this involves use of the escape map
-		               // bottomize all heap references reachable from the arguments
-		               callSitePtg->setBotReturn();
-		
-		               //for an unresolved method, we cannot get the actual parameter indices, so just load in all the callsite args without worrying
-		               // about indices, because we only need it to summarize the reachable heap.
-		
-		               TR::MethodSymbol * unresolvedMethodSymbol = usefulNode->getSymbol()->castToMethodSymbol();
-		
-		
-		               int32_t firstArgIndex = usefulNode->getFirstArgumentIndex();
-		               int32_t numArgs = usefulNode->getNumArguments();
-		               int32_t numChildren = usefulNode->getNumChildren();
-		               int argIndex = 0;
-		               for (int32_t i = firstArgIndex; i < numChildren; i++)
-		                  {
-		                     TR::Node* argNode = usefulNode->getChild(i);
-		                     set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
-		
-		                     callSitePtg->setArg(argIndex, argValues);
-		
-		                     argIndex++;
-		
-		                  }
-		
-		
-		
-		               callSitePtg->summarizeReachableHeapAtCallSite(); //in other words, mark escaping
-		               outPTG = callSitePtg;
-		
-		            } //end isLibraryMethod
-		            else {
-		               //we are looking at an unresolved application method. this should never happen in practice - assert fatal!
-		               cout << "application method " << methodName << " is not resolved!" << endl;
-		               TR_ASSERT_FATAL(false, "application method not resolved");
-		
-		            }
-		         }
+                        // 3. gather the outflow
+                        PointsToGraph *outForTarget = verifiedMethodSummaries[sig];
+                        if (_runtimeVerifierDiagnostics)
+                        {
+                           cout << "callsite processing for " << sig << " completed, callsite PTG below" << endl;
+                           outForTarget->print();
+                        }
+                        outPTG = meet(outPTG, outForTarget);
+                     }
+                  } //end not library method
 
-               //TODO: here, project the callee out-heap to the callsite heap - done
-               //TODO: copy only the reachable heap!
-               // in->copySigmaFrom(outPTG);
-               in->projectReachableHeapFromCallSite(outPTG);
-   
-               //we want to save away the return value whether the method is resolved or not
-               if(! usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning()) {
+                  in->projectReachableHeapFromCallSite(outPTG);
+
+                  // we want to save away the return value whether the method is resolved or not
+                  if (!usefulNode->getSymbol()->castToMethodSymbol()->isNonReturning())
+                  {
                      evaluatedValues = outPTG->getReturnPointsTo();
-               }
-            
-         } //end isHelperCall
+                  }
+               } // end is not transparent
+            } // end is not recursive method
+
+         } // end NOT isHelper
          break;
       }
 
@@ -2483,14 +2528,14 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
          if (opCode == TR::areturn)
          {
-            //the evaluated value of the first child (ie. the call node) will hold the respective call's return value - simply fetch and assign
+            // the evaluated value of the first child (ie. the call node) will hold the respective call's return value - simply fetch and assign
             set<Entry> returnPointees = evaluateNode(in, usefulNode->getFirstChild(), evaluatedNodeValues, visitCount, methodIndex);
-            //TODO: this is wrong - take the meet with each return, below code is wrongly over-writing the return each time
-            //in->assignReturn(returnPointees);
-            // cout << "areturn's pointees are :" << endl;
-            // for (Entry e : returnPointees) {
-            //    cout << e.getString() << " ";
-            // } cout << endl;
+            // TODO: this is wrong - take the meet with each return, below code is wrongly over-writing the return each time
+            // in->assignReturn(returnPointees);
+            //  cout << "areturn's pointees are :" << endl;
+            //  for (Entry e : returnPointees) {
+            //     cout << e.getString() << " ";
+            //  } cout << endl;
             in->extend(PointsToGraph::RETURNLOCAL, returnPointees);
 
             if (_runtimeVerifierDiagnostics)
@@ -2571,15 +2616,15 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    }
 
    bool stackSlotSymRefMapped = false;
-   map <int, int> stackSlotSymRefMap;
+   map<int, int> stackSlotSymRefMap;
    // TODO: 'kill' the locals, args and return of the caller.
 
    // load in the loop invariants for this method
    IFDIAGPRINT << "attempting to read loop invariant " << methodIndex << " " << methodSignature << endl;
    std::map<int, PointsToGraph> staticLoopInvariants = readLoopInvariant(methodIndex);
 
-   //string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
-   //PointsToGraph staticCallSiteInvariant = readCallsiteInvariant(methodIndex);
+   // string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
+   // PointsToGraph staticCallSiteInvariant = readCallsiteInvariant(methodIndex);
 
    // TODO: it'd be nice to encapsulate both of these into a context of sorts
    // a collection of all the in-PTGs, keyed by the bci of the instruction
@@ -2605,14 +2650,17 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    stack<TR::Block *> blockProcessingOrder;
    pseudoTopoSort(start, gray, black, blockProcessingOrder);
 
-   if(methodIndex == 229) {
+   if (methodIndex == 229)
+   {
       cout << "process order for method 229 is \n";
       stack<TR::Block *> s = blockProcessingOrder;
-      while(!s.empty()) {
-         TR::Block * b = s.top();
+      while (!s.empty())
+      {
+         TR::Block *b = s.top();
          cout << b->getNumber() << " ";
          s.pop();
-      } cout << endl;
+      }
+      cout << endl;
    }
 
    // if(isGetSize) {
@@ -2647,7 +2695,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       else
       {
          inForBasicBlock = getPredecessorMeet(currentBB, basicBlockOuts);
-         if(currentBBNumber == 6 && methodIndex == 229) {
+         if (currentBBNumber == 6 && methodIndex == 229)
+         {
             inForBasicBlock->print();
          }
       }
@@ -2670,43 +2719,46 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             // unfortunately it appears that the Start and End nodes are also valid treetops.
             // TODO: is there a way around this check?
 
-            if (node->getOpCodeValue() == TR::BBStart){
-               //the static loop invariant, if any, will map to the bci of the BBStart.
-               if(staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end()) {
-                  //hooray, we have a static loop invariant!
+            if (node->getOpCodeValue() == TR::BBStart)
+            {
+               // the static loop invariant, if any, will map to the bci of the BBStart.
+               if (staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end())
+               {
+                  // hooray, we have a static loop invariant!
                   IFDIAGPRINT << "static loop invariant found for node " << node->getGlobalIndex() << endl;
-                  //now since we have a static loop invariant for the bci (or, block), we use it as the in-PTG
+                  // now since we have a static loop invariant for the bci (or, block), we use it as the in-PTG
                   PointsToGraph staticLoopInvariant = staticLoopInvariants[nodeBCI];
 
-                  //Now we need to map the loop invariant PTG to the running PTG via the stack slots
-                  //step 1. create a mapping of local symrefs to their stack slots. This is an expensive affair, so lets do it just once
-                  // if(!stackSlotSymRefMapped) {
-                  // TR_Array<List<TR::SymbolReference> > *autosListArray = methodSymbol->getAutoSymRefs();
-                  map <int, set <Entry> > invariantRho = staticLoopInvariant.getRho();
-                  map <int, set <Entry> > :: iterator invariantIterator = invariantRho.begin();
-                  while(invariantIterator != invariantRho.end()) {
+                  // Now we need to map the loop invariant PTG to the running PTG via the stack slots
+                  // step 1. create a mapping of local symrefs to their stack slots. This is an expensive affair, so lets do it just once
+                  //  if(!stackSlotSymRefMapped) {
+                  //  TR_Array<List<TR::SymbolReference> > *autosListArray = methodSymbol->getAutoSymRefs();
+                  map<int, set<Entry>> invariantRho = staticLoopInvariant.getRho();
+                  map<int, set<Entry>>::iterator invariantIterator = invariantRho.begin();
+                  while (invariantIterator != invariantRho.end())
+                  {
                      int slot = invariantIterator->first;
                      // TR_Array<List<TR::SymbolReference> > *autosListArray = methodSymbol->getAutoSymRefs(slot);
                      // cout << "the local symref corresponding to stack slot " << slot << "is/are:" << endl;
 
                      ListIterator<TR::SymbolReference> autos(&methodSymbol->getAutoSymRefs(slot));
-                     //TODO: assert autos.size == 1
-                     for (TR::SymbolReference * sr = autos.getFirst(); sr; sr = autos.getNext()) {
-                           // cout << sr->getReferenceNumber() << " ";
-                           localRunningPTG->assign(sr->getReferenceNumber(), invariantIterator->second);
+                     // TODO: assert autos.size == 1
+                     for (TR::SymbolReference *sr = autos.getFirst(); sr; sr = autos.getNext())
+                     {
+                        // cout << sr->getReferenceNumber() << " ";
+                        localRunningPTG->assign(sr->getReferenceNumber(), invariantIterator->second);
                      }
                      // cout << endl;
 
-
                      invariantIterator++;
                   }
-                  //now just copy over the sigma from the invariant as-is
+                  // now just copy over the sigma from the invariant as-is
                   localRunningPTG->copySigmaFrom(&staticLoopInvariant);
                   // cout << "mapped in the loop invariant" << endl;
 
-                  //lets also store this mapped PTG back in the static invariants collection, for later use in the subsumes check
+                  // lets also store this mapped PTG back in the static invariants collection, for later use in the subsumes check
                   staticLoopInvariants[nodeBCI] = PointsToGraph(*localRunningPTG);
-                  if(_runtimeVerifierDiagnostics)
+                  if (_runtimeVerifierDiagnostics)
                      localRunningPTG->print();
                   // basicBlockIns[currentBB] = localRunningPTG;
                }
@@ -2735,10 +2787,13 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
             // if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
             set<Entry> evaluatedValuesForNode = evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount, methodIndex);
-            if(methodIndex == 229 && currentBBNumber == 3) {
-               for (Entry e : evaluatedValuesForNode) {
+            if (methodIndex == 229 && currentBBNumber == 3)
+            {
+               for (Entry e : evaluatedValuesForNode)
+               {
                   cout << e.getString() << " ";
-               } cout << endl;
+               }
+               cout << endl;
 
                cout << "processed node " << node->getGlobalIndex() << "\n";
                cout << "current PTG\n";
@@ -2780,38 +2835,39 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          {
             // cout << "method " << methodIndex <<" BB " << successorBlock->getNumber() << "already analyzed, invariance check, current BB is " << currentBBNumber << endl;
 
+            // if the successor BB has an invariant available, then perform invariant MEET prevIn(successor) to get the RHS of the subsumes check
+            // 1. get the BBStart of the successor block
+            // 2. get the BBStart's BCI
+            // 3. check if a static invariant is available for that BCI (it will, if it is a loop header)
+            // 4. get the IN for the successor BB
+            // 5. if 3 exists, then
+            //     subsumes = Invariant <subsumes> ( OUT(currentBB) <meet> IN(successorBB))
+            // 6. ELSE
+            //     subsumes = IN(successorBB) <subsumes> OUT(currentBB)
 
-            //if the successor BB has an invariant available, then perform invariant MEET prevIn(successor) to get the RHS of the subsumes check
-            //1. get the BBStart of the successor block
-            //2. get the BBStart's BCI
-            //3. check if a static invariant is available for that BCI (it will, if it is a loop header)
-            //4. get the IN for the successor BB
-            //5. if 3 exists, then
-            //    subsumes = Invariant <subsumes> ( OUT(currentBB) <meet> IN(successorBB))
-            //6. ELSE
-            //    subsumes = IN(successorBB) <subsumes> OUT(currentBB)
-
-            //1. get the BBStart of the successor block
-            TR::Node * bbStartOfSuccessor = successorBlock->getEntry()->getNode();
+            // 1. get the BBStart of the successor block
+            TR::Node *bbStartOfSuccessor = successorBlock->getEntry()->getNode();
             int successorBCI = bbStartOfSuccessor->getByteCodeIndex();
             bool subsumes = true;
             PointsToGraph *lhs;
             PointsToGraph *rhs;
-            if(staticLoopInvariants.find(successorBCI) != staticLoopInvariants.end()) {
+            if (staticLoopInvariants.find(successorBCI) != staticLoopInvariants.end())
+            {
                // cout << "found static loop invariant for this block @bci " << successorBCI << endl;
-               //fetch the IN for this BB
-               PointsToGraph * prevIn = getPredecessorMeet(successorBlock, basicBlockOuts);
-               PointsToGraph * inMeetOut = meet(prevIn, localRunningPTG);
+               // fetch the IN for this BB
+               PointsToGraph *prevIn = getPredecessorMeet(successorBlock, basicBlockOuts);
+               PointsToGraph *inMeetOut = meet(prevIn, localRunningPTG);
                PointsToGraph staticLoopInvariantForBCI = staticLoopInvariants[successorBCI];
                // cout << "loop invariant for bci " << successorBCI << " available\n";
                // cout << "static loop invaraint is: " << endl;
                // staticLoopInvariantForBCI.print();
 
-
                subsumes = staticLoopInvariantForBCI.subsumes(inMeetOut);
                lhs = &staticLoopInvariantForBCI;
                rhs = inMeetOut;
-            } else {
+            }
+            else
+            {
                IFDIAGPRINT << "loop invariant for bci " << successorBCI << " not available\n";
                PointsToGraph *prevIn = getPredecessorMeet(successorBlock, basicBlockOuts);
                subsumes = prevIn->subsumes(localRunningPTG);
@@ -2820,7 +2876,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                rhs = localRunningPTG;
             }
 
-            if(!subsumes) {
+            if (!subsumes)
+            {
                // IFDIAGPRINT << "loop invariance check failed";
                cout << "loop invariance check failed for \n";
                cout << "lhs: \n";
@@ -2842,7 +2899,6 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             //    cout << "loop invariant verification failed for BB " << successorBlock->getNumber() << "from BB " << currentBBNumber << endl;
             // }
 
-
             // bool staticInvariantExists = false;
             // if (staticInvariantExists)
             // {
@@ -2858,14 +2914,13 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
       // if we have reached here, the localRunningPTG now represents the out-flow of the current basic block. Store it away for later use
       basicBlockOuts[currentBB] = localRunningPTG;
-
    }
 
    TR::Block *end = cfg->getEnd()->asBlock();
 
    PointsToGraph *outForMethod = basicBlockOuts[end];
 
-   //save this away as the summary for this method!
+   // save this away as the summary for this method!
    verifiedMethodSummaries[methodSignature] = outForMethod;
    verifiedMethodCount++;
    if (_runtimeVerifierDiagnostics)
@@ -2875,11 +2930,13 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       outForMethod->print();
    }
 
-   if(_outsummaryUsed.find(getOrInsertMethodIndex(methodSignature)) != _outsummaryUsed.end()) {
-      //this was a recursive call, and we used its out summary. Now we verify it
+   if (_outsummaryUsed.find(getOrInsertMethodIndex(methodSignature)) != _outsummaryUsed.end())
+   {
+      // this was a recursive call, and we used its out summary. Now we verify it
       PointsToGraph outSummary = readCallsiteOut(getOrInsertMethodIndex(methodSignature));
       bool outVerified = outSummary.subsumes(outForMethod);
-      if(!outVerified) {
+      if (!outVerified)
+      {
          cout << "out summary verification failed for method " << getOrInsertMethodIndex(methodSignature) << endl;
          TR_ASSERT_FATAL(false, "out summary verification failed");
       }
@@ -2924,14 +2981,14 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
    PointsToGraph *outFlow = new PointsToGraph();
 
    // if we are invoked by the algorithm itself (by descending into call site, then the class/methodname will be populated)
-   //if (isInvokedByJITC)
+   // if (isInvokedByJITC)
    //{
-      //className = getFormattedCurrentClassName(comp->getMethodSymbol());
-      //methodName = getFormattedCurrentMethodName(comp->getMethodSymbol());
+   // className = getFormattedCurrentClassName(comp->getMethodSymbol());
+   // methodName = getFormattedCurrentMethodName(comp->getMethodSymbol());
    //}
 
    // TODO: use the standardized method signature here, no need for another specially formatted string
-   //std::string sig = className + "." + methodName;
+   // std::string sig = className + "." + methodName;
    bool analyzed = false;
    // if (_runtimeVerifiedMethods.find(methodSymbol) != _runtimeVerifiedMethods.end())
    // {
@@ -2957,8 +3014,6 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       //    verifiedMethodSummaries[methodSignature]->print();
       // }
       _methodsBeingAnalyzed.insert(methodIndex);
-      
-
 
       // cout << methodSymbol->getName();
       // cout << methodSymbol->getMethod()->nameChars() << endl;
@@ -3006,7 +3061,6 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       _runtimeVerifiedMethods.insert(methodSignature);
    }
 
-
    return outFlow;
 }
 int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimization, int32_t firstOptIndex, int32_t lastOptIndex, int32_t doTiming)
@@ -3024,12 +3078,14 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
       //  when invoked from the JIT, best we can do is supply the compilation object
       // TODO: remember that checking for emptiness isn't the way to lazy-load a map
       // TODO: shouldn't this be done at a level one level higher?
-      if (_methodIndices.empty()) {
+      if (_methodIndices.empty())
+      {
          cout << "reading method indices" << endl;
          _methodIndices = readMethodIndices();
       }
-      
-      if(_classIndices.empty()) {
+
+      if (_classIndices.empty())
+      {
          cout << "reading class indices" << endl;
          _classIndices = readClassIndices();
       }
