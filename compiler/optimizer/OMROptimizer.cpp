@@ -2303,14 +2303,13 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          PointsToGraph *outForCallsite;
          bool isHelperMethodCall = usefulNode->getSymbol()->castToMethodSymbol()->isHelper();
 
-         // we do not want to process helper method calls (OSR, for example)
+         // we do not want to process helper method calls (prepareForOSR, potentialOSRPointHelper, for example)
          if (isHelperMethodCall)
          {
             break;
          }
          else
          {
-
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
 
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
@@ -2484,6 +2483,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      // 2. peek
                      string sig = target->signature(_runtimeVerifierComp->trMemory());
                      forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, inFlowToTarget));
+                     cout << "about to peek " << sig << endl;
                      bool ilGenFailed = NULL == target->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(target, _runtimeVerifierComp, false);
 
                      TR_ASSERT_FATAL(!ilGenFailed, "IL Gen failed, cannot peek into method");
