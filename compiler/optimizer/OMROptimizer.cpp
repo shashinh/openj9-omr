@@ -2168,14 +2168,27 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // we do not want to process helper method calls (osr, for example)
          if (!isHelperMethodCall)
          {
+            //1. check if method call is non static (i.e. receiver should be present)
+
+            bool isStatic = usefulNode->getSymbol()->isStatic();
+            if(isStatic) {
+               //perform callsite verification and directly resolve method at callsite               
+            } else {
+               //2. fetch the receiver
+               TR::Node * receiverNode = usefulNode->getFirstArgument();
+               set <Entry> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
+               //3. check if the PTS of receiver contains bot
+               bool containsBot = receiverVals.find(PointsToGraph::bottomEntry) != receiverVals.end();
+               //4. if-else based on bot
+               if(containsBot) {
+
+               } else {
+
+               }
+            }
+
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
 
-
-            string t = methodName;
-            bool isRunBenchmark = t.find("Benchmark.run(") != string::npos;
-            if(isRunBenchmark)
-               cout << "callsite : " << t << endl;
-            if(isRunBenchmark) in->print();
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
             if(_methodsBeingAnalyzed.find(calleeMethodIndex) != _methodsBeingAnalyzed.end()) {
                //we have a recursive call, us the out summary and defer verification at the end of the method
@@ -2185,12 +2198,12 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                outPTG = &summaryOut;
                _outsummaryUsed.insert(calleeMethodIndex);
 
-               //save the summary of callemeetho -> summaryOut/
+               //TODO: save the summary of callerMethod -> summaryOut/
             } else {
 
-		            //TODO : skip processing if called method is a library method
 		            string s = methodName;
 		            bool isLibraryMethod = false;
+		            bool isTransparentMethod = false;
 		            isLibraryMethod = s.rfind("java", 0) == 0 || s.rfind("com/ibm/", 0) == 0 || s.rfind("sun/", 0) == 0 ||
 		                         s.rfind("openj9/", 0) == 0 || s.rfind("jdk/", 0) == 0 || s.find("org/apache", 0) == 0 || s.find("org/slf4j", 0) == 0 ||
 		                         s.rfind("soot", 0) == 0;
@@ -2200,7 +2213,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		               isLibraryMethod = false;
 		            }
 		
-		            bool isTransparentMethod = false;
 		            /*
 		             * there are certain library methods that are known to have no effect on the reachable heap at a call site,
 		             * we cannot treat such library methods as opaque, and end up summarizing the reachable heap. This will cause
@@ -2334,7 +2346,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 		                  callSitePtg->print();
 		               }
 		
-                     if(isRunBenchmark) cout << "made it here2\n";
 		               PointsToGraph * callsitePtgInv;
 		               if(!callSiteInvariant.isTop()) {
 		                  bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
