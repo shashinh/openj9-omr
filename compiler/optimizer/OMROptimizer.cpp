@@ -2324,6 +2324,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                _outsummaryUsed.insert(calleeMethodIndex);
 
                // TODO: save the summary of callerMethod -> summaryOut
+               break;
             }
             else
             {
@@ -2356,14 +2357,14 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   // gather all the methods to be peeked
                   set<TR::ResolvedMethodSymbol *> methodsToPeek;
                   // 1. check if method call is non static (i.e. receiver should be present)
-                  bool isStatic = usefulNode->getSymbol()->isStatic();
+                  TR::ResolvedMethodSymbol * callNodeSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
+                  TR_ASSERT_FATAL(callNodeSymbol, "callsite method not resolved");
+                  bool isStatic = callNodeSymbol->isStatic();
                   // NOTE - we cannot use the isindirect check here. calls to abstract methods get optimized into direct calls, with the receivr still in place - this will cause issues in arg mapping logic down the line
                   if (isStatic)
                   {
                      // there is no runtime polymorphism when it comes to static methods - so direct resolution of the static type at the callsite is just fine
-                     TR::ResolvedMethodSymbol *staticMethodSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
-                     TR_ASSERT_FATAL(staticMethodSymbol, "static method not resolved");
-                     methodsToPeek.insert(staticMethodSymbol);
+                     methodsToPeek.insert(callNodeSymbol);
                   }
                   else
                   {
@@ -2373,13 +2374,25 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      if (_callsiteReceivers.find(methodIndex) == _callsiteReceivers.end())
                      {
                         // callsite receiver info has not been loaded yet, load it now
+                        cout << "reading callsite receivers for " << methodIndex << endl;
                         receiverInfoForMethod = readReceivers(methodIndex);
+                        _callsiteReceivers[methodIndex] = receiverInfoForMethod;
                      }
                      else
                      {
                         receiverInfoForMethod = _callsiteReceivers[methodIndex];
                      }
 
+                           cout << "receiver info for " << methodIndex << "\n";
+                           map <int, set <int> > :: iterator it = receiverInfoForMethod.begin();
+                           while(it != receiverInfoForMethod.end()){
+                              cout << "bci " << it->first << "\n";
+                              for(int cl : it->second) {
+                                 cout << cl << " ";
+                              } cout << "\n";
+
+                              it++;
+                           }
                      // 2. fetch the receiver's evaluated vals (we are in the non-static branch, so first argument is the receiver for sure)
                      TR::Node *receiverNode = usefulNode->getFirstArgument();
                      set<Entry> receiverVals = evaluateNode(in, receiverNode, evaluatedNodeValues, visitCount, methodIndex);
@@ -2403,6 +2416,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      }
                      else
                      {
+                        cout << "looking for receiver info at " << callsiteBCI << endl;
                         if (receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end())
                         {
                            // 7. verification failure (we expected receiver info, but wasn't supplied)
@@ -2477,6 +2491,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      }
                      else
                      {
+                        // TR_ASSERT_FATAL(false, "callsite invariant not supplied");
                         inFlowToTarget = new PointsToGraph(*callSitePtg);
                      }
 

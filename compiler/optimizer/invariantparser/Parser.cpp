@@ -80,13 +80,14 @@ map <int, set <int> >  readReceiversImpl(string fileName) {
     parser.addErrorListener(&errorListener);
 
     tree::ParseTree *tree = parser.recs();
-    cout << "parser successful\n";
-    cout << tree->toStringTree(&parser) << "\n";
+    // cout << "parser successful\n";
+    // cout << tree->toStringTree(&parser) << "\n";
     RECParser::RecsContext *ctx = parser.recs();
 
 
     RECBuilderVisitor visitor;
     ret = visitor.visitRecs((RECParser::RecsContext *) tree).as<map <int, set <int> > >();
+	cout << "made it here after building receivers\n";
 
     // map <int, set <int> > :: iterator it = ret.begin();
     // while(it != ret.end()) {
