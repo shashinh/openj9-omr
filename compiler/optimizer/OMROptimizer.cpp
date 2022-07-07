@@ -2416,6 +2416,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                         if (receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end())
                         {
                            // 7. verification failure (we expected receiver info, but wasn't supplied)
+                           in->print();
                            TR_ASSERT_FATAL(false, "callsite receiver info not supplied, callee method %s, index %i, callsite bci %i, caller method %i", methodName, calleeMethodIndex, callsiteBCI, methodIndex);
                         }
                         else
