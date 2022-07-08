@@ -2231,6 +2231,21 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       {
          bool isStatic = usefulNode->getSymbol()->isStatic();
          TR_ASSERT_FATAL(isStatic, "found an awrtbar node that isn't Static!");
+         //TODO: summarise the reachable heap of the RHS here - essentially, that object escapes
+         //the structure of the awrtbar node for a static store is as follows. We are interested only in the first child (corresponds to the rhs in A.f = x)
+
+         //   awrtbar  A.f LA;[#356  notAccessed Static] [flags 0x307 0x0 ]          
+         //     aload  <auto slot 1>[#363  Auto] [flags 0x7 0x0 ]                    
+         //     aloadi  <javaLangClassFromClass>[#275  Shadow +48] [flags 0x607 0x0 ]
+         //       ==>loadaddr
+
+         TR::Node * storeNode = usefulNode->getFirstChild();
+         set<Entry> storeVals = evaluateNode(in, storeNode, evaluatedNodeValues, visitCount, methodIndex);
+         //we want to summarize the reachable heap for each of the pointees of the rhs
+         for(Entry pointee : storeVals) {
+            in->summarizeReachableHeap(pointee);
+         }
+
       }
       case TR::awrtbari:
       {
@@ -2407,7 +2422,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                            // 6. receiver contains bot, but static receiver info is supplied nevertheless - something wrong - verification fault!
                            cout << "receiver info supplied for BOT receiver, in ptg dump\n";
                            in->print();
-                           // TR_ASSERT_FATAL(false, "callsite receiver info supplied for BOT receiver, methodIndex %i, callsiteBCI %i, node n%in", methodIndex, callsiteBCI, usefulNode->getGlobalIndex());
+                           TR_ASSERT_FATAL(false, "callsite receiver info supplied for BOT receiver, methodIndex %i, callsiteBCI %i, node n%in", methodIndex, callsiteBCI, usefulNode->getGlobalIndex());
                         }
                      }
                      else
@@ -2429,6 +2444,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                               string receiverTypeName = _classIndices[receiverType];
 
                               //boilerplate to fetch a resolved method symbol for the target method against the receiver's type
+                              //TODO: extract all repeating code to a method
                                  int len = strlen(receiverTypeName.c_str());
                                  TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
                                  TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
