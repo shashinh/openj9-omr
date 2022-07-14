@@ -25,6 +25,7 @@ class PointsToGraph {
         static set<Entry> getBotSet();
         std::map <int, std::set <Entry> > getRho();
         std::map <Entry, std::map <string, set <Entry> > > getSigma();
+        std::map <int, std::set <Entry> > getArgs();
         void setArg(int argIndex, set <Entry> values);
         set <Entry> getArgPointsToSet(int argIndex);
         set <Entry> getPointsToSet (int symRef);
@@ -87,5 +88,13 @@ class PointsToGraph {
         void projectReachableHeapFromCallSite(PointsToGraph *other);
 
         bool isTop();
+
+        void copyArgsFrom(PointsToGraph *other);
+
+        static map <Entry, map <string, set <Entry> > > getReachableHeap(Entry target, map <Entry, map <string, set <Entry> > > sigma);
+
+        void projectReachableHeapFromArgs();
+
+        void mergeSigmaFrom(PointsToGraph *other);
         
 };

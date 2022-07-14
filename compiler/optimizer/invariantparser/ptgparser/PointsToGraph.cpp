@@ -7,6 +7,9 @@ const Entry PointsToGraph::nullEntry = { .caller = -1, .bci = -1, .type = Null }
 std::map <int, std::set <Entry> >  PointsToGraph::getRho() {
     return rho;
 }
+std::map <int, std::set <Entry> >  PointsToGraph::getArgs() {
+    return args;
+}
 std::map <Entry, std::map <string, set <Entry> > > PointsToGraph::getSigma() {
     return sigma;
 }
@@ -262,6 +265,7 @@ PointsToGraph::PointsToGraph(std::map <int, std::set <Entry> > rho,  std::map <E
 PointsToGraph::PointsToGraph(const PointsToGraph &ptg) {
     this->rho = ptg.rho;
     this->sigma = ptg.sigma;
+    this->args = ptg.args;
 }
 
 void PointsToGraph::printArgs() {
@@ -372,11 +376,11 @@ void PointsToGraph::ptgUnion(PointsToGraph *a, PointsToGraph *b) {
 
 bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
 
-    // cout << "subsumes check requested for ptgs " << endl;
-    // cout << "lhs : " << endl;
-    // this->print();
-    // cout << "rhs :" << endl;
-    // other->print();
+    cout << "subsumes check requested for ptgs " << endl;
+    cout << "lhs : " << endl;
+    this->print();
+    cout << "rhs :" << endl;
+    other->print();
 
     map <int, set <Entry> > otherRho;
     //if the subsumes check if requested at a callsite, then we compare rho_LHS with args_RHS
@@ -475,7 +479,7 @@ void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
     this->sigma = other->sigma;
 }
 
-map <Entry, map <string, set <Entry> > > getReachableHeap (Entry target, map <Entry, map <string, set <Entry> > > sigma) {
+map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry target, map <Entry, map <string, set <Entry> > > sigma) {
     map <Entry, map <string, set<Entry> > > res;
 
     if(sigma.find(target) != sigma.end()) {
@@ -498,6 +502,9 @@ map <Entry, map <string, set <Entry> > > getReachableHeap (Entry target, map <En
 }
 
 void PointsToGraph::projectReachableHeapFromCallSite(PointsToGraph *other) {
+    //this : callsite ptg; other : out flow from callee
+    cout << "before projectio\n";
+    this->print();
     map <Entry, map <string, set <Entry> > > inSigma = this->sigma;
     map <Entry, map <string, set <Entry>  > > outSigma = other->sigma;
 
@@ -540,6 +547,9 @@ void PointsToGraph::projectReachableHeapFromCallSite(PointsToGraph *other) {
         outRhoIt++;
     }
 
+
+    cout << "after projectio\n";
+    this->print();
 }
 
 const int PointsToGraph::RETURNLOCAL = -99;
@@ -583,4 +593,37 @@ void PointsToGraph::summarizeReachableHeapAtCallSite() {
 
 bool PointsToGraph::isTop() {
     return rho.empty() && sigma.empty() && args.empty();
+}
+
+void PointsToGraph::copyArgsFrom(PointsToGraph *other) {
+    this->args = other->args;
+}
+
+void PointsToGraph::projectReachableHeapFromArgs() {
+    map <Entry, map <string, set <Entry> > > inSigma = this->sigma;
+
+    this->sigma.clear();
+    map <int, set<Entry> > :: iterator argsIterator = this->args.begin();
+    while(argsIterator != this->args.end()) {
+        for(Entry pointee : argsIterator->second) {
+            map <Entry, map <string, set <Entry> > > reachable = getReachableHeap(pointee, inSigma);
+            this->sigma.insert(reachable.begin(), reachable.end());
+        }
+
+        argsIterator++;
+    }
+}
+
+void PointsToGraph::mergeSigmaFrom(PointsToGraph *other) {
+    // cout << "merging sigma from \n";
+    // other->print();
+    // cout << "to \n";
+    // this->print();
+    // this->sigma.insert(other->sigma.begin(), other->sigma.end());
+    map <Entry, map <string, set <Entry > > > :: iterator otherSigmaIt = other->sigma.begin();
+    while(otherSigmaIt != other->sigma.end()) {
+        this->sigma[otherSigmaIt->first] = otherSigmaIt->second;
+
+        otherSigmaIt ++;
+    }
 }

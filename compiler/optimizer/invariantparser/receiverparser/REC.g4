@@ -2,7 +2,7 @@ grammar REC;
 
 recs : (entry ';')* (NEWLINE | EOF);
 entry : bciKey ' ' clazzes;
-clazzes : clazz ( ' ' (clazz)* )?;
+clazzes : clazz ( ' ' (clazz) )*;
 clazz : NUMS;
 bciKey : NUMS;
 
