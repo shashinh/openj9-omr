@@ -1689,8 +1689,8 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
 {
 
    string methodSignature = methodSymbol->signature(_runtimeVerifierComp->trMemory());
-   cout << "in flow for method " << methodSignature << "\n";
-   in->print();
+   // cout << "in flow for method " << methodSignature << "\n";
+   // in->print();
 
    ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
    TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
@@ -1997,6 +1997,7 @@ bool isCallsiteVerified(TR::Node *callNode, PointsToGraph *in, PointsToGraph *ca
 set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex);
 void summarizeCallsite(TR::Node *callNode, PointsToGraph *callSitePtg, PointsToGraph *in, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
 {
+   cout << "entered summarizeCallsite\n";
 
    // 1. set return to BOT
    // 2. summarize the reachable heap - this involves use of the escape map
@@ -2027,8 +2028,8 @@ PointsToGraph *buildCallsitePtg(TR::Node *callNode, PointsToGraph *in, TR::Resol
 {
    // cout << "about to build callsite ptg, here is the in supplied\n  ";
    // if(callNode->getGlobalIndex() == 3648) {
-      cout << "build callsite ptg\n";
-      in->print();
+      // cout << "build callsite ptg\n";
+      // in->print();
    // }
    // in->print();
    // if target is not supplied - fetch it direct from the call site. This is the case for library and opaque methods where we need the callsite ptg simply to summarize
@@ -2060,22 +2061,27 @@ PointsToGraph *buildCallsitePtg(TR::Node *callNode, PointsToGraph *in, TR::Resol
    for (int32_t i = firstArgIndex; i < numChildren; i++)
    {
       TR::Node *argNode = callNode->getChild(i);
+      // cout << "argIndex " << argIndex << " -> argvalues: \n";
       set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
 
+      // cout << "arg evaluate node complete, values:\n";
+      // for(Entry e : argValues) {
+      //    cout << e.getString() << " ";
+      // } cout << "\n";
       callSitePtg->setArg(argIndex, argValues);
       callSitePtg->print();
 
       argIndex++;
    }
    // if(callNode->getGlobalIndex() == 3648) {
-      cout << "mapped args\n";
-      callSitePtg->print();
+      // cout << "mapped args\n";
+      // callSitePtg->print();
    // }
 
    callSitePtg->projectReachableHeapFromArgs();
    // if(callNode->getGlobalIndex() == 3648) {
-      cout << "built callsite ptg\n";
-      callSitePtg->print();
+      // cout << "built callsite ptg\n";
+      // callSitePtg->print();
    // }
    return callSitePtg;
 }
@@ -2097,6 +2103,10 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
    {
       // the node's been visited before - fetch its evaluated value
       evaluatedValues = evaluatedNodeValues[usefulNode];
+      cout << "node " << usefulNode->getGlobalIndex() << " already evaluated\n";
+      for(Entry e : evaluatedValues) {
+         cout << e.getString() << " ";
+      } cout << endl;
       return evaluatedValues;
    }
    else
@@ -2145,17 +2155,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          // note that this is a strong update
          int storeSymRef = usefulNode->getSymbolReference()->getReferenceNumber();
          in->assign(storeSymRef, evaluatedValues);
-         if (usefulNode->getGlobalIndex() == 22842)
-         {
-            cout << "storesymref: " << storeSymRef << endl;
-            cout << "child node: " << storeChild->getGlobalIndex() << endl;
-            for (Entry e : evaluatedValues)
-            {
-               cout << e.getString() << " ";
-            }
-            cout << endl;
-            in->print();
-         }
          // TODO: do astore's need an evaluated value? can there be pointers to astore nodes?
 
          // if(_runtimeVerifierDiagnostics) in->print();
@@ -2366,8 +2365,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          else
          {
             const char *methodName = usefulNode->getSymbolReference()->getName(_runtimeVerifierComp->getDebug());
-            cout << "processing callsite for " << methodName << "\n";
-            in->print();
+            // cout << "processing callsite for " << methodName << "\n";
+            // in->print();
 
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
             // special handling for a recursive call site
@@ -2475,20 +2474,20 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      }
                      else
                      {
-                        cout << "here-v\n";
-                        cout << "looking for receiver info at bci " << callsiteBCI << " caller " << methodIndex << "\n";
-                        cout << "here-x\n";
+                        // cout << "here-v\n";
+                        // cout << "looking for receiver info at bci " << callsiteBCI << " caller " << methodIndex << "\n";
+                        // cout << "here-x\n";
                         TR_ASSERT_FATAL(!receiverInfoForMethod.empty(), "rec info empty");
                         if (receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end())
                         {
-                           cout << "here-a\n";
+                           // cout << "here-a\n";
                            // 7. verification failure (we expected receiver info, but wasn't supplied)
-                           in->print();
+                           // in->print();
                            TR_ASSERT_FATAL(false, "callsite receiver info not supplied, callee method %s, index %i, callsite bci %i, caller method %i", methodName, calleeMethodIndex, callsiteBCI, methodIndex);
                         }
                         else
                         {
-                           cout << "here-b\n";
+                           // cout << "here-b\n";
                            // 8. static receiver info present, use it
                            set<int> receiverTypesForCallsite = receiverInfoForMethod[callsiteBCI];
                            cout << "here-c\n";
@@ -2574,7 +2573,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, inFlowToTarget));
                      // cout << "about to peek " << sig << endl;
                      // cout << "inflow : \n";
-                     inFlowToTarget->print();
+                     // inFlowToTarget->print();
                      bool ilGenFailed = NULL == target->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(target, _runtimeVerifierComp, false);
                      // cout << "back from peek " << sig << endl;
 
@@ -2585,7 +2584,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      // 3. gather the outflow
                      PointsToGraph *outForTarget = verifiedMethodSummaries[sig];
                      // cout << "outForTarget computed\n";
-                     outForTarget->print();
+                     // outForTarget->print();
                      if (_runtimeVerifierDiagnostics)
                      {
                         cout << "callsite processing for " << sig << " completed, callsite PTG below" << endl;
@@ -2593,7 +2592,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      }
                      outForCallsite = meet(outForCallsite, outForTarget);
                      // cout << "outForCallsite computed:\n";
-                     outForCallsite->print();
+                     // outForCallsite->print();
                   }
                } // end not library method
 
@@ -2616,7 +2615,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
          } // end NOT isHelper
          // cout << "finished call switch\n";
-         in->print();
+         // in->print();
          break;
       }
 
@@ -2663,7 +2662,10 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
    // TODO: update the evaluated values here, or in the caller? Lets do it here, for now
    evaluatedNodeValues[usefulNode] = evaluatedValues;
-   // cout << "evaluatNode " << node->getGlobalIndex() << "completed\n";
+   cout << "evaluatNode " << usefulNode->getGlobalIndex() << " completed, evaluatedValues below\n";
+   for(Entry e : evaluatedValues) {
+      cout << e.getString() << " ";
+   } cout << endl;
    return evaluatedValues;
 }
 

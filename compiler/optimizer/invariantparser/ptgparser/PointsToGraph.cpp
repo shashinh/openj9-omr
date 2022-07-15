@@ -480,8 +480,11 @@ void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
 }
 
 map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry target, map <Entry, map <string, set <Entry> > > sigma) {
+    cout << "entered getreachable heap\n";
     map <Entry, map <string, set<Entry> > > res;
 
+    set <Entry> reachedObjects;
+    reachedObjects.insert(target);
     if(sigma.find(target) != sigma.end()) {
         map <string, set<Entry> > fields = sigma[target];
         res[target] = fields;
@@ -490,6 +493,15 @@ map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry 
         while(fieldsIt != fields.end()) {
             set <Entry> reachableObjects = fieldsIt->second;
             for(Entry reachable : reachableObjects) {
+                cout << "reachable obj " << reachable.getString() << "\n";
+
+                if(reachedObjects.find(reachable) != reachedObjects.end() || reachable == PointsToGraph::bottomEntry || reachable == PointsToGraph::nullEntry) {
+                    //make sure we don't end up in an infinite recursion!
+                    continue;
+                }
+
+                reachedObjects.insert(reachable);
+
                 map <Entry, map <string, set <Entry> > > reachableHeap = getReachableHeap(reachable, sigma);
                 res.insert(reachableHeap.begin(), reachableHeap.end());
             }
@@ -497,6 +509,7 @@ map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry 
         }
     }
 
+    cout << "exiting getreachable heap\n";
     return res;
 
 }
@@ -573,6 +586,8 @@ void PointsToGraph::summarizeReachableHeap (Entry target) {
 }
 
 void PointsToGraph::summarizeReachableHeapAtCallSite() {
+    cout << "entered summarizereachableheapatcallsite\n";
+
     //for each reference type argument, summarize its reachable heap
     //summarizing is achieved by marking the abstract object as "escaping"
 
@@ -586,7 +601,7 @@ void PointsToGraph::summarizeReachableHeapAtCallSite() {
         }
         argsIterator++;
     }
-    // cout << "summarize reachable heap completed : \n";
+    cout << "exiting summarizereachableheapatcallsite\n";
     // this->print();
 
 }
@@ -600,18 +615,22 @@ void PointsToGraph::copyArgsFrom(PointsToGraph *other) {
 }
 
 void PointsToGraph::projectReachableHeapFromArgs() {
+    cout << "entered projectheap from args\n";
     map <Entry, map <string, set <Entry> > > inSigma = this->sigma;
 
     this->sigma.clear();
     map <int, set<Entry> > :: iterator argsIterator = this->args.begin();
     while(argsIterator != this->args.end()) {
         for(Entry pointee : argsIterator->second) {
+            cout << "pointee: " << pointee.getString() << "\n";
             map <Entry, map <string, set <Entry> > > reachable = getReachableHeap(pointee, inSigma);
             this->sigma.insert(reachable.begin(), reachable.end());
+            cout << "done pointee: " << pointee.getString() << "\n" << pointee.getString() << "\n";;
         }
 
         argsIterator++;
     }
+    cout << "exiting projectheap from args\n";
 }
 
 void PointsToGraph::mergeSigmaFrom(PointsToGraph *other) {
