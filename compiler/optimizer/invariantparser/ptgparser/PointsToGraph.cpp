@@ -569,8 +569,12 @@ const int PointsToGraph::RETURNLOCAL = -99;
 
 //summarizes the heap objects reachable from the given abstract object
 void PointsToGraph::summarizeReachableHeap (Entry target) {
-    map <string, set <Entry> > reachableHeap = this->sigma[target];
 
+    cout << "entered summarizereachableheap for target " << target.getString() << "\n";
+    if(target == PointsToGraph::nullEntry || target == PointsToGraph::bottomEntry)
+        return;
+
+    map <string, set <Entry> > reachableHeap = this->sigma[target];
     map <string, set <Entry> > :: iterator reachableHeapIterator = reachableHeap.begin();
     while(reachableHeapIterator != reachableHeap.end()) {
         set <Entry> targets = reachableHeapIterator->second;
@@ -583,6 +587,7 @@ void PointsToGraph::summarizeReachableHeap (Entry target) {
         reachableHeapIterator++;
     }
 
+    cout << "exiting summarizereachableheap\n";
 }
 
 void PointsToGraph::summarizeReachableHeapAtCallSite() {
@@ -597,6 +602,8 @@ void PointsToGraph::summarizeReachableHeapAtCallSite() {
     map <int, set <Entry> > :: iterator argsIterator = this->args.begin();
     while(argsIterator != this->args.end()) {
         for(Entry target : argsIterator->second) {
+            if(target == PointsToGraph :: bottomEntry)
+                continue;
             this->summarizeReachableHeap(target);
         }
         argsIterator++;

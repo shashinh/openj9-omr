@@ -2007,19 +2007,19 @@ void summarizeCallsite(TR::Node *callNode, PointsToGraph *callSitePtg, PointsToG
    // for an unresolved method, we cannot get the actual parameter indices, so just load in all the callsite args without worrying
    //  about indices, because we only need it to summarize the reachable heap.
 
-   int32_t firstArgIndex = callNode->getFirstArgumentIndex();
-   int32_t numArgs = callNode->getNumArguments();
-   int32_t numChildren = callNode->getNumChildren();
-   int argIndex = 0;
-   for (int32_t i = firstArgIndex; i < numChildren; i++)
-   {
-      TR::Node *argNode = callNode->getChild(i);
-      set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
+   // int32_t firstArgIndex = callNode->getFirstArgumentIndex();
+   // int32_t numArgs = callNode->getNumArguments();
+   // int32_t numChildren = callNode->getNumChildren();
+   // int argIndex = 0;
+   // for (int32_t i = firstArgIndex; i < numChildren; i++)
+   // {
+   //    TR::Node *argNode = callNode->getChild(i);
+   //    set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
 
-      callSitePtg->setArg(argIndex, argValues);
+   //    callSitePtg->setArg(argIndex, argValues);
 
-      argIndex++;
-   }
+   //    argIndex++;
+   // }
 
    callSitePtg->summarizeReachableHeapAtCallSite(); // in other words, mark escaping
 }
@@ -2279,6 +2279,9 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
          set<Entry> storeVals = evaluateNode(in, storeNode, evaluatedNodeValues, visitCount, methodIndex);
          //we want to summarize the reachable heap for each of the pointees of the rhs
          for(Entry pointee : storeVals) {
+            cout << "summarizing reachable heap at pointee " << pointee.getString() << "\n";
+            if(pointee == PointsToGraph::nullEntry || pointee == PointsToGraph::bottomEntry)
+               continue;
             in->summarizeReachableHeap(pointee);
          }
 
@@ -2477,7 +2480,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                         // cout << "here-v\n";
                         // cout << "looking for receiver info at bci " << callsiteBCI << " caller " << methodIndex << "\n";
                         // cout << "here-x\n";
-                        TR_ASSERT_FATAL(!receiverInfoForMethod.empty(), "rec info empty");
                         if (receiverInfoForMethod.find(callsiteBCI) == receiverInfoForMethod.end())
                         {
                            // cout << "here-a\n";
