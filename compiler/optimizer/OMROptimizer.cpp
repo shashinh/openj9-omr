@@ -124,6 +124,7 @@ using namespace std;
 static std::set<string> _runtimeVerifiedMethods;
 // static std::set<TR::ResolvedMethodSymbol *> _runtimeVerifiedMethods;
 static std::map<string, int> _methodIndices;
+static std::set<int> _partiallyAnalysedMethodIndices;
 static std::map<int, string> _classIndices;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation *_runtimeVerifierComp;
@@ -150,6 +151,7 @@ using namespace OMR; // Note: used here only to avoid having to prepend all opts
 
 // collection of methods to read static artifacts for runtime verification
 extern map<string, int> readMethodIndices();
+extern set<int> readPartiallyAnalysedMethodIndices();
 extern map<int, PointsToGraph> readLoopInvariant(int methodIndex);
 extern PointsToGraph readCallsiteInvariant(int methodIndex);
 extern PointsToGraph readCallsiteOut(int methodIndex);
@@ -1949,6 +1951,12 @@ bool isLibraryMethod(string methodName)
       isLibraryMethod = false;
    }
 
+   int methodIndex = getOrInsertMethodIndex(methodName);
+   if(_partiallyAnalysedMethodIndices.find(methodIndex) != _partiallyAnalysedMethodIndices.end()) {
+      cout << "method " << methodIndex << " " << methodName << " is not statically analysed, will be summarized\n";
+      isLibraryMethod = true;
+   }
+
    return isLibraryMethod;
 }
 
@@ -3199,6 +3207,7 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
       {
          cout << "reading method indices" << endl;
          _methodIndices = readMethodIndices();
+         _partiallyAnalysedMethodIndices = readPartiallyAnalysedMethodIndices();
       }
 
       if (_classIndices.empty())

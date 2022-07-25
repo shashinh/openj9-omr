@@ -30,16 +30,13 @@ class ParseErrorListener : public BaseErrorListener
 
 set<int> readPartiallyAnalysedMethodIndices() {
 	set<int> ret;
-	char* methodIndicesFileName = "invariants/mp.txt";
+	char* methodIndicesFileName = "invariants/pa.txt";
 
 	ifstream file(methodIndicesFileName);
 	int methodIndex;
-	int index = 1;
 	while(file >> methodIndex) {
 		// cout << methodName << ":" << index << endl;
-
 		ret.insert(methodIndex);
-		index++;
 	}
 
 	return ret;
