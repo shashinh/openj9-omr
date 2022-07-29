@@ -91,7 +91,7 @@ class PointsToGraph {
 
         void copyArgsFrom(PointsToGraph *other);
 
-        static map <Entry, map <string, set <Entry> > > getReachableHeap(Entry target, map <Entry, map <string, set <Entry> > > sigma);
+        static map <Entry, map <string, set <Entry> > > getReachableHeap(Entry target, map <Entry, map <string, set <Entry> > > sigma, set <Entry> &reachedObjects);
 
         void projectReachableHeapFromArgs();
 

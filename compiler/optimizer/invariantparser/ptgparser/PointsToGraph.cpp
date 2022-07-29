@@ -418,6 +418,14 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
                 //lhsPointees should be a superset of rhsPointees
                 if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
                                 rhsPointees.begin(), rhsPointees.end())) {
+                                    cout << "rho subsumes failed. diagnostics follow:\n";
+                                    cout << "var: " << it->first << "\n";
+                                    cout << "lhspointees: ";
+                                    for(Entry e: lhsPointees) cout << e.getString() << " ";
+                                    cout << "\n";
+                                    cout << "rhspointees: ";
+                                    for(Entry e: rhsPointees) cout << e.getString() << " ";
+                                    cout << "\n";
                     return false;
                 }
             }
@@ -446,6 +454,15 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
                             //lhsPointees should be a superset of rhsPointees
                             if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
                                             rhsPointees.begin(), rhsPointees.end())) {
+                                    cout << "sigma subsumes failed. diagnostics follow:\n";
+                                    Entry entry = it->first;
+                                    cout << "var: " << entry.getString() << " field : " << i->first << "\n";
+                                    cout << "lhspointees: ";
+                                    for(Entry e: lhsPointees) cout << e.getString() << " ";
+                                    cout << "\n";
+                                    cout << "rhspointees: ";
+                                    for(Entry e: rhsPointees) cout << e.getString() << " ";
+                                    cout << "\n";
                                 return false;
                             }
                     }
@@ -479,11 +496,11 @@ void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
     this->sigma = other->sigma;
 }
 
-map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry target, map <Entry, map <string, set <Entry> > > sigma) {
+map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry target, map <Entry, map <string, set <Entry> > > sigma, set<Entry> &reachedObjects) {
     cout << "entered getreachable heap\n";
     map <Entry, map <string, set<Entry> > > res;
 
-    set <Entry> reachedObjects;
+    // set <Entry> reachedObjects;
     reachedObjects.insert(target);
     if(sigma.find(target) != sigma.end()) {
         map <string, set<Entry> > fields = sigma[target];
@@ -500,9 +517,9 @@ map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry 
                     continue;
                 }
 
-                reachedObjects.insert(reachable);
+                // reachedObjects.insert(reachable);
 
-                map <Entry, map <string, set <Entry> > > reachableHeap = getReachableHeap(reachable, sigma);
+                map <Entry, map <string, set <Entry> > > reachableHeap = getReachableHeap(reachable, sigma, reachedObjects);
                 res.insert(reachableHeap.begin(), reachableHeap.end());
             }
             fieldsIt++;
@@ -534,7 +551,8 @@ void PointsToGraph::projectReachableHeapFromCallSite(PointsToGraph *other) {
 
         for(Entry pointee : argsPointsTo) {
             //fetch the reachable heap
-            map <Entry, map <string, set <Entry> > > reachableHeap = getReachableHeap(pointee, outSigma);
+            set<Entry> reached;
+            map <Entry, map <string, set <Entry> > > reachableHeap = getReachableHeap(pointee, outSigma, reached);
             map <Entry, map <string, set <Entry> > > :: iterator reachableHeapIt = reachableHeap.begin();
             while(reachableHeapIt != reachableHeap.end()) {
                 Entry target = reachableHeapIt->first;
@@ -630,7 +648,8 @@ void PointsToGraph::projectReachableHeapFromArgs() {
     while(argsIterator != this->args.end()) {
         for(Entry pointee : argsIterator->second) {
             cout << "pointee: " << pointee.getString() << "\n";
-            map <Entry, map <string, set <Entry> > > reachable = getReachableHeap(pointee, inSigma);
+            set<Entry> reached;
+            map <Entry, map <string, set <Entry> > > reachable = getReachableHeap(pointee, inSigma, reached);
             this->sigma.insert(reachable.begin(), reachable.end());
             cout << "done pointee: " << pointee.getString() << "\n" << pointee.getString() << "\n";;
         }

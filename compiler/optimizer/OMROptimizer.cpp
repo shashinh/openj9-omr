@@ -2011,25 +2011,37 @@ void summarizeCallsite(TR::Node *callNode, PointsToGraph *callSitePtg, PointsToG
    // 2. summarize the reachable heap - this involves use of the escape map
    // bottomize all heap references reachable from the arguments
    callSitePtg->setBotReturn();
-
-   // for an unresolved method, we cannot get the actual parameter indices, so just load in all the callsite args without worrying
-   //  about indices, because we only need it to summarize the reachable heap.
-
-   // int32_t firstArgIndex = callNode->getFirstArgumentIndex();
-   // int32_t numArgs = callNode->getNumArguments();
-   // int32_t numChildren = callNode->getNumChildren();
-   // int argIndex = 0;
-   // for (int32_t i = firstArgIndex; i < numChildren; i++)
-   // {
-   //    TR::Node *argNode = callNode->getChild(i);
-   //    set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
-
-   //    callSitePtg->setArg(argIndex, argValues);
-
-   //    argIndex++;
-   // }
-
    callSitePtg->summarizeReachableHeapAtCallSite(); // in other words, mark escaping
+}
+
+
+//builds a callsite ptg for an unresolved method - use only to summarise a callsite
+PointsToGraph *buildDummyCallsitePtg(TR::Node *callNode, PointsToGraph *in, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex) {
+
+   PointsToGraph *callSitePtg = new PointsToGraph(*in);
+   callSitePtg->killRho();
+   callSitePtg->killArgs();
+
+   int argIndex = 0;
+
+   int32_t firstArgIndex = callNode->getFirstArgumentIndex();
+   int32_t numArgs = callNode->getNumArguments();
+   int32_t numChildren = callNode->getNumChildren();
+   for (int32_t i = firstArgIndex; i < numChildren; i++)
+   {
+      TR::Node *argNode = callNode->getChild(i);
+      set<Entry> argValues = evaluateNode(in, argNode, evaluatedNodeValues, visitCount, methodIndex);
+
+      callSitePtg->setArg(argIndex, argValues);
+      callSitePtg->print();
+
+      argIndex++;
+   }
+   callSitePtg->projectReachableHeapFromArgs();
+
+
+   return callSitePtg;
+
 }
 
 PointsToGraph *buildCallsitePtg(TR::Node *callNode, PointsToGraph *in, TR::ResolvedMethodSymbol *target, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
@@ -2381,8 +2393,10 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
             int calleeMethodIndex = getOrInsertMethodIndex(methodName);
             // special handling for a recursive call site
-            if (_methodsBeingAnalyzed.find(calleeMethodIndex) != _methodsBeingAnalyzed.end())
+            // if (_methodsBeingAnalyzed.find(calleeMethodIndex) != _methodsBeingAnalyzed.end())
+            if(false)
             {
+               cout << calleeMethodIndex << " is already being analyzed, will use the outsummary\n";
                // we have a recursive call, use the static out summary and defer verification to the end of the method
                //  cout << "recursive call for " << calleeMethodIndex << ", out summary will be used" << endl;
                PointsToGraph summaryOut = readCallsiteOut(calleeMethodIndex);
@@ -2391,6 +2405,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                _outsummaryUsed.insert(calleeMethodIndex);
 
                // TODO: save the summary of callerMethod -> summaryOut
+               verifiedMethodSummaries[methodName] = outForCallsite;
                break;
             }
             else
@@ -2414,9 +2429,15 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   PointsToGraph *callSitePtg = buildCallsitePtg(usefulNode, in, NULL, evaluatedNodeValues, visitCount, methodIndex);
                   summarizeCallsite(usefulNode, callSitePtg, in, evaluatedNodeValues, visitCount, methodIndex);
                   outForCallsite = callSitePtg;
+               } else if (usefulNode->getSymbolReference()->isUnresolved() && !usefulNode->getSymbol()->castToMethodSymbol()->isInterface()) {
+                  //calls to unresolved application method also get summarized
+                  IFDIAGPRINT << "summarizing unresolved method " << methodName << " caller index " << methodIndex << " callsite BCI " << usefulNode->getByteCodeIndex() << "\n";
+                  PointsToGraph *callSitePtg = buildDummyCallsitePtg(usefulNode, in, evaluatedNodeValues, visitCount, methodIndex);
+                  summarizeCallsite(usefulNode, callSitePtg, in, evaluatedNodeValues, visitCount, methodIndex);
+                  outForCallsite = callSitePtg;
                }
                else
-               { // application methods (non-library, non-transparent)
+               { // application methods (non-library, non-transparent, resolved)
 
                   int callsiteBCI = usefulNode->getByteCodeIndex();
                   // read the callsite invariant
@@ -2425,13 +2446,15 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                   // gather all the methods to be peeked
                   set<TR::ResolvedMethodSymbol *> methodsToPeek;
                   // 1. check if method call is non static (i.e. receiver should be present)
-                  TR::ResolvedMethodSymbol * callNodeSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
-                  TR_ASSERT_FATAL(callNodeSymbol, "callsite method not resolved - caller index %i, callsite bci %i, callee %s", methodIndex, callsiteBCI, methodName);
-                  bool isStatic = callNodeSymbol->isStatic();
+                  // TR::ResolvedMethodSymbol * callNodeSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
+                  // TR_ASSERT_FATAL(callNodeSymbol, "callsite method not resolved - caller index %i, callsite bci %i, callee %s", methodIndex, callsiteBCI, methodName);
+
+                  bool isStatic = usefulNode->getSymbol()->castToMethodSymbol()->isStatic();
                   // NOTE - we cannot use the isindirect check here. calls to abstract methods get optimized into direct calls, with the receivr still in place - this will cause issues in arg mapping logic down the line
                   if (isStatic)
                   {
                      // there is no runtime polymorphism when it comes to static methods - so direct resolution of the static type at the callsite is just fine
+                     TR::ResolvedMethodSymbol * callNodeSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
                      methodsToPeek.insert(callNodeSymbol);
                   }
                   else
@@ -2500,11 +2523,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                            // cout << "here-b\n";
                            // 8. static receiver info present, use it
                            set<int> receiverTypesForCallsite = receiverInfoForMethod[callsiteBCI];
-                           cout << "here-c\n";
+                           // cout << "here-c\n";
 
                            for (int receiverType : receiverTypesForCallsite)
                            {
-                              cout << "here-d  " << receiverType << "\n";
+                              // cout << "here-d  " << receiverType << "\n";
                               string receiverTypeName = _classIndices[receiverType];
                               cout << "receiverTypeName = " << receiverTypeName << "\n";
 
@@ -2535,17 +2558,45 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      } // end receiver not contains bot
                   }    // end handling non-statics
 
+                           // TR_ASSERT_FATAL(false, "callsite receiver info not supplied, callee method %s, index %i, callsite bci %i, caller method %i", methodName, calleeMethodIndex, callsiteBCI, methodIndex);
+                  TR_ASSERT_FATAL(methodsToPeek.size() > 0, "no resolved targets for callsite!, caller method %i callsite bci %i", methodIndex, callsiteBCI);
                   cout << "invoke buildcallsiteptg\n";
                   PointsToGraph *callSitePtg = buildCallsitePtg(usefulNode, in, NULL, evaluatedNodeValues, visitCount, methodIndex);
                   // now we have a collection of target methods to analyze. verify callsite for each of them and proceed to peek.
                   for (TR::ResolvedMethodSymbol *target : methodsToPeek)
                   {
+                     // 0. handle recursive calls first!
+
+                     int sigLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->signatureLength();
+                     string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
+                     string targetMethodSig = target->signature(_runtimeVerifierComp->trMemory());
+                     int targetMethodIndex = getOrInsertMethodIndex(targetMethodSig);
+                     cout << targetMethodSig << " >> " << targetMethodIndex << "\n";
+                     if (_methodsBeingAnalyzed.find(targetMethodIndex) != _methodsBeingAnalyzed.end())
+                     {
+                        cout << targetMethodIndex << " is already being analyzed, will use the outsummary\n";
+                        // we have a recursive call, use the static out summary and defer verification to the end of the method
+                        //  cout << "recursive call for " << calleeMethodIndex << ", out summary will be used" << endl;
+                        PointsToGraph summaryOut = readCallsiteOut(targetMethodIndex);
+                        // summaryOut.print();
+                        // outForCallsite = &summaryOut;
+                        PointsToGraph *outForTarget = &summaryOut;
+                        _outsummaryUsed.insert(targetMethodIndex);
+                        outForCallsite = meet(outForCallsite, outForTarget);
+
+                        // TODO: save the summary of callerMethod -> summaryOut
+                        // verifiedMethodSummaries[targetMethodSig] = outForCallsite;
+                        continue;
+                     }
+
                      // 1. verify callsite
+                        // string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
+                        // string sig = signatureChars.substr(0, sigLength);
 
                      
                      if (_runtimeVerifierDiagnostics)
                      {
-                        cout << "callsite ptg mapped:" << endl;
+                        cout << "callsite ptg mapped for method: "  << methodName << endl;
                         callSitePtg->print();
                      }
 
@@ -2581,15 +2632,17 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      // 2. peek
                      string sig = target->signature(_runtimeVerifierComp->trMemory());
                      forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, inFlowToTarget));
-                     // cout << "about to peek " << sig << endl;
+                     IFDIAGPRINT << "about to peek " << sig << endl;
                      // cout << "inflow : \n";
                      // inFlowToTarget->print();
-                     bool ilGenFailed = NULL == target->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(target, _runtimeVerifierComp, false);
-                     // cout << "back from peek " << sig << endl;
+                     if(verifiedMethodSummaries.find(sig) == verifiedMethodSummaries.end()) {
+                        bool ilGenFailed = NULL == target->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(target, _runtimeVerifierComp, false);
+                        // cout << "back from peek " << sig << endl;
 
-                     TR_ASSERT_FATAL(!ilGenFailed, "IL Gen failed, cannot peek into method");
+                        TR_ASSERT_FATAL(!ilGenFailed, "IL Gen failed, cannot peek into method");
 
-                     _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", target);
+                        _runtimeVerifierComp->dumpMethodTrees("Method tree about to peek", target);
+                     }
 
                      // 3. gather the outflow
                      PointsToGraph *outForTarget = verifiedMethodSummaries[sig];
@@ -2601,6 +2654,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                         outForTarget->print();
                      }
                      outForCallsite = meet(outForCallsite, outForTarget);
+                     // cout << "here-c\n";
                      // cout << "outForCallsite computed:\n";
                      // outForCallsite->print();
                   }
@@ -3066,7 +3120,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          TR_ASSERT_FATAL(false, "out summary verification failed");
       }
    }
-   cout << "analyzed " << methodSignature << " " << methodIndex << endl;
+   cout << "analyzed " << methodSignature << "\n";
 
    // cout << "verified method count " << verifiedMethodCount << endl;
    return outForMethod;
