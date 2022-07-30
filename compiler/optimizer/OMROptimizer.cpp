@@ -2440,6 +2440,10 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                { // application methods (non-library, non-transparent, resolved)
 
                   int callsiteBCI = usefulNode->getByteCodeIndex();
+                  if(usefulNode->getSymbol()->castToMethodSymbol()->isInterface())
+                     //in case of invokeinterface, J9 seems to increment the bci by 2. This causes a mismatch with static artifacts, so we adjust it back
+                     callsiteBCI -= 2;
+
                   // read the callsite invariant
                   PointsToGraph callSiteInvariant = readCallsiteInvariant(calleeMethodIndex);
 
