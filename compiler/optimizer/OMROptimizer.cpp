@@ -1697,21 +1697,6 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
    ListIterator<TR::ParameterSymbol> paramIterator(&(methodSymbol->getParameterList()));
    TR::ParameterSymbol *paramCursor = paramIterator.getFirst();
    TR::SymbolReference *symRef;
-   bool isVirtualOrSpecial = false;
-   if (methodSymbol->isVirtual() || methodSymbol->isSpecial())
-   {
-      // map off the this parm first
-      //      symRef = methodSymbol->getParmSymRef(0);
-      //      int32_t symRefNumber = symRef->getReferenceNumber();
-      //
-      //      set <Entry> thisPointees = in->getArgPointsToSet(0);
-      //      in->assign(symRefNumber, thisPointees);
-      //
-      //      argIndex++;
-      //      paramCursor = paramIterator.getNext();
-
-      isVirtualOrSpecial = true;
-   }
 
    int argIndex = 0;
    if(methodSymbol->isStatic()) {
@@ -1720,27 +1705,20 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
    }
    for (; paramCursor != NULL; paramCursor = paramIterator.getNext())
    {
-      // param at getSlot == 0 is the this-pointer
       int paramSlot = paramCursor->getSlot();
       cout << "paramSlot = " << paramSlot << "\n";
 
-      // int argIndex = paramSlot;
-      // if (!isVirtualOrSpecial) {
-      //    argIndex++;
-      //    continue;
-      // }
-
       symRef = methodSymbol->getParmSymRef(paramSlot);
       if(!symRef) 
-         cout << "param symRef is null!\n";
+         TR_ASSERT_FATAL(false, "param symref is null!");
+         // cout << "param symRef is null!\n";
       if (symRef->getSymbol()->getType().isAddress())
       {
-
          int32_t symRefNumber = symRef->getReferenceNumber();
          cout << "symref num = " << symRefNumber << "\n";
 
          if (_runtimeVerifierDiagnostics)
-            cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << " will be mapped to param " << argIndex << endl;
+            cout << "the symref number corresponding to param " << paramCursor->getSlot() << " is " << symRefNumber << " will be mapped to arg " << argIndex << endl;
 
          // set<Entry> argsPointsTo = in->getArgPointsToSet(argIndex);
          set<Entry> argsPointsTo = in->getPointsToSet(argIndex);
@@ -1752,6 +1730,7 @@ int mapParametersIn(TR::ResolvedMethodSymbol *methodSymbol, PointsToGraph *in)
          argIndex++;
       } else {
          cout << "not an address symref!\n";
+         argIndex++;
       }
    }
 
@@ -1903,17 +1882,37 @@ int processStore(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, vector<
 
 Entry evaluateAllocate(TR::Node *node, int methodIndex)
 {
+   Entry obj;
+
    if (_runtimeVerifierDiagnostics)
       cout << "evaluated an allocation node at n" << node->getGlobalIndex() << "n" << endl;
-   int allocationBCI = node->getByteCodeIndex();
-   int callerIndex = methodIndex;
 
-   Entry entry;
-   entry.bci = allocationBCI;
-   entry.caller = methodIndex;
-   entry.type = Reference;
+   //check the loadaddr child node to ensure that the instantiated type is resolved 
+   TR::Node* loadaddrNode = node->getFirstChild();
+   TR_ASSERT_FATAL(loadaddrNode->getOpCodeValue() == TR::loadaddr, "expected first child of jitnewobject to be loadaddr op");
+   if(loadaddrNode->getSymbolReference()->isUnresolved()) {
+      /*
+       * the instantiated type is unresolved, we interpret that as "not on classpath and/or unresolved"
+       * 
+       * assign an empty set at the allocation site and call it a day
+       */
 
-   return entry;
+      //return null as a stopgap, we do't have an object to represent "empty" yet. This is fine since we ignore nulls anyway
+      obj = PointsToGraph::nullEntry;
+   } else {
+
+      int allocationBCI = node->getByteCodeIndex();
+      int callerIndex = methodIndex;
+
+      Entry entry;
+      entry.bci = allocationBCI;
+      entry.caller = methodIndex;
+      entry.type = Reference;
+
+      obj = entry;
+   }
+
+   return obj;
 }
 
 PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp, TR::ResolvedMethodSymbol *methodSymbol,
@@ -2575,7 +2574,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
                      string targetMethodSig = target->signature(_runtimeVerifierComp->trMemory());
                      int targetMethodIndex = getOrInsertMethodIndex(targetMethodSig);
-                     cout << targetMethodSig << " >> " << targetMethodIndex << "\n";
+                     cout << "caller " << methodIndex << " callsite bci " << callsiteBCI << " target " << targetMethodSig << " target method index " << targetMethodIndex << "\n";
                      if (_methodsBeingAnalyzed.find(targetMethodIndex) != _methodsBeingAnalyzed.end())
                      {
                         cout << targetMethodIndex << " is already being analyzed, will use the outsummary\n";
@@ -2608,6 +2607,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      // if callsite invariant wasn't supplied, just use the callsite ptg
                      if (!callSiteInvariant.isTop())
                      {
+                        cout << "callsite verification requested for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
                         bool callSiteVerified = callSiteInvariant.subsumes(callSitePtg, true);
                         if (!callSiteVerified)
                         {
@@ -2630,6 +2630,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      else
                      {
                         // TR_ASSERT_FATAL(false, "callsite invariant not supplied");n68n
+                        cout << "callsite verification skipped for method " << calleeMethodIndex << ", caller method " << methodIndex << endl;
                         inFlowToTarget = new PointsToGraph(*callSitePtg);
                      }
 
@@ -2637,7 +2638,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      string sig = target->signature(_runtimeVerifierComp->trMemory());
                      forceCallsiteArgsForJITCInvocation.insert(pair<string, PointsToGraph *>(sig, inFlowToTarget));
                      IFDIAGPRINT << "about to peek " << sig << endl;
-                     // cout << "inflow : \n";
+                     // cout << "inflow : \n";DataRegister.read
                      // inFlowToTarget->print();
                      if(verifiedMethodSummaries.find(sig) == verifiedMethodSummaries.end()) {
                         bool ilGenFailed = NULL == target->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(target, _runtimeVerifierComp, false);
@@ -3124,7 +3125,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          TR_ASSERT_FATAL(false, "out summary verification failed");
       }
    }
-   cout << "analyzed " << methodSignature << "\n";
+   cout << "analyzed " << methodSignature << " " << methodIndex << "\n";
 
    // cout << "verified method count " << verifiedMethodCount << endl;
    return outForMethod;
