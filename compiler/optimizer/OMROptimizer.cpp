@@ -1605,6 +1605,7 @@ TR::Node *getUsefulNode(TR::Node *node)
              opCode == TR::ardbari ||
              opCode == TR::anewarray ||
              opCode == TR::newarray ||
+             opCode == TR::multianewarray ||
              // this is needed for calls where the arg is null - it appears to map to aconst_null in bytecode
              opCode == TR::aconst ||
              opCode == TR::aladd ||
@@ -1636,7 +1637,6 @@ TR::Node *getUsefulNode(TR::Node *node)
                 opCode == TR::newvalue ||
                 opCode == TR::variableNew ||
                 opCode == TR::variableNewArray ||
-                opCode == TR::multianewarray ||
                 opCode == TR::aiadd ||
                 opCode == TR::ArrayCHK)
             {
@@ -1952,7 +1952,7 @@ bool isLibraryMethod(string methodName)
 
    int methodIndex = getOrInsertMethodIndex(methodName);
    if(_partiallyAnalysedMethodIndices.find(methodIndex) != _partiallyAnalysedMethodIndices.end()) {
-      cout << "method " << methodIndex << " " << methodName << " is not statically analysed, will be summarized\n";
+      IFDIAGPRINT << "method " << methodIndex << " " << methodName << " is not statically analysed, will be summarized\n";
       isLibraryMethod = true;
    }
 
@@ -2156,6 +2156,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
       }
 
       case TR::anewarray:
+      case TR::multianewarray:
       case TR::newarray:
       {
          // process anewarray
@@ -2561,8 +2562,19 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      } // end receiver not contains bot
                   }    // end handling non-statics
 
+                  if(_runtimeVerifierDiagnostics) {
+                     for(TR::ResolvedMethodSymbol *target : methodsToPeek) {
+                        string targetMethodSig = target->signature(_runtimeVerifierComp->trMemory());
+                        int targetMethodIndex = getOrInsertMethodIndex(targetMethodSig);
+
+                        cout << "to peek " << targetMethodIndex << " - " << targetMethodSig << " from caller " << methodIndex << " callsiteBCI " << callsiteBCI << "\n";
+                     }
+                  }
+
                            // TR_ASSERT_FATAL(false, "callsite receiver info not supplied, callee method %s, index %i, callsite bci %i, caller method %i", methodName, calleeMethodIndex, callsiteBCI, methodIndex);
-                  TR_ASSERT_FATAL(methodsToPeek.size() > 0, "no resolved targets for callsite!, caller method %i callsite bci %i", methodIndex, callsiteBCI);
+                  // TR_ASSERT_FATAL(methodsToPeek.size() > 0, "no resolved targets for callsite!, caller method %i callsite bci %i", methodIndex, callsiteBCI);
+                  if(methodsToPeek.size() == 0)
+                     cout << "WARNING - no resolved targets for callsitebci " << callsiteBCI << " caller " << methodIndex << "\n";
                   cout << "invoke buildcallsiteptg\n";
                   PointsToGraph *callSitePtg = buildCallsitePtg(usefulNode, in, NULL, evaluatedNodeValues, visitCount, methodIndex);
                   // now we have a collection of target methods to analyze. verify callsite for each of them and proceed to peek.
@@ -2588,15 +2600,13 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                         outForCallsite = meet(outForCallsite, outForTarget);
 
                         // TODO: save the summary of callerMethod -> summaryOut
-                        // verifiedMethodSummaries[targetMethodSig] = outForCallsite;
+                        verifiedMethodSummaries[targetMethodSig] = outForCallsite;
                         continue;
                      }
 
                      // 1. verify callsite
-                        // string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
-                        // string sig = signatureChars.substr(0, sigLength);
-
-                     
+                                            // string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
+                        // string sig = signatureChars.substr(0, sigLength); 
                      if (_runtimeVerifierDiagnostics)
                      {
                         cout << "callsite ptg mapped for method: "  << methodName << endl;
@@ -2661,7 +2671,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      outForCallsite = meet(outForCallsite, outForTarget);
                      // cout << "here-c\n";
                      // cout << "outForCallsite computed:\n";
-                     // outForCallsite->print();
+                     // outForCallsite->print()runtime verification of method org/dacapo/harness/TestHarness.main([Ljava/lang/String;)V, index 4 invoked by JIT-C
+;
                   }
                } // end not library method
 
