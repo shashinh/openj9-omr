@@ -2555,6 +2555,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                  string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
                                  string sig = signatureChars.substr(0, sigLength);
 
+                                 cout << "looking for method " << methodNm << " signature " << signatureChars << " on receiver " << receiverTypeName << "\n";
                                  TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, methodNm.c_str(), sig.c_str());
                                  TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
                                  TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
