@@ -665,10 +665,24 @@ void PointsToGraph::mergeSigmaFrom(PointsToGraph *other) {
     // cout << "to \n";
     // this->print();
     // this->sigma.insert(other->sigma.begin(), other->sigma.end());
-    map <Entry, map <string, set <Entry > > > :: iterator otherSigmaIt = other->sigma.begin();
-    while(otherSigmaIt != other->sigma.end()) {
-        this->sigma[otherSigmaIt->first] = otherSigmaIt->second;
+    // map <Entry, map <string, set <Entry > > > :: iterator otherSigmaIt = other->sigma.begin();
+    // while(otherSigmaIt != other->sigma.end()) {
+    //     this->sigma[otherSigmaIt->first] = otherSigmaIt->second;
 
-        otherSigmaIt ++;
+    //     otherSigmaIt ++;
+    // }
+
+    map <int, set <Entry> > :: iterator rhoIterator = this->rho.begin();
+
+    while (rhoIterator != this->rho.end()) {
+        set<Entry> pointees = rhoIterator->second;
+
+        for(Entry pointee : pointees) {
+            if(other->sigma.find(pointee) != other->sigma.end()) {
+                this->sigma[pointee] = other->sigma[pointee];
+            }
+        }
+
+        rhoIterator++;
     }
 }

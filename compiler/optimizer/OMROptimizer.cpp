@@ -134,6 +134,7 @@ std::map<string, PointsToGraph *> verifiedMethodSummaries;
 static set<int> _methodsBeingAnalyzed;
 static set<int> _outsummaryUsed;
 std::map<int, map<int, set<int>>> _callsiteReceivers;
+TR_OpaqueMethodBlock * _threadStartPersistentId;
 
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
@@ -1915,6 +1916,12 @@ Entry evaluateAllocate(TR::Node *node, int methodIndex)
    return obj;
 }
 
+// Entry checkCast(TR::Node *node, int methodIndex) {
+//    IFDIAGPRINT << "evaluated a checkcast node at n" << node->getGlobalIndex() << "n" << endl;
+
+
+// }
+
 PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp, TR::ResolvedMethodSymbol *methodSymbol,
                                       std::string className, std::string methodName, PointsToGraph *inFlow, bool isInvokedByJITC);
 
@@ -1936,29 +1943,39 @@ void mapParameters(PointsToGraph *pred, PointsToGraph *inFlow, TR::Node *callNod
 {
 }
 
+//indicates that a method is considered a "library" method. uses package prefix as a heuristic
 bool isLibraryMethod(string methodName)
 {
 
    bool isLibraryMethod = false;
-   isLibraryMethod = methodName.rfind("java", 0) == 0 || methodName.rfind("com/ibm/", 0) == 0 || methodName.rfind("sun/", 0) == 0 ||
-                     methodName.rfind("openj9/", 0) == 0 || methodName.rfind("jdk/", 0) == 0 || methodName.find("org/apache", 0) == 0 || methodName.find("org/slf4j", 0) == 0 ||
-                     methodName.rfind("soot", 0) == 0;
-
-   if (methodName.rfind("soot/rtlib/tamiflex/ReflectiveCallsWrapper", 0) == 0)
-   {
-      // we want to treat the reflectivecallswrapper as an application method, as it contains callsites for the actual benchmark
+   if(methodName.rfind("java/lang/Thread.start") == 0 || methodName.rfind("soot/rtlib/tamiflex/ReflectiveCallsWrapper", 0) == 0 || methodName.rfind("java/security", 0) == 0 ||
+                                 methodName.rfind("javax/crypto", 0) == 0) {
       isLibraryMethod = false;
+      return isLibraryMethod;
    }
 
    int methodIndex = getOrInsertMethodIndex(methodName);
    if(_partiallyAnalysedMethodIndices.find(methodIndex) != _partiallyAnalysedMethodIndices.end()) {
       IFDIAGPRINT << "method " << methodIndex << " " << methodName << " is not statically analysed, will be summarized\n";
       isLibraryMethod = true;
+      return isLibraryMethod;
    }
+
+   if(methodName.rfind("org/apache/lucene", 0) == 0 || methodName.rfind("org/apache/xalan", 0) == 0) {
+      return false;
+   }
+   else
+      isLibraryMethod = methodName.rfind("java/lang/Thread.start") !=0 &&
+                     methodName.rfind("java", 0) == 0 || methodName.rfind("com/ibm/", 0) == 0 || methodName.rfind("sun/", 0) == 0 ||
+                     methodName.rfind("openj9/", 0) == 0 || methodName.rfind("jdk/", 0) == 0 || methodName.find("org/apache", 0) == 0 || methodName.find("org/slf4j", 0) == 0 ||
+                     methodName.rfind("soot", 0) == 0 || methodName.rfind("org/jfree", 0) == 0;
+
+
 
    return isLibraryMethod;
 }
 
+//indicates that a method is to have no effect on the points-to values at a location
 bool isTransparentMethod(string methodName)
 {
    bool isTransparentMethod = false;
@@ -2423,7 +2440,6 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                }
                else if (isLibraryMethod(methodName))
                {
-
                   // summarize reachable heap, library methods are considered opaque
                   cout << "summarizing library method " << methodName << "\n";
                   PointsToGraph *callSitePtg = buildCallsitePtg(usefulNode, in, NULL, evaluatedNodeValues, visitCount, methodIndex);
@@ -2440,7 +2456,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                { // application methods (non-library, non-transparent, resolved)
 
                   int callsiteBCI = usefulNode->getByteCodeIndex();
-                  if(usefulNode->getSymbol()->castToMethodSymbol()->isInterface())
+                  bool isInterfaceInvoke = usefulNode->getSymbol()->castToMethodSymbol()->isInterface();
+                  if(isInterfaceInvoke)
                      //in case of invokeinterface, J9 seems to increment the bci by 2. This causes a mismatch with static artifacts, so we adjust it back
                      callsiteBCI -= 2;
 
@@ -2538,6 +2555,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                               // cout << "here-d  " << receiverType << "\n";
                               string receiverTypeName = _classIndices[receiverType];
                               cout << "receiverTypeName = " << receiverTypeName << "\n";
+                                    cout << "here1\n";
 
                               //boilerplate to fetch a resolved method symbol for the target method against the receiver's type
                               //TODO: extract all repeating code to a method
@@ -2545,16 +2563,47 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                  TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
                                  TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
 
+                                 //test - superclass iterator
+                                 //code is reused (rather, duplicated) from ClassSuperclassesIterator.cpp
+                                    // J9Class **superClasses = TR::Compiler->cls.superClassesOf(type);
+                                    // int classDepth = TR::Compiler->cls.classDepthOf(type);
+                                    // cout << "class depth is " << classDepth << "\n";
+                                    // while(classDepth != 0) {
+                                    // J9Class * superClass =  NULL;
+                                    // classDepth--; 
+
+                                    // superClass = *superClasses;
+                                    // if(!superClass) {
+                                    //    cout << "no more superclasses\n";
+                                    // } else {
+                                    //    //do whatever with superClass
+                                    //    //say we want to print name
+                                    //    int32_t classNameLength;
+                                    //    char *classNameChars = _runtimeVerifierComp->fej9()->getClassNameChars((TR_OpaqueClassBlock *) superClass, classNameLength);
+                                    //    //FIXTHIS: not safe, may corrupt std-out if not terminated properly. substring using classnamelength
+                                    //    cout << "super-class: " << classNameChars << "\n";
+                                    // }
+
+                                    // }
+
                                  //fetch target method name
                                  int methodNameLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameLength();
-                                 string methodNm = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameChars();
-                                 methodNm = methodNm.substr(0, methodNameLength);
+                                 string methodNm;
+
+                                 if(!isInterfaceInvoke && usefulNode->getSymbol()->getResolvedMethodSymbol()->getResolvedMethod()->getPersistentIdentifier() == _threadStartPersistentId) {
+                                    methodNm = "run";
+                                    cout << "short-circuit Thread.start with " << receiverTypeName << ".run()\n";
+                                 }
+                                 else {
+                                    methodNm = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameChars();
+                                    methodNm = methodNm.substr(0, methodNameLength);
+                                 }
 
                                  //fetch target method signature
                                  int sigLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->signatureLength();
                                  string signatureChars = usefulNode->getSymbol()->getMethodSymbol()->getMethod()->signatureChars();
                                  string sig = signatureChars.substr(0, sigLength);
-
+                                 
                                  cout << "looking for method " << methodNm << " signature " << signatureChars << " on receiver " << receiverTypeName << "\n";
                                  TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, methodNm.c_str(), sig.c_str());
                                  TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
@@ -2799,6 +2848,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    cout << "beginning to analyze " << methodSignature << " " << methodIndex << endl;
    inFlow->print();
    cout << "verifiedmethods map size: " << _runtimeVerifiedMethods.size() << endl;
+   cout << "blah\n";
 
    // string str = "getSize()";
    // bool isGetSize = methodSignature.find(str) != string::npos;
@@ -2812,14 +2862,10 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 
    bool stackSlotSymRefMapped = false;
    map<int, int> stackSlotSymRefMap;
-   // TODO: 'kill' the locals, args and return of the caller.
 
    // load in the loop invariants for this method
    IFDIAGPRINT << "attempting to read loop invariant " << methodIndex << " " << methodSignature << endl;
    std::map<int, PointsToGraph> staticLoopInvariants = readLoopInvariant(methodIndex);
-
-   // string callsiteInvariantFileName = "invariants/ci" + std::to_string(methodIndex) + ".txt";
-   // PointsToGraph staticCallSiteInvariant = readCallsiteInvariant(methodIndex);
 
    // TODO: it'd be nice to encapsulate both of these into a context of sorts
    // a collection of all the in-PTGs, keyed by the bci of the instruction
@@ -2836,7 +2882,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    // TODO: perform the topological sort of the CFG here, to identify the order in which the basic blocks are to be processed
    TR::CFG *cfg = methodSymbol->getFlowGraph();
    if (!cfg)
-      cout << "cfg is null!" << endl;
+      TR_ASSERT_FATAL(false, "could not obtain cfg for method");
+      // cout << "cfg is null!" << endl;
    TR::Block *start = cfg->getStart()->asBlock();
 
    // perform a topological sort of the CFG to determine the order in which the basic blocks are to be processed
@@ -2845,28 +2892,6 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    stack<TR::Block *> blockProcessingOrder;
    pseudoTopoSort(start, gray, black, blockProcessingOrder);
 
-   if (methodIndex == 229)
-   {
-      cout << "process order for method 229 is \n";
-      stack<TR::Block *> s = blockProcessingOrder;
-      while (!s.empty())
-      {
-         TR::Block *b = s.top();
-         cout << b->getNumber() << " ";
-         s.pop();
-      }
-      cout << endl;
-   }
-
-   // if(isGetSize) {
-   //    cout << "completed topo sort for getSize()\n";
-   // }
-
-   //   queue<TR::Block *> workList;
-   //   workList.push(start);
-
-   // not technically needed. We can look to see if this block has an Out-PTG
-   // set<int> visitedBlocks;
    std::map<TR::Node *, set<Entry>> evaluatedNodeValues;
 
    while (!blockProcessingOrder.empty())
@@ -2875,11 +2900,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       blockProcessingOrder.pop();
 
       int currentBBNumber = currentBB->getNumber();
-      if (_runtimeVerifierDiagnostics || methodIndex == 229)
+      if (_runtimeVerifierDiagnostics)
          cout << "popped BB" << currentBBNumber << " from the worklist" << endl;
-
-      // do we need to mark the block as visited?
-      // if(visitedBlocks)
 
       PointsToGraph *inForBasicBlock;
 
@@ -2890,10 +2912,6 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
       else
       {
          inForBasicBlock = getPredecessorMeet(currentBB, basicBlockOuts);
-         if (currentBBNumber == 6 && methodIndex == 229)
-         {
-            inForBasicBlock->print();
-         }
       }
 
       basicBlockIns[currentBB] = inForBasicBlock;
@@ -2925,31 +2943,23 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                   PointsToGraph staticLoopInvariant = staticLoopInvariants[nodeBCI];
 
                   // Now we need to map the loop invariant PTG to the running PTG via the stack slots
-                  // step 1. create a mapping of local symrefs to their stack slots. This is an expensive affair, so lets do it just once
-                  //  if(!stackSlotSymRefMapped) {
-                  //  TR_Array<List<TR::SymbolReference> > *autosListArray = methodSymbol->getAutoSymRefs();
                   map<int, set<Entry>> invariantRho = staticLoopInvariant.getRho();
                   map<int, set<Entry>>::iterator invariantIterator = invariantRho.begin();
                   while (invariantIterator != invariantRho.end())
                   {
                      int slot = invariantIterator->first;
-                     // TR_Array<List<TR::SymbolReference> > *autosListArray = methodSymbol->getAutoSymRefs(slot);
-                     // cout << "the local symref corresponding to stack slot " << slot << "is/are:" << endl;
 
                      ListIterator<TR::SymbolReference> autos(&methodSymbol->getAutoSymRefs(slot));
-                     // TODO: assert autos.size == 1
+                     // TODO: assert autos.size == 1 -- this is a sanity check to make sure there is no sharing of auto symbols
                      for (TR::SymbolReference *sr = autos.getFirst(); sr; sr = autos.getNext())
                      {
-                        // cout << sr->getReferenceNumber() << " ";
                         localRunningPTG->assign(sr->getReferenceNumber(), invariantIterator->second);
                      }
-                     // cout << endl;
 
                      invariantIterator++;
                   }
                   // now just copy over the sigma from the invariant as-is
                   localRunningPTG->copySigmaFrom(&staticLoopInvariant);
-                  // cout << "mapped in the loop invariant" << endl;
 
                   // lets also store this mapped PTG back in the static invariants collection, for later use in the subsumes check
                   staticLoopInvariants[nodeBCI] = PointsToGraph(*localRunningPTG);
@@ -2962,24 +2972,6 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             else if (node->getOpCodeValue() == TR::BBEnd)
                break;
 
-            // if (staticLoopInvariants.find(nodeBCI) != staticLoopInvariants.end())
-            // {
-            //    IFDIAGPRINT << "found static loop invariant at bci " << nodeBCI << endl;
-            // }
-
-            // if there is an invariant available for this bci, map it in
-            // mapStaticInvariantToRunningPTG(invariantPTG, localRunningPTG);
-
-            // update the node's visit count, if it is less than the current visit count;
-            //  if(node->getVisitCount() < visitCount) {
-            //     node->setVisitCount(visitCount);
-            //     cout << node->getGlobalIndex() << " visited first time" << endl;
-            //  } else {
-            //     //this node has already been visited before!
-            //     cout << node->getGlobalIndex() << " visited already!" << endl;
-            //     continue;
-            //  }
-
             // if there is an interesting node, we evaluate it. This will also update the rho/sigma maps where applicable
             if (_runtimeVerifierDiagnostics)
             {
@@ -2987,25 +2979,6 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                localRunningPTG->print();
             }
             set<Entry> evaluatedValuesForNode = evaluateNode(localRunningPTG, node, evaluatedNodeValues, visitCount, methodIndex);
-            if (methodIndex == 229 && currentBBNumber == 3)
-            {
-               for (Entry e : evaluatedValuesForNode)
-               {
-                  cout << e.getString() << " ";
-               }
-               cout << endl;
-
-               cout << "processed node " << node->getGlobalIndex() << "\n";
-               cout << "current PTG\n";
-               localRunningPTG->print();
-            }
-            // quick test to make sure values are persisting b/w calls
-            // UPDATE: they are!
-            //            if(_runtimeVerifierDiagnostics) {
-            //	           for(Entry e : evaluatedValuesForNode) {
-            //	              cout << e.getString() << endl;
-            //	           }
-            //            }
 
             if (_runtimeVerifierDiagnostics)
             {
@@ -3053,14 +3026,10 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
             PointsToGraph *rhs;
             if (staticLoopInvariants.find(successorBCI) != staticLoopInvariants.end())
             {
-               // cout << "found static loop invariant for this block @bci " << successorBCI << endl;
                // fetch the IN for this BB
                PointsToGraph *prevIn = getPredecessorMeet(successorBlock, basicBlockOuts);
                PointsToGraph *inMeetOut = meet(prevIn, localRunningPTG);
                PointsToGraph staticLoopInvariantForBCI = staticLoopInvariants[successorBCI];
-               // cout << "loop invariant for bci " << successorBCI << " available\n";
-               // cout << "static loop invaraint is: " << endl;
-               // staticLoopInvariantForBCI.print();
 
                subsumes = staticLoopInvariantForBCI.subsumes(inMeetOut);
                lhs = &staticLoopInvariantForBCI;
@@ -3086,29 +3055,6 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
                rhs->print();
                TR_ASSERT_FATAL(false, "loop invariance check failed for method %s, index %i", methodSignature.c_str(), methodIndex);
             }
-            // PointsToGraph *prevIn = basicBlockOuts[successorBlock];
-            // bool subsumes = prevIn->subsumes(localRunningPTG);
-            // if(!subsumes) {
-            //    TR_ASSERT_FATAL(false, "loop invariance check failed");
-            // //fetch the in for the basic block
-            // PointsToGraph* inForBB = basicBlockIns[successorBlock];
-
-            // //now apply subsumes
-            // bool subsumes = inForBB->subsumes(localRunningPTG);
-            // if(!subsumes) {
-            //    cout << "loop invariant verification failed for BB " << successorBlock->getNumber() << "from BB " << currentBBNumber << endl;
-            // }
-
-            // bool staticInvariantExists = false;
-            // if (staticInvariantExists)
-            // {
-            // }
-            // else
-            // {
-            //    PointsToGraph *ptgRunning = getPredecessorMeet(successorBlock, basicBlockOuts);
-            //    bool subsumes = ptgRunning->subsumes(ptgRunning);
-            //    cout << "subsumes check returned " << subsumes << endl;
-            // }
          }
       }
 
@@ -3140,6 +3086,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
          cout << "out summary verification failed for method " << getOrInsertMethodIndex(methodSignature) << endl;
          TR_ASSERT_FATAL(false, "out summary verification failed");
       }
+      _outsummaryUsed.erase(getOrInsertMethodIndex(methodSignature));
    }
    cout << "analyzed " << methodSignature << " " << methodIndex << "\n";
 
@@ -3290,6 +3237,20 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
          // cout << "reading class indices" << endl;
          _classIndices = readClassIndices();
       }
+
+      if(!_threadStartPersistentId) {
+         //fetch a persistent oject for the thread.start method
+         int len = strlen("java/lang/Thread");
+         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
+         TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s", "java/lang/Thread");
+
+         TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
+         TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
+         TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+         TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
+            _threadStartPersistentId = targetMethod->getPersistentIdentifier();
+      }
+
       verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
    }
 
