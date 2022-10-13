@@ -376,11 +376,11 @@ void PointsToGraph::ptgUnion(PointsToGraph *a, PointsToGraph *b) {
 
 bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
 
-    cout << "subsumes check requested for ptgs " << endl;
-    cout << "lhs : " << endl;
-    this->print();
-    cout << "rhs :" << endl;
-    other->print();
+    //cout << "subsumes check requested for ptgs " << endl;
+    //cout << "lhs : " << endl;
+    //this->print();
+    //cout << "rhs :" << endl;
+    //other->print();
 
     map <int, set <Entry> > otherRho;
     //if the subsumes check if requested at a callsite, then we compare rho_LHS with args_RHS
@@ -403,30 +403,33 @@ bool PointsToGraph::subsumes(PointsToGraph *other, bool callSite) {
         //we only check subsumes between rho entries that are present in both ptgs
         //because it is entirely possible for the runtime ptg to have extra rho entries (temps, for example)
         if(rho.find(it->first) != rho.end()) {
-            set <Entry> rhsPointees = it->second;
-            //hack-begin - to account for library functions being summarized
-            rhsPointees.erase(PointsToGraph::bottomEntry);
-            rhsPointees.erase(PointsToGraph::nullEntry);
-            //hack-end
-            set <Entry> lhsPointees = rho[it->first];
-            if(lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()  ) {
-            // ||                             rhsPointees.find(PointsToGraph::bottomEntry) != rhsPointees.end()) {
-                //Bot subsumes anything, no need to check RHS
-                //do we need messaging?
-                // cout << "found BOT in LHS pointees" << endl;
-            } else {
-                //lhsPointees should be a superset of rhsPointees
-                if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
-                                rhsPointees.begin(), rhsPointees.end())) {
-                                    cout << "rho subsumes failed. diagnostics follow:\n";
-                                    cout << "var: " << it->first << "\n";
-                                    cout << "lhspointees: ";
-                                    for(Entry e: lhsPointees) cout << e.getString() << " ";
-                                    cout << "\n";
-                                    cout << "rhspointees: ";
-                                    for(Entry e: rhsPointees) cout << e.getString() << " ";
-                                    cout << "\n";
-                    return false;
+            if(it->first != 0) {
+                //skip subsumes check for the this-ptr
+                set <Entry> rhsPointees = it->second;
+                //hack-begin - to account for library functions being summarized
+                rhsPointees.erase(PointsToGraph::bottomEntry);
+                rhsPointees.erase(PointsToGraph::nullEntry);
+                //hack-end
+                set <Entry> lhsPointees = rho[it->first];
+                if(lhsPointees.find(PointsToGraph::bottomEntry) != lhsPointees.end()  ) {
+                // ||                             rhsPointees.find(PointsToGraph::bottomEntry) != rhsPointees.end()) {
+                    //Bot subsumes anything, no need to check RHS
+                    //do we need messaging?
+                    // cout << "found BOT in LHS pointees" << endl;
+                } else {
+                    //lhsPointees should be a superset of rhsPointees
+                    if(! includes(lhsPointees.begin(),  lhsPointees.end(), 
+                                    rhsPointees.begin(), rhsPointees.end())) {
+                                        cout << "rho subsumes failed. diagnostics follow:\n";
+                                        cout << "var: " << it->first << "\n";
+                                        cout << "lhspointees: ";
+                                        for(Entry e: lhsPointees) cout << e.getString() << " ";
+                                        cout << "\n";
+                                        cout << "rhspointees: ";
+                                        for(Entry e: rhsPointees) cout << e.getString() << " ";
+                                        cout << "\n";
+                        return false;
+                    }
                 }
             }
         }
@@ -497,7 +500,7 @@ void PointsToGraph::copySigmaFrom(PointsToGraph *other) {
 }
 
 map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry target, map <Entry, map <string, set <Entry> > > sigma, set<Entry> &reachedObjects) {
-    cout << "entered getreachable heap\n";
+    //cout << "entered getreachable heap\n";
     map <Entry, map <string, set<Entry> > > res;
 
     // set <Entry> reachedObjects;
@@ -510,7 +513,7 @@ map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry 
         while(fieldsIt != fields.end()) {
             set <Entry> reachableObjects = fieldsIt->second;
             for(Entry reachable : reachableObjects) {
-                cout << "reachable obj " << reachable.getString() << "\n";
+                //cout << "reachable obj " << reachable.getString() << "\n";
 
                 if(reachedObjects.find(reachable) != reachedObjects.end() || reachable == PointsToGraph::bottomEntry || reachable == PointsToGraph::nullEntry) {
                     //make sure we don't end up in an infinite recursion!
@@ -526,15 +529,15 @@ map <Entry, map <string, set <Entry> > > PointsToGraph::getReachableHeap (Entry 
         }
     }
 
-    cout << "exiting getreachable heap\n";
+    //cout << "exiting getreachable heap\n";
     return res;
 
 }
 
 void PointsToGraph::projectReachableHeapFromCallSite(PointsToGraph *other) {
     //this : callsite ptg; other : out flow from callee
-    cout << "before projectio\n";
-    this->print();
+    //cout << "before projectio\n";
+    //this->print();
     map <Entry, map <string, set <Entry> > > inSigma = this->sigma;
     map <Entry, map <string, set <Entry>  > > outSigma = other->sigma;
 
@@ -579,8 +582,8 @@ void PointsToGraph::projectReachableHeapFromCallSite(PointsToGraph *other) {
     }
 
 
-    cout << "after projectio\n";
-    this->print();
+    //cout << "after projectio\n";
+    //this->print();
 }
 
 const int PointsToGraph::RETURNLOCAL = -99;
@@ -588,7 +591,7 @@ const int PointsToGraph::RETURNLOCAL = -99;
 //summarizes the heap objects reachable from the given abstract object
 void PointsToGraph::summarizeReachableHeap (Entry target) {
 
-    cout << "entered summarizereachableheap for target " << target.getString() << "\n";
+    //cout << "entered summarizereachableheap for target " << target.getString() << "\n";
     if(target == PointsToGraph::nullEntry || target == PointsToGraph::bottomEntry)
         return;
 
@@ -605,11 +608,11 @@ void PointsToGraph::summarizeReachableHeap (Entry target) {
         reachableHeapIterator++;
     }
 
-    cout << "exiting summarizereachableheap\n";
+    //cout << "exiting summarizereachableheap\n";
 }
 
 void PointsToGraph::summarizeReachableHeapAtCallSite() {
-    cout << "entered summarizereachableheapatcallsite\n";
+    //cout << "entered summarizereachableheapatcallsite\n";
 
     //for each reference type argument, summarize its reachable heap
     //summarizing is achieved by marking the abstract object as "escaping"
@@ -626,7 +629,7 @@ void PointsToGraph::summarizeReachableHeapAtCallSite() {
         }
         argsIterator++;
     }
-    cout << "exiting summarizereachableheapatcallsite\n";
+    //cout << "exiting summarizereachableheapatcallsite\n";
     // this->print();
 
 }
@@ -640,23 +643,23 @@ void PointsToGraph::copyArgsFrom(PointsToGraph *other) {
 }
 
 void PointsToGraph::projectReachableHeapFromArgs() {
-    cout << "entered projectheap from args\n";
+    //cout << "entered projectheap from args\n";
     map <Entry, map <string, set <Entry> > > inSigma = this->sigma;
 
     this->sigma.clear();
     map <int, set<Entry> > :: iterator argsIterator = this->args.begin();
     while(argsIterator != this->args.end()) {
         for(Entry pointee : argsIterator->second) {
-            cout << "pointee: " << pointee.getString() << "\n";
+            //cout << "pointee: " << pointee.getString() << "\n";
             set<Entry> reached;
             map <Entry, map <string, set <Entry> > > reachable = getReachableHeap(pointee, inSigma, reached);
             this->sigma.insert(reachable.begin(), reachable.end());
-            cout << "done pointee: " << pointee.getString() << "\n" << pointee.getString() << "\n";;
+            //cout << "done pointee: " << pointee.getString() << "\n" << pointee.getString() << "\n";;
         }
 
         argsIterator++;
     }
-    cout << "exiting projectheap from args\n";
+    //cout << "exiting projectheap from args\n";
 }
 
 void PointsToGraph::mergeSigmaFrom(PointsToGraph *other) {
