@@ -83,4 +83,25 @@ struct Entry
     }
 };
 
+enum ConfigType {
+    Avrora,
+    Sunflow,
+    Lusearch,
+    Luindex,
+
+    Fop,
+    Pmd,
+
+    Compress,
+    Sparse,
+    Sor,
+    Lu,
+    Fft,
+    Monte,
+
+    Spec,
+
+    Unknown
+};
+
 #endif
