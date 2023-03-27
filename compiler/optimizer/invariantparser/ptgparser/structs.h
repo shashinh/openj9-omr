@@ -17,12 +17,14 @@ enum EntryType
 
 struct Entry
 {
+    //encoded in the invariants
     int caller;
     int bci;
-
+    //int clazz;
     EntryType type;
 
-    TR_OpaqueClassBlock *clazz;
+    //resolved by JIT
+    //TR_OpaqueClassBlock *clazzPtr;
 
 
     string getString()

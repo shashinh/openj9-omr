@@ -24,6 +24,7 @@
 
 #include "optimizer/Inliner.hpp"
 
+#include <iostream>
 #include <algorithm>
 #include <assert.h>
 #include <limits.h>
@@ -1297,6 +1298,17 @@ TR_DumbInliner::inlineCallTargets(TR::ResolvedMethodSymbol * callerSymbol, TR_Ca
    return (inlineCount != 0);
    }
 
+void testMonomorphAndProcessInline(TR_CallSite *callsite, TR_StackMemory mem) {
+   //SHASHIN
+   std::cout << "num targets = " << callsite->numTargets() << "\n";
+   if(callsite->numTargets() == 1) {
+      TR_CallTarget *calltarget = callsite->getTarget(0);
+      TR_VirtualGuardSelection *noguard = new (mem) TR_VirtualGuardSelection(TR_NoGuard);
+      calltarget->_guard = noguard;
+   }
+
+}
+
 bool
 TR_DumbInliner::analyzeCallSite(
    TR_CallStack * callStack, TR::TreeTop * callNodeTreeTop, TR::Node * parent, TR::Node * callNode)
@@ -1310,11 +1322,15 @@ TR_DumbInliner::analyzeCallSite(
                                                (TR_OpaqueClassBlock*) 0, symRef, (TR_ResolvedMethod*) 0,
                                                comp(), trMemory() , stackAlloc);
 
+   //std::cout << "num targets before getSymbolAndFindInlineTargets = " << callsite->numTargets() << "\n";
    getSymbolAndFindInlineTargets(callStack,callsite);
+   if(feGetEnv("TR_InlineWithMonomorphs"))
+      testMonomorphAndProcessInline(callsite, trStackMemory());
 
    if (!callsite->numTargets())
       return false;
    bool success = false;
+
    for(int32_t i=0;i<callsite->numTargets();i++)
       {
       TR_CallTarget *calltarget = callsite->getTarget(i);
@@ -4005,6 +4021,9 @@ void TR_InlinerBase::getSymbolAndFindInlineTargets(TR_CallStack *callStack, TR_C
 
    if (findNewTargets)
       {
+      //SHASHIN : potential changes to findCallSiteTarget to expose new inlining opportunities for monomorphs
+      //this call resolves to either TR_DirectCallSite::findCallSite.. or TR_IndirectCallSite::findCallSite.. (both implemented
+      //    in this file Inliner.cpp)
       callsite->findCallSiteTarget(callStack, this);
       applyPolicyToTargets(callStack, callsite);
       }
@@ -4012,6 +4031,7 @@ void TR_InlinerBase::getSymbolAndFindInlineTargets(TR_CallStack *callStack, TR_C
    if(tracer()->debugLevel())
       tracer()->dumpCallSite(callsite, "CallSite after finding call Targets");
 
+   //filter out (1) targets that CANNOT be inlined, (2) targets that are recognized(?)
    for (int32_t i=0; i<callsite->numTargets(); i++)
       {
       TR_CallTarget *target = callsite->getTarget(i);
