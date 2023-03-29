@@ -21,7 +21,8 @@ public:
   enum {
     RulePtg = 0, RuleEntry = 1, RuleVars = 2, RuleVarentry = 3, RuleFields = 4, 
     RuleFieldentry = 5, RuleField = 6, RuleCiBciEntry = 7, RuleCiEntries = 8, 
-    RuleCallerIndex = 9, RuleBciKey = 10, RuleBciVal = 11, RuleFieldKey = 12
+    RuleCallerIndex = 9, RuleBciKey = 10, RuleType = 11, RuleBciValWithType = 12, 
+    RuleFieldKey = 13
   };
 
   explicit LIParser(antlr4::TokenStream *input);
@@ -45,7 +46,8 @@ public:
   class CiEntriesContext;
   class CallerIndexContext;
   class BciKeyContext;
-  class BciValContext;
+  class TypeContext;
+  class BciValWithTypeContext;
   class FieldKeyContext; 
 
   class  PtgContext : public antlr4::ParserRuleContext {
@@ -175,8 +177,8 @@ public:
     CiEntriesContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     CallerIndexContext *callerIndex();
-    std::vector<BciValContext *> bciVal();
-    BciValContext* bciVal(size_t i);
+    std::vector<BciValWithTypeContext *> bciValWithType();
+    BciValWithTypeContext* bciValWithType(size_t i);
 
 
     virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -211,11 +213,25 @@ public:
 
   BciKeyContext* bciKey();
 
-  class  BciValContext : public antlr4::ParserRuleContext {
+  class  TypeContext : public antlr4::ParserRuleContext {
   public:
-    BciValContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    TypeContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *NUMS();
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  TypeContext* type();
+
+  class  BciValWithTypeContext : public antlr4::ParserRuleContext {
+  public:
+    BciValWithTypeContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    BciKeyContext *bciKey();
+    TypeContext *type();
     antlr4::tree::TerminalNode *NIL();
 
 
@@ -223,7 +239,7 @@ public:
    
   };
 
-  BciValContext* bciVal();
+  BciValWithTypeContext* bciValWithType();
 
   class  FieldKeyContext : public antlr4::ParserRuleContext {
   public:

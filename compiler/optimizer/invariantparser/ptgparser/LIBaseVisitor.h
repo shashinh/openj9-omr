@@ -61,7 +61,11 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitBciVal(LIParser::BciValContext *ctx) override {
+  virtual antlrcpp::Any visitType(LIParser::TypeContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitBciValWithType(LIParser::BciValWithTypeContext *ctx) override {
     return visitChildren(ctx);
   }
 

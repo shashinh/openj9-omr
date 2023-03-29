@@ -14,11 +14,15 @@ field : fieldKey ':'  (ciBciEntry) (' ' (ciBciEntry))*;
 
 ciBciEntry: ciEntries | STRING | CONST | GLOBAL | NIL;
 
-ciEntries: callerIndex '-' ( (bciVal)('.' (bciVal))*);
+//each bciVal to be associated with a type (numeric)
+//ciEntries: callerIndex '-' ( (bciVal)('.' (bciVal))*);
+ciEntries: callerIndex '-' ( (bciValWithType)('.' (bciValWithType))*);
 
 callerIndex : NUMS;
 bciKey : NUMS;
-bciVal : NUMS | NIL;
+//bciVal : NUMS | NIL;
+type : NUMS;
+bciValWithType : bciKey '-' type | NIL;
 fieldKey: ALPHAS;
 
 NIL : 'N';

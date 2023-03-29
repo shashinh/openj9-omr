@@ -1,8 +1,8 @@
 #include "PointsToGraph.h"
 
 
-const Entry PointsToGraph::bottomEntry = { .caller = -1, .bci = -1, .type = Global };
-const Entry PointsToGraph::nullEntry = { .caller = -1, .bci = -1, .type = Null };
+const Entry PointsToGraph::bottomEntry = { .caller = -1, .bci = -1, .clazz = -1, .type = Global, .clazzPtr = NULL };
+const Entry PointsToGraph::nullEntry = { .caller = -1, .bci = -1, .clazz = -1, .type = Null, .clazzPtr = NULL };
 
 std::map <int, std::set <Entry> >  PointsToGraph::getRho() {
     return rho;

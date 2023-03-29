@@ -20,11 +20,11 @@ struct Entry
     //encoded in the invariants
     int caller;
     int bci;
-    //int clazz;
+    int clazz;
     EntryType type;
 
-    //resolved by JIT
-    //TR_OpaqueClassBlock *clazzPtr;
+    TR_OpaqueClassBlock *clazzPtr;
+
 
 
     string getString()
@@ -32,7 +32,7 @@ struct Entry
         string res;
         if (type == Reference)
         {
-            res.append(to_string(caller)).append("-").append(to_string(bci));
+            res.append(to_string(caller)).append("-").append(to_string(bci).append(" type: ").append(to_string(clazz).append(";")));
         }
         else if (type == String)
         {

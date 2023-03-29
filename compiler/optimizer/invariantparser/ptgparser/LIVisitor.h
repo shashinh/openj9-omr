@@ -42,7 +42,9 @@ public:
 
     virtual antlrcpp::Any visitBciKey(LIParser::BciKeyContext *context) = 0;
 
-    virtual antlrcpp::Any visitBciVal(LIParser::BciValContext *context) = 0;
+    virtual antlrcpp::Any visitType(LIParser::TypeContext *context) = 0;
+
+    virtual antlrcpp::Any visitBciValWithType(LIParser::BciValWithTypeContext *context) = 0;
 
     virtual antlrcpp::Any visitFieldKey(LIParser::FieldKeyContext *context) = 0;
 

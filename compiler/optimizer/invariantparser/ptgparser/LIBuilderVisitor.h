@@ -14,7 +14,7 @@ public:
     virtual antlrcpp::Any visitPtg(LIParser::PtgContext *ctx) override;
     virtual antlrcpp::Any visitVars(LIParser::VarsContext *ctx) override;
     virtual antlrcpp::Any visitFields(LIParser::FieldsContext *ctx) override;
-    virtual antlrcpp::Any visitBciVal(LIParser::BciValContext *ctx) override;
+    virtual antlrcpp::Any visitBciValWithType(LIParser::BciValWithTypeContext *ctx) override;
     virtual antlrcpp::Any visitBciKey(LIParser::BciKeyContext *ctx) override;
     //virtual antlrcpp::Any visitBciKeyField(LIParser::BciKeyFieldContext *ctx) override;
     //virtual antlrcpp::Any visitField(LIParser::FieldContext *ctx) override;

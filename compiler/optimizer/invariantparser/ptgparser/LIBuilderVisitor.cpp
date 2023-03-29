@@ -47,8 +47,6 @@ set <Entry> LIBuilderVisitor::processciBciEntrys(vector<LIParser::CiBciEntryCont
 				entries.insert(varEntry);
 			} else if (entry->GLOBAL() != NULL) {
 				//cout << "varEntry is global" << endl;
-				varEntry.bci = -1;
-				varEntry.caller = -1;
 				varEntry.type = Global;
 				entries.insert(varEntry);
 			} else if (entry->NIL() != NULL) {
@@ -59,13 +57,25 @@ set <Entry> LIBuilderVisitor::processciBciEntrys(vector<LIParser::CiBciEntryCont
 			} else {
 				int callerIndex = entry->ciEntries()->callerIndex()->accept(this).as<int>();
 		//cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
-				for(auto val : entry->ciEntries()->bciVal()){
-					int bciVal = stoi(val->accept(this).as<string>());
+
+				for(auto valWithType : entry->ciEntries()->bciValWithType()) {
+					int bciVal = stoi(valWithType->bciKey()->NUMS()->toString());
+					int clazz = stoi(valWithType->type()->NUMS()->toString());
 					varEntry.type = Reference;
 					varEntry.caller = callerIndex;
 					varEntry.bci = bciVal;
+					varEntry.clazz = clazz;
 					entries.insert(varEntry);
-				}
+				}		  
+
+
+//				for(auto val : entry->ciEntries()->bciVal()){
+//					int bciVal = stoi(val->accept(this).as<string>());
+//					varEntry.type = Reference;
+//					varEntry.caller = callerIndex;
+//					varEntry.bci = bciVal;
+//					entries.insert(varEntry);
+//				}
 			}
 
 		}
@@ -109,13 +119,23 @@ antlrcpp::Any LIBuilderVisitor::visitVars(LIParser::VarsContext *ctx)
 			} else {
 				int callerIndex = entry->ciEntries()->callerIndex()->accept(this).as<int>();
 		//cout << "\t there are " << entry->ciEntries()->bciVal().size() << " entries in entry->ciEntries()->bciVal()" << endl;
-				for(auto val : entry->ciEntries()->bciVal()){
-					int bciVal = stoi(val->accept(this).as<string>());
+				for(auto valWithType : entry->ciEntries()->bciValWithType()) {
+					int bciVal = stoi(valWithType->bciKey()->NUMS()->toString());
+					int clazz = stoi(valWithType->type()->NUMS()->toString());
 					varEntry.type = Reference;
 					varEntry.caller = callerIndex;
 					varEntry.bci = bciVal;
+					varEntry.clazz = clazz;
 					entries.insert(varEntry);
-				}
+				}		  
+
+//				for(auto val : entry->ciEntries()->bciVal()){
+//					int bciVal = stoi(val->accept(this).as<string>());
+//					varEntry.type = Reference;
+//					varEntry.caller = callerIndex;
+//					varEntry.bci = bciVal;
+//					entries.insert(varEntry);
+//				}
 			}
 
 		}
@@ -185,9 +205,11 @@ antlrcpp::Any LIBuilderVisitor::visitBciKey(LIParser::BciKeyContext *ctx)
 	return bci;
 }
 
-antlrcpp::Any LIBuilderVisitor::visitBciVal(LIParser::BciValContext *ctx)
+//TODO: not used, remove?
+antlrcpp::Any LIBuilderVisitor::visitBciValWithType(LIParser::BciValWithTypeContext *ctx)
 {
-	auto res = ctx->NUMS() != NULL ? ctx->NUMS()->toString() : ctx->NIL()->toString();
+	auto res = "";
+	//auto res = ctx->NUMS() != NULL ? ctx->NUMS()->toString() : ctx->NIL()->toString();
 	//cout << res << endl;
 
 	//cout << "bciVal is " << res << endl;
