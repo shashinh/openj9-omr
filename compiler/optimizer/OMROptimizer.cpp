@@ -1917,6 +1917,13 @@ Entry evaluateAllocate(TR::Node *node, int methodIndex)
       entry.caller = methodIndex;
       entry.type = Reference;
 
+      //fetch the CP of the type of object being allocated
+      TR::SymbolReference * loadaddrSymRef = loadaddrNode->getSymbolReference();
+      TR_OpaqueClassBlock * cp = (TR_OpaqueClassBlock *) loadaddrSymRef->getSymbol()->castToLocalObjectSymbol()->getClassSymbolReference()->getSymbol()->castToStaticSymbol()->getStaticAddress();
+      TR_ASSERT_FATAL(cp != NULL, "allocation type class pointer not found");
+
+      entry.clazzPtr = cp;
+
       obj = entry;
    }
 
