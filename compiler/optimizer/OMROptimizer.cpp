@@ -141,6 +141,7 @@ std::map<int, map<int, set<int>>> _callsiteReceivers;
 TR_OpaqueMethodBlock * _threadStartPersistentId;
 
 std::string OMR::Optimizer::shstring = "hello world!";
+int OMR::Optimizer::monomorphCount = 0;
 static std::map<TR::Node *, bool> _isMonomorph;
 static bool hasAnalysisRunOnce = false;
 
@@ -2812,6 +2813,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                               //mark off the isMonomorph flag
                               if(methodsToPeek.size() == 1) {
                                  _isMonomorph[usefulNode] = true;
+                                 OMR::Optimizer::monomorphCount++;
                               } else {
                                  _isMonomorph[usefulNode] = false;
                               }
@@ -3524,20 +3526,20 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
             _threadStartPersistentId = targetMethod->getPersistentIdentifier();
       }
 
-         string mainClass = "Main";
-         string mainMethodNm = "main";
-         string mainMethodSig = "";
-         int len = strlen(mainClass.c_str());
-         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(mainClass.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
-         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", mainClass);
+//         string mainClass = "Main";
+//         string mainMethodNm = "main";
+//         string mainMethodSig = "([Ljava/lang/String;)V";
+//         int len = strlen(mainClass.c_str());
+//         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(mainClass.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+//         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", mainClass);
+//
+//         TR_ResolvedMethod *mainMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, mainMethodNm.c_str(), mainMethodSig.c_str());
+//         TR_ASSERT_FATAL(mainMethod, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str());
+//         TR::ResolvedMethodSymbol *mainMethodSymbol = mainMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+//         TR_ASSERT_FATAL(mainMethodSymbol, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str()); 
 
-         TR_ResolvedMethod *mainMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, mainMethodNm.c_str(), mainMethodSig.c_str());
-         TR_ASSERT_FATAL(mainMethod, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str());
-         TR::ResolvedMethodSymbol *mainMethodSymbol = mainMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
-         TR_ASSERT_FATAL(mainMethodSymbol, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str()); 
-
-      //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
-      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), mainMethodSymbol);
+      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
+      //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), mainMethodSymbol);
    }
 
    // comp()->getVisitCount(); //returns the latest visit count
