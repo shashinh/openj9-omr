@@ -31,6 +31,7 @@ namespace OMR { class Optimizer; }
 namespace OMR { typedef OMR::Optimizer OptimizerConnector; }
 #endif
 
+#include <string>
 #include <stddef.h>
 #include <stdint.h>
 #include "compile/CompilationTypes.hpp"
@@ -139,6 +140,8 @@ enum
 class Optimizer
    {
    public:
+
+   static std::string shstring;
 
    TR_ALLOC(TR_Memory::Machine)
 

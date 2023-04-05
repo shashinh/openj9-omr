@@ -140,6 +140,8 @@ static set<int> _outsummaryUsed;
 std::map<int, map<int, set<int>>> _callsiteReceivers;
 TR_OpaqueMethodBlock * _threadStartPersistentId;
 
+std::string OMR::Optimizer::shstring = "hello world!";
+
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
    cout
@@ -1918,11 +1920,11 @@ Entry evaluateAllocate(TR::Node *node, int methodIndex)
       entry.type = Reference;
 
       //fetch the CP of the type of object being allocated
-      TR::SymbolReference * loadaddrSymRef = loadaddrNode->getSymbolReference();
-      TR_OpaqueClassBlock * cp = (TR_OpaqueClassBlock *) loadaddrSymRef->getSymbol()->castToLocalObjectSymbol()->getClassSymbolReference()->getSymbol()->castToStaticSymbol()->getStaticAddress();
-      TR_ASSERT_FATAL(cp, "allocation type class pointer not found");
+      //TR::SymbolReference * loadaddrSymRef = loadaddrNode->getSymbolReference();
+      //TR_OpaqueClassBlock * cp = (TR_OpaqueClassBlock *) loadaddrSymRef->getSymbol()->castToLocalObjectSymbol()->getClassSymbolReference()->getSymbol()->castToStaticSymbol()->getStaticAddress();
+      //TR_ASSERT_FATAL(cp, "allocation type class pointer not found");
 
-      entry.clazzPtr = cp;
+      //entry.clazzPtr = cp;
 
       obj = entry;
    }
@@ -3463,11 +3465,11 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
          _classIndices = readClassIndices();
       }
 
+      //fetch a persistent oject for the thread.start method
       if(!_threadStartPersistentId) {
-         //fetch a persistent oject for the thread.start method
          int len = strlen("java/lang/Thread");
          TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
-         TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s", "java/lang/Thread");
+         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
 
          TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
          TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
