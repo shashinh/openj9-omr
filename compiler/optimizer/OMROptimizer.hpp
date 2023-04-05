@@ -142,6 +142,7 @@ class Optimizer
    public:
 
    static std::string shstring;
+   static bool isMonomorphicCall(TR::Node* callNode);
 
    TR_ALLOC(TR_Memory::Machine)
 

@@ -141,6 +141,8 @@ std::map<int, map<int, set<int>>> _callsiteReceivers;
 TR_OpaqueMethodBlock * _threadStartPersistentId;
 
 std::string OMR::Optimizer::shstring = "hello world!";
+static std::map<TR::Node *, bool> _isMonomorph;
+static bool hasAnalysisRunOnce = false;
 
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
@@ -1920,11 +1922,11 @@ Entry evaluateAllocate(TR::Node *node, int methodIndex)
       entry.type = Reference;
 
       //fetch the CP of the type of object being allocated
-      //TR::SymbolReference * loadaddrSymRef = loadaddrNode->getSymbolReference();
-      //TR_OpaqueClassBlock * cp = (TR_OpaqueClassBlock *) loadaddrSymRef->getSymbol()->castToLocalObjectSymbol()->getClassSymbolReference()->getSymbol()->castToStaticSymbol()->getStaticAddress();
-      //TR_ASSERT_FATAL(cp, "allocation type class pointer not found");
+      TR::SymbolReference * loadaddrSymRef = loadaddrNode->getSymbolReference();
+      TR_OpaqueClassBlock * cp = (TR_OpaqueClassBlock *) loadaddrSymRef->getSymbol()->castToStaticSymbol()->getStaticAddress();
+      TR_ASSERT_FATAL(cp, "allocation type class pointer not found");
 
-      //entry.clazzPtr = cp;
+      entry.clazzPtr = cp;
 
       obj = entry;
    }
@@ -2713,18 +2715,49 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                               set<int> receiverTypesForCallsite = receiverInfoForMethod[callsiteBCI];
                               // cout << "here-c\n";
 
-                              for (int receiverType : receiverTypesForCallsite)
+                              //test to see if the CPs resolved by PTA matches the receivers dumped by Soot
+                              //test size
+                              set<TR_OpaqueClassBlock*> cpsFromPTA;
+                              for(Entry e : receiverVals) {
+                                 TR_OpaqueClassBlock* ptr;
+
+                                 if(e.clazzPtr) {
+                                    cpsFromPTA.insert(e.clazzPtr);
+                                 }
+                                 else if(!e.clazzPtr && e.clazz != -1) {
+                                    cout << e.getString() << "\n";
+                                    cout << "e.clazz = " << e.clazz << "\n";
+                                    string receiverTypeName = _classIndices[e.clazz];
+                                    int len = strlen(receiverTypeName.c_str());
+                                    ptr = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+                                    TR_ASSERT_FATAL(ptr, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
+
+                                    e.clazzPtr = ptr;
+                                    cpsFromPTA.insert(e.clazzPtr);
+                                 } else {
+                                    cout << "e.clazz = -1!\n";
+                                 }
+                              }
+                              TR_ASSERT_FATAL(cpsFromPTA.size() == receiverTypesForCallsite.size(), "CP and receiver count do not match!\n");
+                              //end test
+
+
+
+
+
+                              //for (int receiverType : receiverTypesForCallsite)
+                              for (TR_OpaqueClassBlock* cp : cpsFromPTA)
                               {
                                  // cout << "here-d  " << receiverType << "\n";
-                                 string receiverTypeName = _classIndices[receiverType];
+                                    //string receiverTypeName = _classIndices[receiverType];
                                  //cout << "receiverTypeName = " << receiverTypeName << "\n";
                                        //cout << "here1\n";
 
                                  //boilerplate to fetch a resolved method symbol for the target method against the receiver's type
                                  //TODO: extract all repeating code to a method
-                                    int len = strlen(receiverTypeName.c_str());
-                                    TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
-                                    TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
+                                    //int len = strlen(receiverTypeName.c_str());
+                                    //TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+                                    //TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
 
                                     //test - superclass iterator
                                     //code is reused (rather, duplicated) from ClassSuperclassesIterator.cpp
@@ -2768,12 +2801,19 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                     string sig = signatureChars.substr(0, sigLength);
                                     
                                     //cout << "looking for method " << methodNm << " signature " << signatureChars << " on receiver " << receiverTypeName << "\n";
-                                    TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, methodNm.c_str(), sig.c_str());
+                                    TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), /*type*/ cp, methodNm.c_str(), sig.c_str());
                                     TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
                                     TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
                                     TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
 
                                  methodsToPeek.insert(targetMethodSymbol);
+                              }
+                              
+                              //mark off the isMonomorph flag
+                              if(methodsToPeek.size() == 1) {
+                                 _isMonomorph[usefulNode] = true;
+                              } else {
+                                 _isMonomorph[usefulNode] = false;
                               }
                            }
                         } // end receiver not contains bot
@@ -2986,6 +3026,12 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 //      in->print();
 //   }
    return evaluatedValues;
+}
+bool OMR::Optimizer::isMonomorphicCall(TR::Node* callNode) {
+   bool isMonomorph = false;
+   isMonomorph = _isMonomorph[callNode];
+
+   return isMonomorph;
 }
 
 void pseudoTopoSort(TR::Block *currentBlock, vector<TR::Block *> &gray, vector<TR::Block *> &black, stack<TR::Block *> &sorted)
@@ -3440,7 +3486,7 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
    if(!isConfigLoaded) {
       loadConfigs();
    }
-   if (performRuntimeVerify)
+   if (performRuntimeVerify /*&& !hasAnalysisRunOnce*/)
    {
       if (!_runtimeVerifierComp)
          _runtimeVerifierComp = comp();
@@ -3478,7 +3524,20 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
             _threadStartPersistentId = targetMethod->getPersistentIdentifier();
       }
 
-      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
+         string mainClass = "Main";
+         string mainMethodNm = "main";
+         string mainMethodSig = "";
+         int len = strlen(mainClass.c_str());
+         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(mainClass.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", mainClass);
+
+         TR_ResolvedMethod *mainMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, mainMethodNm.c_str(), mainMethodSig.c_str());
+         TR_ASSERT_FATAL(mainMethod, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str());
+         TR::ResolvedMethodSymbol *mainMethodSymbol = mainMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+         TR_ASSERT_FATAL(mainMethodSymbol, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str()); 
+
+      //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
+      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), mainMethodSymbol);
    }
 
    // comp()->getVisitCount(); //returns the latest visit count

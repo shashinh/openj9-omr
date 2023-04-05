@@ -1298,14 +1298,21 @@ TR_DumbInliner::inlineCallTargets(TR::ResolvedMethodSymbol * callerSymbol, TR_Ca
    return (inlineCount != 0);
    }
 
-void testMonomorphAndProcessInline(TR_CallSite *callsite, TR_StackMemory mem) {
+void testMonomorphAndProcessInline(TR_CallSite *callsite, TR_StackMemory mem, TR::Node * callNode) {
    //SHASHIN
-   std::cout << "num targets = " << callsite->numTargets() << "\n";
-   if(callsite->numTargets() == 1) {
+   if(OMR::Optimizer::isMonomorphicCall(callNode)) {
+      std::cout << "node " << callNode->getGlobalIndex() << " is a monomorph! removing guard\n";
+      //insert assert on numtargets here !!
       TR_CallTarget *calltarget = callsite->getTarget(0);
       TR_VirtualGuardSelection *noguard = new (mem) TR_VirtualGuardSelection(TR_NoGuard);
       calltarget->_guard = noguard;
    }
+   //std::cout << "num targets = " << callsite->numTargets() << "\n";
+   //if(callsite->numTargets() == 1) {
+   //   TR_CallTarget *calltarget = callsite->getTarget(0);
+   //   TR_VirtualGuardSelection *noguard = new (mem) TR_VirtualGuardSelection(TR_NoGuard);
+   //   calltarget->_guard = noguard;
+   //}
 
 }
 
@@ -1325,7 +1332,7 @@ TR_DumbInliner::analyzeCallSite(
    //std::cout << "num targets before getSymbolAndFindInlineTargets = " << callsite->numTargets() << "\n";
    getSymbolAndFindInlineTargets(callStack,callsite);
    if(feGetEnv("TR_InlineWithMonomorphs"))
-      testMonomorphAndProcessInline(callsite, trStackMemory());
+      testMonomorphAndProcessInline(callsite, trStackMemory(), callNode);
 
    if (!callsite->numTargets())
       return false;
