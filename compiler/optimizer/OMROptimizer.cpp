@@ -143,7 +143,7 @@ TR_OpaqueMethodBlock * _threadStartPersistentId;
 std::string OMR::Optimizer::shstring = "hello world!";
 int OMR::Optimizer::monomorphCount = 0;
 static std::map<TR::Node *, bool> _isMonomorph;
-static bool hasAnalysisRunOnce = false;
+static bool hasMainStarted = false;
 
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
@@ -2726,8 +2726,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                     cpsFromPTA.insert(e.clazzPtr);
                                  }
                                  else if(!e.clazzPtr && e.clazz != -1) {
-                                    cout << e.getString() << "\n";
-                                    cout << "e.clazz = " << e.clazz << "\n";
+//                                    cout << e.getString() << "\n";
+//                                    cout << "e.clazz = " << e.clazz << "\n";
                                     string receiverTypeName = _classIndices[e.clazz];
                                     int len = strlen(receiverTypeName.c_str());
                                     ptr = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
@@ -2787,6 +2787,17 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                     int methodNameLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameLength();
                                     string methodNm;
 
+      if(!_threadStartPersistentId) {
+         int len = strlen("java/lang/Thread");
+         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
+         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
+
+         TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
+         TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
+         TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+         TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
+            _threadStartPersistentId = targetMethod->getPersistentIdentifier();
+      }
                                     if(!isInterfaceInvoke && usefulNode->getSymbol()->getResolvedMethodSymbol()->getResolvedMethod()->getPersistentIdentifier() == _threadStartPersistentId) {
                                        methodNm = "run";
                                        //cout << "short-circuit Thread.start with " << receiverTypeName << ".run()\n";
@@ -2812,6 +2823,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                               
                               //mark off the isMonomorph flag
                               if(methodsToPeek.size() == 1) {
+                                 cout << usefulNode->getGlobalIndex() << " is monomorphic!\n";
                                  _isMonomorph[usefulNode] = true;
                                  OMR::Optimizer::monomorphCount++;
                               } else {
@@ -3117,7 +3129,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    // TODO: perform the topological sort of the CFG here, to identify the order in which the basic blocks are to be processed
    TR::CFG *cfg = methodSymbol->getFlowGraph();
    if (!cfg)
-      TR_ASSERT_FATAL(false, "could not obtain cfg for method");
+      TR_ASSERT_FATAL(false, "could not obtain cfg for method %s", methodSymbol->getMethod()->nameChars());
       // cout << "cfg is null!" << endl;
    TR::Block *start = cfg->getStart()->asBlock();
 
@@ -3488,10 +3500,13 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
    if(!isConfigLoaded) {
       loadConfigs();
    }
+
    if (performRuntimeVerify /*&& !hasAnalysisRunOnce*/)
    {
+
       if (!_runtimeVerifierComp)
          _runtimeVerifierComp = comp();
+
 
       comp()->dumpMethodTrees("Trees before performRuntimeVerification");
       // cout << "visit count before inc " << comp()->getVisitCount();
@@ -3514,31 +3529,46 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
       }
 
       //fetch a persistent oject for the thread.start method
-      if(!_threadStartPersistentId) {
-         int len = strlen("java/lang/Thread");
-         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
-         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
-
-         TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
-         TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
-         TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
-         TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
-            _threadStartPersistentId = targetMethod->getPersistentIdentifier();
-      }
-
-//         string mainClass = "Main";
-//         string mainMethodNm = "main";
-//         string mainMethodSig = "([Ljava/lang/String;)V";
-//         int len = strlen(mainClass.c_str());
-//         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(mainClass.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
-//         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", mainClass);
+//      if(!_threadStartPersistentId) {
+//         int len = strlen("java/lang/Thread");
+//         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
+//         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
 //
-//         TR_ResolvedMethod *mainMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, mainMethodNm.c_str(), mainMethodSig.c_str());
-//         TR_ASSERT_FATAL(mainMethod, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str());
-//         TR::ResolvedMethodSymbol *mainMethodSymbol = mainMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
-//         TR_ASSERT_FATAL(mainMethodSymbol, "unable to find method for name and signature %s %s", mainMethodNm.c_str(), mainMethodSig.c_str()); 
+//         TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
+//         TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
+//         TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+//         TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
+//            _threadStartPersistentId = targetMethod->getPersistentIdentifier();
+//      }
+            TR::ResolvedMethodSymbol *methodToAnalyze;
+            if(!hasMainStarted) {
+                  hasMainStarted = true;
+                  char * mainClass = "Main";
+                  char * mainMethodNm = "main";
+                  char * mainMethodSig = "([Ljava/lang/String;)V";
+                  int len = strlen(mainClass);
+                  TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(mainClass, len, _runtimeVerifierComp->getCurrentMethod());
+ //                 cout << "hasMainStarted= " << hasMainStarted << "\n";
+//                  if(type) cout << "boob CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
+//                  else cout << "NOT obtained CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
+                  TR_ASSERT_FATAL(type, "unable to get class pointer for %s", mainClass);
 
-      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
+                  TR_ResolvedMethod *mainMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, mainMethodNm, mainMethodSig);
+                  TR_ASSERT_FATAL(mainMethod, "unable to find method for name and signature %s %s", mainMethodNm, mainMethodSig);
+                  TR::ResolvedMethodSymbol *mainMethodSymbol = mainMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+                  TR_ASSERT_FATAL(mainMethodSymbol, "unable to find method for name and signature %s %s", mainMethodNm, mainMethodSig); 
+                  //cout << "peeking main!\n";
+                  mainMethod->genMethodILForPeekingEvenUnderMethodRedefinition(mainMethodSymbol, _runtimeVerifierComp, false);
+
+                  methodToAnalyze = mainMethodSymbol;
+
+            } else {
+               //cout << "methodtoAnalyze = " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
+               methodToAnalyze = comp()->getMethodSymbol();
+            }
+
+      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), methodToAnalyze);
+      //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
       //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), mainMethodSymbol);
    }
 

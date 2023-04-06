@@ -1300,6 +1300,7 @@ TR_DumbInliner::inlineCallTargets(TR::ResolvedMethodSymbol * callerSymbol, TR_Ca
 
 void testMonomorphAndProcessInline(TR_CallSite *callsite, TR_StackMemory mem, TR::Node * callNode) {
    //SHASHIN
+   std::cout << "INLINER:: testing node " << callNode->getGlobalIndex() << " for monomorph!\n";
    if(OMR::Optimizer::isMonomorphicCall(callNode)) {
       std::cout << "node " << callNode->getGlobalIndex() << " is a monomorph! removing guard\n";
       //insert assert on numtargets here !!
@@ -1329,7 +1330,7 @@ TR_DumbInliner::analyzeCallSite(
                                                (TR_OpaqueClassBlock*) 0, symRef, (TR_ResolvedMethod*) 0,
                                                comp(), trMemory() , stackAlloc);
 
-   //std::cout << "num targets before getSymbolAndFindInlineTargets = " << callsite->numTargets() << "\n";
+//std::cout << "num targets before getSymbolAndFindInlineTargets = " << callsite->numTargets() << "\n";
    getSymbolAndFindInlineTargets(callStack,callsite);
    if(feGetEnv("TR_InlineWithMonomorphs"))
       testMonomorphAndProcessInline(callsite, trStackMemory(), callNode);

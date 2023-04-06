@@ -66,7 +66,7 @@ map <int, string> readClassIndices() {
 	string className;
 	int index = 1;
 	while(file >> className) {
-		cout << className << ":" << index << endl;
+		//cout << className << ":" << index << endl;
 
 		ret[index] = className;
 		index++;
