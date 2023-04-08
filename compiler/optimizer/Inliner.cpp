@@ -1300,9 +1300,10 @@ TR_DumbInliner::inlineCallTargets(TR::ResolvedMethodSymbol * callerSymbol, TR_Ca
 
 void testMonomorphAndProcessInline(TR_CallSite *callsite, TR_StackMemory mem, TR::Node * callNode) {
    //SHASHIN
-   std::cout << "INLINER:: testing node " << callNode->getGlobalIndex() << " for monomorph!\n";
-   if(OMR::Optimizer::isMonomorphicCall(callNode)) {
-      std::cout << "node " << callNode->getGlobalIndex() << " is a monomorph! removing guard\n";
+      TR_ASSERT_FATAL(callsite->numTargets() <= 1, "assumption that num targets is always 0 or 1");
+   std::cout << "INLINER:: testing node " << callNode->getGlobalIndex() << ", method " << callNode->getOwningMethod() << ", bci " << callNode->getByteCodeIndex() << " for monomorph!\n";
+   if(OMR::Optimizer::isMonomorphicCall(callNode) && callsite->numTargets() == 1) {
+      std::cout << "INLINER:: ..monomorph, removing guard\n";
       //insert assert on numtargets here !!
       TR_CallTarget *calltarget = callsite->getTarget(0);
       TR_VirtualGuardSelection *noguard = new (mem) TR_VirtualGuardSelection(TR_NoGuard);

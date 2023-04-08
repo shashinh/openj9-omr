@@ -131,7 +131,7 @@ static std::set<int> _partiallyAnalysedMethodIndices;
 static std::map<int, string> _classIndices;
 static bool _runtimeVerifierDiagnostics;
 static TR::Compilation *_runtimeVerifierComp;
-static int verifiedMethodCount = 0;
+int OMR::Optimizer::verifiedMethodCount = 0;
 std::map<TR_OpaqueMethodBlock *, PointsToGraph *> forceCallsiteArgsForJITCInvocation;
 //std::map<string, PointsToGraph *> verifiedMethodSummaries;
 std::unordered_map<TR_OpaqueMethodBlock *, PointsToGraph *> verifiedMethodSummaries;
@@ -142,7 +142,8 @@ TR_OpaqueMethodBlock * _threadStartPersistentId;
 
 std::string OMR::Optimizer::shstring = "hello world!";
 int OMR::Optimizer::monomorphCount = 0;
-static std::map<TR::Node *, bool> _isMonomorph;
+//static std::map<TR::Node *, bool> _isMonomorph;
+static std::map<TR_OpaqueMethodBlock *, std::map<int, bool> > _isMonomorph;
 static bool hasMainStarted = false;
 
 #define IFDIAGPRINT                 \
@@ -2823,11 +2824,11 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                               
                               //mark off the isMonomorph flag
                               if(methodsToPeek.size() == 1) {
-                                 cout << usefulNode->getGlobalIndex() << " is monomorphic!\n";
-                                 _isMonomorph[usefulNode] = true;
+                                 std::cout << "PTA:: node " << usefulNode->getGlobalIndex() << ", of method " << usefulNode->getOwningMethod() << ", bci " << usefulNode->getByteCodeIndex() << " is monomorphic\n";
+                                 _isMonomorph[usefulNode->getOwningMethod()][usefulNode->getByteCodeIndex()] = true;
                                  OMR::Optimizer::monomorphCount++;
                               } else {
-                                 _isMonomorph[usefulNode] = false;
+                                 _isMonomorph[usefulNode->getOwningMethod()][usefulNode->getByteCodeIndex()] = false;
                               }
                            }
                         } // end receiver not contains bot
@@ -3043,7 +3044,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 }
 bool OMR::Optimizer::isMonomorphicCall(TR::Node* callNode) {
    bool isMonomorph = false;
-   isMonomorph = _isMonomorph[callNode];
+   isMonomorph = _isMonomorph[callNode->getOwningMethod()][callNode->getByteCodeIndex()];
 
    return isMonomorph;
 }
@@ -3316,7 +3317,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    // save this away as the summary for this method!
    //FIXME
    verifiedMethodSummaries[methodPersistentId] = outForMethod;
-   verifiedMethodCount++;
+   OMR::Optimizer::verifiedMethodCount++;
 //   if (_runtimeVerifierDiagnostics)
 //   {
 //      cout << "completed runtime PTA for " << methodSignature << endl;
@@ -3348,7 +3349,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 //       cout << "out summary verification passed for method " << getOrInsertMethodIndex(methodSymbol) << endl;
 //      }
 
-   cout << "verified method count " << verifiedMethodCount << endl;
+   //cout << "verified method count " << OMR::Optimizer::verifiedMethodCount << endl;
    return outForMethod;
 }
 

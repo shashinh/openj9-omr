@@ -144,6 +144,7 @@ class Optimizer
    static std::string shstring;
    static bool isMonomorphicCall(TR::Node* callNode);
    static int monomorphCount;
+   static int verifiedMethodCount;
 
    TR_ALLOC(TR_Memory::Machine)
 
