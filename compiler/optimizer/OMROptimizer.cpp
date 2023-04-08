@@ -2264,7 +2264,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
 {
 
-   // cout << "evaluatNode " << node->getGlobalIndex() << "\n";
+   cout << "evaluateNode " << node->getGlobalIndex() << "\n";
    set<Entry> evaluatedValues;
 
    TR::Node *usefulNode = getUsefulNode(node);
@@ -2642,6 +2642,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      if (isStatic)
                      {
                         // there is no runtime polymorphism when it comes to static methods - so direct resolution of the static type at the callsite is just fine
+                        cout << "here - static call site\n";
                         TR::ResolvedMethodSymbol * callNodeSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
                         methodsToPeek.insert(callNodeSymbol);
                      }
@@ -2724,11 +2725,13 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                  TR_OpaqueClassBlock* ptr;
 
                                  if(e.clazzPtr) {
+                                    cout << "here1\n";
                                     cpsFromPTA.insert(e.clazzPtr);
                                  }
                                  else if(!e.clazzPtr && e.clazz != -1) {
 //                                    cout << e.getString() << "\n";
 //                                    cout << "e.clazz = " << e.clazz << "\n";
+                                    cout << "here2\n";
                                     string receiverTypeName = _classIndices[e.clazz];
                                     int len = strlen(receiverTypeName.c_str());
                                     ptr = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
@@ -2737,6 +2740,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                     e.clazzPtr = ptr;
                                     cpsFromPTA.insert(e.clazzPtr);
                                  } else {
+                                    cout << "here3\n";
                                     cout << "e.clazz = -1!\n";
                                  }
                               }
@@ -3101,12 +3105,12 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    // string str = "getSize()";
    // bool isGetSize = methodSignature.find(str) != string::npos;
 
-//   if (_runtimeVerifierDiagnostics)
-//   {
-//      cout << "beginning runtime PTA for " << methodSignature << endl;
-//      cout << "in-PTG:" << endl;
-//      inFlow->print();
-//   }
+   if (_runtimeVerifierDiagnostics)
+   {
+      cout << "beginning runtime PTA for " << methodSignature << endl;
+      cout << "in-PTG:" << endl;
+      inFlow->print();
+   }
 
    bool stackSlotSymRefMapped = false;
    map<int, int> stackSlotSymRefMap;
@@ -3461,6 +3465,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       }
 
       // now that we have the inflow adjusted, proceed to perform the runtime points to analysis for this method
+      cout << "invoking performRuntimePointsToAnalysis for method: " << methodSymbol->getMethod()->nameChars() << "\n";
       outFlow = performRuntimePointsToAnalysis(inFlow, methodSymbol, visitCount);
 
       _methodsBeingAnalyzed.erase(methodIndex);
@@ -3544,14 +3549,14 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
             TR::ResolvedMethodSymbol *methodToAnalyze;
             if(!hasMainStarted) {
                   hasMainStarted = true;
-                  char * mainClass = "Main";
+                  char * mainClass = "Harness";
                   char * mainMethodNm = "main";
                   char * mainMethodSig = "([Ljava/lang/String;)V";
                   int len = strlen(mainClass);
                   TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(mainClass, len, _runtimeVerifierComp->getCurrentMethod());
  //                 cout << "hasMainStarted= " << hasMainStarted << "\n";
-//                  if(type) cout << "boob CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
-//                  else cout << "NOT obtained CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
+                  if(type) cout << "obtained CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
+                  else cout << "NOT obtained CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
                   TR_ASSERT_FATAL(type, "unable to get class pointer for %s", mainClass);
 
                   TR_ResolvedMethod *mainMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, mainMethodNm, mainMethodSig);
@@ -3562,13 +3567,16 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
                   mainMethod->genMethodILForPeekingEvenUnderMethodRedefinition(mainMethodSymbol, _runtimeVerifierComp, false);
 
                   methodToAnalyze = mainMethodSymbol;
+                  cout << "here if\n";
 
             } else {
-               //cout << "methodtoAnalyze = " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
+               cout << "here else\n";
+               cout << "\tmethodtoAnalyze = " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
                methodToAnalyze = comp()->getMethodSymbol();
+      cout << "invoking verifyingStaticMethodInfo for method: " << methodToAnalyze->getMethod()->nameChars() << "\n";
+      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), methodToAnalyze);
             }
 
-      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), methodToAnalyze);
       //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
       //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), mainMethodSymbol);
    }
