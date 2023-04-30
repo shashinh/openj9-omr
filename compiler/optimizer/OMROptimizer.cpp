@@ -2280,7 +2280,7 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
 set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, set<Entry>> &evaluatedNodeValues, int visitCount, int methodIndex)
 {
 
-   // cout << "evaluatNode " << node->getGlobalIndex() << "\n";
+   cout << "evaluateNode " << node->getGlobalIndex() << "\n";
    set<Entry> evaluatedValues;
 
    TR::Node *usefulNode = getUsefulNode(node);
@@ -2658,6 +2658,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                      if (isStatic)
                      {
                         // there is no runtime polymorphism when it comes to static methods - so direct resolution of the static type at the callsite is just fine
+                        cout << "here - static call site\n";
                         TR::ResolvedMethodSymbol * callNodeSymbol = usefulNode->getSymbol()->getResolvedMethodSymbol();
                         methodsToPeek.insert(callNodeSymbol);
                      }
@@ -3138,12 +3139,12 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    // string str = "getSize()";
    // bool isGetSize = methodSignature.find(str) != string::npos;
 
-//   if (_runtimeVerifierDiagnostics)
-//   {
-//      cout << "beginning runtime PTA for " << methodSignature << endl;
-//      cout << "in-PTG:" << endl;
-//      inFlow->print();
-//   }
+   if (_runtimeVerifierDiagnostics)
+   {
+      cout << "beginning runtime PTA for " << methodSignature << endl;
+      cout << "in-PTG:" << endl;
+      inFlow->print();
+   }
 
    bool stackSlotSymRefMapped = false;
    map<int, int> stackSlotSymRefMap;
@@ -3499,6 +3500,7 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
       }
 
       // now that we have the inflow adjusted, proceed to perform the runtime points to analysis for this method
+      cout << "invoking performRuntimePointsToAnalysis for method: " << methodSymbol->getMethod()->nameChars() << "\n";
       outFlow = performRuntimePointsToAnalysis(inFlow, methodSymbol, visitCount);
 
       _methodsBeingAnalyzed.erase(methodIndex);
@@ -3612,6 +3614,7 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
                   mainMethod->genMethodILForPeekingEvenUnderMethodRedefinition(mainMethodSymbol, _runtimeVerifierComp, false);
 
                   methodToAnalyze = mainMethodSymbol;
+                  cout << "here if\n";
 
             } else {
                TR::ResolvedMethodSymbol * sym = comp()->getMethodSymbol();
