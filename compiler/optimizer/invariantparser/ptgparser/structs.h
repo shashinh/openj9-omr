@@ -93,6 +93,7 @@ enum ConfigType {
 
     Fop,
     Pmd,
+    Antlr,
 
     Compress,
     Sparse,

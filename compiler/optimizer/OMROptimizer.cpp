@@ -142,9 +142,12 @@ TR_OpaqueMethodBlock * _threadStartPersistentId;
 
 std::string OMR::Optimizer::shstring = "hello world!";
 int OMR::Optimizer::monomorphCount = 0;
+int OMR::Optimizer::outOfOrderMethodCount = 0;
 //static std::map<TR::Node *, bool> _isMonomorph;
-static std::map<TR_OpaqueMethodBlock *, std::map<int, bool> > _isMonomorph;
+//static std::map<TR_OpaqueMethodBlock *, std::map<int, bool> > _isMonomorph;
+static std::map<string, std::map<int, bool> > _isMonomorph;
 static bool hasMainStarted = false;
+static std::set<TR_OpaqueMethodBlock *> outOfOrderCounted;
 
 #define IFDIAGPRINT                 \
    if (_runtimeVerifierDiagnostics) \
@@ -153,6 +156,7 @@ static bool hasMainStarted = false;
 static bool isConfigLoaded = false;
 static ConfigType configType = Unknown;
 static bool performRuntimeVerify = false;
+static TR_OpaqueMethodBlock * currentPeek = NULL;
 
 namespace TR
 {
@@ -2056,9 +2060,21 @@ bool isLibraryMethod(string methodName)
       break;
 
       case Fop:
-        if(methodName.rfind("Harn", 0) == 0 || methodName.rfind("dac", 0) == 0 || methodName.rfind("org/apache/fop", 0) == 0) {
+        /*if(methodName.rfind("org/apache/fop/layout", 0) == 0) {
+         return true;
+        }
+        else*/ if(methodName.rfind("Harn", 0) == 0 || methodName.rfind("dac", 0) == 0 || methodName.rfind("org/apache/fop", 0) == 0  
+         || methodName.rfind("org/apache/xerces", 0) == 0 || methodName.rfind("javax/xml", 0) == 0 /*|| methodName.rfind("org/xml", 0) == 0*/) {
          return false;
         }
+      break;
+
+
+      case Antlr:
+        if(methodName.rfind("Harn", 0) == 0 || methodName.rfind("dac", 0) == 0 || methodName.rfind("antlr", 0) == 0 ) {
+         return false;
+        }
+
       break;
 
       case Compress:
@@ -2719,47 +2735,54 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                               //test to see if the CPs resolved by PTA matches the receivers dumped by Soot
                               //test size
-                              set<TR_OpaqueClassBlock*> cpsFromPTA;
-                              for(Entry e : receiverVals) {
-                                 TR_OpaqueClassBlock* ptr;
+//                              set<TR_OpaqueClassBlock*> cpsFromPTA;
+//                              cout << "static receivers for callsite " << usefulNode->getGlobalIndex() << "\n";
+//                              for(int t : receiverTypesForCallsite) {
+//                                 cout << t << " ";
+//                              }
+//                              cout << "\n";
+//                              for(Entry e : receiverVals) {
+//                                 cout << e.getString() << "\n";
+//                                 TR_OpaqueClassBlock* ptr;
+//
+//                                 if(e.clazzPtr) {
+//                                    cpsFromPTA.insert(e.clazzPtr);
+//                                 }
+//                                 else if(!e.clazzPtr && e.clazz != 0) {
+////                                    cout << e.getString() << "\n";
+////                                    cout << "e.clazz = " << e.clazz << "\n";
+//                                    string receiverTypeName = _classIndices[e.clazz];
+//                                    int len = strlen(receiverTypeName.c_str());
+//                                    ptr = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+//                                    TR_ASSERT_FATAL(ptr, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
+//
+//                                    e.clazzPtr = ptr;
+//                                    cpsFromPTA.insert(e.clazzPtr);
+//                                 } else {
+//                                    cout << "e.clazz = 0!\n";
+//                                 }
+//                              }
+//
+//                              //TR_ASSERT_FATAL(cpsFromPTA.size() == receiverTypesForCallsite.size(), "CP and receiver count do not match! %d vs %d, verified methods = %d\n", cpsFromPTA.size(), receiverTypesForCallsite.size(), OMR::Optimizer::verifiedMethodCount);
+//                              //end test
 
-                                 if(e.clazzPtr) {
-                                    cpsFromPTA.insert(e.clazzPtr);
-                                 }
-                                 else if(!e.clazzPtr && e.clazz != -1) {
-//                                    cout << e.getString() << "\n";
-//                                    cout << "e.clazz = " << e.clazz << "\n";
-                                    string receiverTypeName = _classIndices[e.clazz];
-                                    int len = strlen(receiverTypeName.c_str());
-                                    ptr = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
-                                    TR_ASSERT_FATAL(ptr, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
-
-                                    e.clazzPtr = ptr;
-                                    cpsFromPTA.insert(e.clazzPtr);
-                                 } else {
-                                    cout << "e.clazz = -1!\n";
-                                 }
-                              }
-                              TR_ASSERT_FATAL(cpsFromPTA.size() == receiverTypesForCallsite.size(), "CP and receiver count do not match!\n");
-                              //end test
 
 
 
 
-
-                              //for (int receiverType : receiverTypesForCallsite)
-                              for (TR_OpaqueClassBlock* cp : cpsFromPTA)
+                              for (int receiverType : receiverTypesForCallsite)
+                              //for (TR_OpaqueClassBlock* cp : cpsFromPTA)
                               {
                                  // cout << "here-d  " << receiverType << "\n";
-                                    //string receiverTypeName = _classIndices[receiverType];
+                                    string receiverTypeName = _classIndices[receiverType];
                                  //cout << "receiverTypeName = " << receiverTypeName << "\n";
                                        //cout << "here1\n";
 
                                  //boilerplate to fetch a resolved method symbol for the target method against the receiver's type
                                  //TODO: extract all repeating code to a method
-                                    //int len = strlen(receiverTypeName.c_str());
-                                    //TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
-                                    //TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s", receiverTypeName.c_str());
+                                    int len = strlen(receiverTypeName.c_str());
+                                    TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(receiverTypeName.c_str(), len, _runtimeVerifierComp->getCurrentMethod());
+                                    TR_ASSERT_FATAL(type, "unable to get class pointer for receiver %s, methods analyzed = %d", receiverTypeName.c_str(), OMR::Optimizer::verifiedMethodCount);
 
                                     //test - superclass iterator
                                     //code is reused (rather, duplicated) from ClassSuperclassesIterator.cpp
@@ -2788,17 +2811,17 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                     int methodNameLength = usefulNode->getSymbol()->castToResolvedMethodSymbol()->getMethod()->nameLength();
                                     string methodNm;
 
-      if(!_threadStartPersistentId) {
-         int len = strlen("java/lang/Thread");
-         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
-         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
-
-         TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
-         TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
-         TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
-         TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
-            _threadStartPersistentId = targetMethod->getPersistentIdentifier();
-      }
+//      if(!_threadStartPersistentId) {
+//         int len = strlen("java/lang/Thread");
+//         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
+//         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
+//
+//         TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
+//         TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
+//         TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+//         TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
+//            _threadStartPersistentId = targetMethod->getPersistentIdentifier();
+//      }
                                     if(!isInterfaceInvoke && usefulNode->getSymbol()->getResolvedMethodSymbol()->getResolvedMethod()->getPersistentIdentifier() == _threadStartPersistentId) {
                                        methodNm = "run";
                                        //cout << "short-circuit Thread.start with " << receiverTypeName << ".run()\n";
@@ -2814,7 +2837,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                                     string sig = signatureChars.substr(0, sigLength);
                                     
                                     //cout << "looking for method " << methodNm << " signature " << signatureChars << " on receiver " << receiverTypeName << "\n";
-                                    TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), /*type*/ cp, methodNm.c_str(), sig.c_str());
+                                    //TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), /*type*/ cp, methodNm.c_str(), sig.c_str());
+                                    TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, methodNm.c_str(), sig.c_str());
                                     TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
                                     TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
                                     TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", methodNm.c_str(), sig.c_str());
@@ -2823,12 +2847,16 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                               }
                               
                               //mark off the isMonomorph flag
+                              TR::ResolvedMethodSymbol *m = usefulNode->getSymbolReference()->getOwningMethodSymbol(_runtimeVerifierComp);
+                              string s = m->signature(_runtimeVerifierComp->trMemory());
                               if(methodsToPeek.size() == 1) {
-                                 std::cout << "PTA:: node " << usefulNode->getGlobalIndex() << ", of method " << usefulNode->getOwningMethod() << ", bci " << usefulNode->getByteCodeIndex() << " is monomorphic\n";
-                                 _isMonomorph[usefulNode->getOwningMethod()][usefulNode->getByteCodeIndex()] = true;
+                                 //std::cout << "PTA:: node " << usefulNode->getGlobalIndex() << ", of method " << usefulNode->getOwningMethod() << ", bci " << usefulNode->getByteCodeIndex() << " is monomorphic\n";
+                                 //_isMonomorph[usefulNode->getOwningMethod()][usefulNode->getByteCodeIndex()] = true;
+                                 _isMonomorph[s][usefulNode->getByteCodeIndex()] = true;
                                  OMR::Optimizer::monomorphCount++;
                               } else {
-                                 _isMonomorph[usefulNode->getOwningMethod()][usefulNode->getByteCodeIndex()] = false;
+                                 //_isMonomorph[usefulNode->getOwningMethod()][usefulNode->getByteCodeIndex()] = false;
+                                 _isMonomorph[s][usefulNode->getByteCodeIndex()] = false;
                               }
                            }
                         } // end receiver not contains bot
@@ -2845,7 +2873,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                               // TR_ASSERT_FATAL(false, "callsite receiver info not supplied, callee method %s, index %i, callsite bci %i, caller method %i", methodName, calleeMethodIndex, callsiteBCI, methodIndex);
                      // TR_ASSERT_FATAL(methodsToPeek.size() > 0, "no resolved targets for callsite!, caller method %i callsite bci %i", methodIndex, callsiteBCI);
-                     if(methodsToPeek.size() == 0)
+                   if(methodsToPeek.size() == 0)
                         cout << "WARNING - no resolved targets for callsitebci " << callsiteBCI << " caller " << methodIndex << "\n";
                      //cout << "invoke buildcallsiteptg\n";
                      PointsToGraph *callSitePtg = buildCallsitePtg(usefulNode, in, NULL, evaluatedNodeValues, visitCount, methodIndex);
@@ -2863,7 +2891,7 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
                         {
                            //cout << targetMethodIndex << " is already being analyzed, will use the outsummary\n";
                            // we have a recursive call, use the static out summary and defer verification to the end of the method
-                           cout << "recursive call for " << targetMethodIndex << ", out summary will be used" << endl;
+                           //cout << "recursive call for " << targetMethodIndex << ", out summary will be used" << endl;
                            PointsToGraph summaryOut = readCallsiteOut(targetMethodIndex);
                            // summaryOut.print();
                            // outForCallsite = &summaryOut;
@@ -2939,6 +2967,8 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
 
                         //only peek if method summary not already available
                         if(verifiedMethodSummaries.find(target->getResolvedMethod()->getPersistentIdentifier()) == verifiedMethodSummaries.end()) {
+                           currentPeek = target->getResolvedMethod()->getPersistentIdentifier();
+                           //cout << "currentPeek = " << currentPeek << "\n";
                            bool ilGenFailed = NULL == target->getResolvedMethod()->genMethodILForPeekingEvenUnderMethodRedefinition(target, _runtimeVerifierComp, false);
                            // cout << "back from peek " << sig << endl;
 
@@ -3043,8 +3073,14 @@ set<Entry> evaluateNode(PointsToGraph *in, TR::Node *node, std::map<TR::Node *, 
    return evaluatedValues;
 }
 bool OMR::Optimizer::isMonomorphicCall(TR::Node* callNode) {
+   if(feGetEnv("TEST"))
+      return true;
+
    bool isMonomorph = false;
-   isMonomorph = _isMonomorph[callNode->getOwningMethod()][callNode->getByteCodeIndex()];
+
+   TR::ResolvedMethodSymbol *m = callNode->getSymbolReference()->getOwningMethodSymbol(_runtimeVerifierComp);
+   string s = m->signature(_runtimeVerifierComp->trMemory());
+   isMonomorph = _isMonomorph[s][callNode->getByteCodeIndex()];
 
    return isMonomorph;
 }
@@ -3093,7 +3129,8 @@ PointsToGraph *performRuntimePointsToAnalysis(PointsToGraph *inFlow, TR::Resolve
    int methodIndex = getOrInsertMethodIndex(methodSymbol);
    TR_OpaqueMethodBlock * methodPersistentId = methodSymbol->getResolvedMethod()->getPersistentIdentifier();
    //cout << "method indices size " << _methodIndices.size() << endl;
-   //cout << "beginning to analyze " << methodSignature << " " << methodIndex << endl;
+   J9ClassLoader *classLoader = TR::Compiler->cls.convertClassOffsetToClassPtr((TR_OpaqueClassBlock*)J9_CLASS_FROM_METHOD(((J9Method *)methodPersistentId)))->classLoader;
+   //cout << "beginning to analyze " << methodSignature << " " << methodIndex << " " << methodPersistentId << " from classloader " << classLoader << "\n" << endl;
    //inFlow->print();
    //cout << "verifiedmethods map size: " << _runtimeVerifiedMethods.size() << endl;
    //cout << "blah\n";
@@ -3412,11 +3449,12 @@ PointsToGraph *verifyStaticMethodInfo(int visitCount, TR::Compilation *comp = NU
    }
    // else
    //    _runtimeVerifiedMethods.insert(methodSignature);
-
    // a guarantee that each method is processed at most once
-   if (!analyzed)
-   {
       int methodIndex = getOrInsertMethodIndex(methodSymbol);
+      bool isBeingAnalyzed = false;
+      isBeingAnalyzed = _methodsBeingAnalyzed.find(methodIndex) != _methodsBeingAnalyzed.end();
+   if (!analyzed && !isBeingAnalyzed)
+   {
       // if(isGetSize) {
       //    cout << "get size is analyzed, summary:\n";
       //    verifiedMethodSummaries[methodSignature]->print();
@@ -3486,6 +3524,8 @@ void loadConfigs() {
       configType = Fop;
    } else if (feGetEnv("PMD") != NULL) {
       configType = Pmd;
+   } else if (feGetEnv("ANTLR") != NULL) {
+      configType = Antlr;
    } else if (feGetEnv("SPEC") != NULL) {
       configType = Spec;
    } else {
@@ -3529,46 +3569,76 @@ int32_t OMR::Optimizer::performOptimization(const OptimizationStrategy *optimiza
          _classIndices = readClassIndices();
       }
 
-      //fetch a persistent oject for the thread.start method
-//      if(!_threadStartPersistentId) {
-//         int len = strlen("java/lang/Thread");
-//         TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
-//         TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
-//
-//         TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
-//         TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
-//         TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
-//         TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
-//            _threadStartPersistentId = targetMethod->getPersistentIdentifier();
-//      }
+            //fetch a persistent oject for the thread.start method
+            if(!_threadStartPersistentId) {
+               int len = strlen("java/lang/Thread");
+               TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature("java/lang/Thread", len, _runtimeVerifierComp->getCurrentMethod());
+               TR_ASSERT_FATAL(type, "unable to get class pointer for %s", "java/lang/Thread");
+
+
+               TR_ResolvedMethod *targetMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, "start", "()V");
+               TR_ASSERT_FATAL(targetMethod, "unable to find method for name and signature %s %s", "start", "()V");
+               TR::ResolvedMethodSymbol *targetMethodSymbol = targetMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
+               TR_ASSERT_FATAL(targetMethodSymbol, "unable to find method for name and signature %s %s", "start", "()V"); 
+                  _threadStartPersistentId = targetMethod->getPersistentIdentifier();
+            }
+
             TR::ResolvedMethodSymbol *methodToAnalyze;
             if(!hasMainStarted) {
+                  cout << "first method = " << comp()->getMethodSymbol()->signature(comp()->trMemory()) << "\n";
+
                   hasMainStarted = true;
-                  char * mainClass = "Main";
+                  char *mainClass = "Harness";
+                  //char * mainClass = feGetEnv("TR_MainClass");
                   char * mainMethodNm = "main";
                   char * mainMethodSig = "([Ljava/lang/String;)V";
                   int len = strlen(mainClass);
                   TR_OpaqueClassBlock *type = _runtimeVerifierComp->fe()->getClassFromSignature(mainClass, len, _runtimeVerifierComp->getCurrentMethod());
  //                 cout << "hasMainStarted= " << hasMainStarted << "\n";
-//                  if(type) cout << "boob CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
 //                  else cout << "NOT obtained CP!, currently processing method " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
                   TR_ASSERT_FATAL(type, "unable to get class pointer for %s", mainClass);
+
+//               char* test = "soot/rtlib/tamiflex/ReflectiveCallsWrapper";
+//               int l = strlen(test);
+//               TR_OpaqueClassBlock *t = comp()->fe()->getClassFromSignature(test, l, comp()->getCurrentMethod());
+//               TR_ASSERT_FATAL(t, "unable to get class pointer for %s", test);
 
                   TR_ResolvedMethod *mainMethod = _runtimeVerifierComp->fej9()->getResolvedMethodForNameAndSignature(_runtimeVerifierComp->trMemory(), type, mainMethodNm, mainMethodSig);
                   TR_ASSERT_FATAL(mainMethod, "unable to find method for name and signature %s %s", mainMethodNm, mainMethodSig);
                   TR::ResolvedMethodSymbol *mainMethodSymbol = mainMethod->findOrCreateJittedMethodSymbol(_runtimeVerifierComp);
                   TR_ASSERT_FATAL(mainMethodSymbol, "unable to find method for name and signature %s %s", mainMethodNm, mainMethodSig); 
                   //cout << "peeking main!\n";
+                  currentPeek = mainMethodSymbol->getResolvedMethod()->getPersistentIdentifier();
                   mainMethod->genMethodILForPeekingEvenUnderMethodRedefinition(mainMethodSymbol, _runtimeVerifierComp, false);
 
                   methodToAnalyze = mainMethodSymbol;
 
             } else {
-               //cout << "methodtoAnalyze = " << comp()->getMethodSymbol()->getMethod()->nameChars() << "\n";
+               TR::ResolvedMethodSymbol * sym = comp()->getMethodSymbol();
+               TR_ASSERT_FATAL(sym, "resolved method symbol null");
+               int methodIndex = getOrInsertMethodIndex(sym);
+               //bool isMethodBeingAnalyzed = false;
+               bool isMethodBeingAnalyzed = _methodsBeingAnalyzed.find(methodIndex) != _methodsBeingAnalyzed.end();
+               //cout << "method: " << methodIndex << " ismethodbeinganalyzed=" << isMethodBeingAnalyzed << "\n";
+               //cout << "else methodtoAnalyze = " << comp()->getMethodSymbol()->signature(_runtimeVerifierComp->trMemory()) << "\n";
+
+
                methodToAnalyze = comp()->getMethodSymbol();
+               TR_OpaqueMethodBlock * id = methodToAnalyze->getResolvedMethod()->getPersistentIdentifier();
+               J9ClassLoader *classLoader = TR::Compiler->cls.convertClassOffsetToClassPtr((TR_OpaqueClassBlock*)J9_CLASS_FROM_METHOD(((J9Method *)id)))->classLoader;
+               //cout << "checking " << methodIndex << " " << id << " from classloader " << classLoader << "\n" << endl;
+               if(!isMethodBeingAnalyzed && currentPeek == id) {
+                  //cout << "verifystaticmethodinfo: method " << methodIndex << "\n";
+                  verifyStaticMethodInfo(comp()->getVisitCount(), comp(), methodToAnalyze);
+               } else {
+                  if(outOfOrderCounted.find(id) == outOfOrderCounted.end()){
+                     outOfOrderCounted.insert(id);
+                     outOfOrderMethodCount++;
+                  }
+               }
             }
 
-      verifyStaticMethodInfo(comp()->getVisitCount(), comp(), methodToAnalyze);
+      //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), methodToAnalyze);
       //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), comp()->getMethodSymbol());
       //verifyStaticMethodInfo(comp()->getVisitCount(), comp(), mainMethodSymbol);
    }

@@ -425,6 +425,11 @@ class TR_DumbInliner : public TR_InlinerBase
       TR_DumbInliner(TR::Optimizer *, TR::Optimization *, uint32_t initialSize, uint32_t dumbReductionIncrement = 5);
       virtual bool inlineCallTargets(TR::ResolvedMethodSymbol *, TR_CallStack *, TR_InnerPreexistenceInfo *);
       bool tryToInline(char *message, TR_CallTarget *calltarget);
+
+      static int uniqueGuardsRemoved;
+      static double timeReadingMaps;
+      static std::map<std::string, std::map<int, bool> > isMonomorphicCallSiteCounted;
+      static int totalGuardsRemoved;
    protected:
       virtual bool analyzeCallSite(TR_CallStack *, TR::TreeTop *, TR::Node *, TR::Node *);
 

@@ -1076,6 +1076,40 @@ TR_InlineCall::inlineRecognizedMethod(TR::RecognizedMethod method)
    }
 
 
+int TR_DumbInliner::uniqueGuardsRemoved = 0;
+int TR_DumbInliner::totalGuardsRemoved = 0;
+std::map<std::string, std::map<int, bool> > TR_DumbInliner::isMonomorphicCallSiteCounted;
+double TR_DumbInliner::timeReadingMaps = 0;
+void testMonomorphAndProcessInline(TR_CallSite *callsite, TR_StackMemory mem, TR::Node * callNode, TR::Compilation * comp) {
+   //SHASHIN
+      TR_ASSERT_FATAL(callsite->numTargets() <= 1, "assumption that num targets is always 0 or 1");
+   //std::cout << "INLINER:: testing node " << callNode->getGlobalIndex() << ", method " << callNode->getOwningMethod() << ", bci " << callNode->getByteCodeIndex() << " for monomorph!\n";
+   clock_t start, end;
+   start = clock(); 
+   bool isMonomorph = OMR::Optimizer::isMonomorphicCall(callNode);
+   end = clock();
+   if(isMonomorph && callsite->numTargets() == 1) {
+   //if(true && callsite->numTargets() == 1) {
+      //std::cout << "INLINER:: ..monomorph, removing guard\n";
+      //insert assert on numtargets here !!
+      TR_CallTarget *calltarget = callsite->getTarget(0);
+      TR_VirtualGuardSelection *noguard = new (mem) TR_VirtualGuardSelection(TR_NoGuard);
+      calltarget->_guard = noguard;
+
+            TR::ResolvedMethodSymbol *m = callNode->getSymbolReference()->getOwningMethodSymbol(comp);
+            std::string s = m->signature(comp->trMemory());
+            bool isCounted = TR_DumbInliner::isMonomorphicCallSiteCounted[s][callNode->getByteCodeIndex()];
+
+         TR_DumbInliner::totalGuardsRemoved++;
+      if (!isCounted) {
+         TR_DumbInliner::uniqueGuardsRemoved++;
+         TR_DumbInliner::isMonomorphicCallSiteCounted[s][callNode->getByteCodeIndex()] = true;
+      }
+
+      TR_DumbInliner::timeReadingMaps += double(end-start) / double (CLOCKS_PER_SEC);
+   }
+}
+
 bool
 TR_InlineCall::inlineCall(TR::TreeTop * callNodeTreeTop, TR_OpaqueClassBlock * thisClass, bool recursiveInlining, TR_PrexArgInfo *argInfo, int32_t initialMaxSize)
    {
@@ -1122,6 +1156,10 @@ TR_InlineCall::inlineCall(TR::TreeTop * callNodeTreeTop, TR_OpaqueClassBlock * t
                                                comp(), trMemory() , stackAlloc);
 
    getSymbolAndFindInlineTargets(&callStack,callsite);
+   //extra
+   //std::cout << "InlinerTemp.cpp inlineCall\n";
+   if(feGetEnv("TR_InlineWithMonomorphs"))
+      testMonomorphAndProcessInline(callsite, trStackMemory(), callNode, comp());
 
    if(!callsite->numTargets())
       return false; //nothing to callStack::commit yet
@@ -1298,25 +1336,6 @@ TR_DumbInliner::inlineCallTargets(TR::ResolvedMethodSymbol * callerSymbol, TR_Ca
    return (inlineCount != 0);
    }
 
-void testMonomorphAndProcessInline(TR_CallSite *callsite, TR_StackMemory mem, TR::Node * callNode) {
-   //SHASHIN
-      TR_ASSERT_FATAL(callsite->numTargets() <= 1, "assumption that num targets is always 0 or 1");
-   std::cout << "INLINER:: testing node " << callNode->getGlobalIndex() << ", method " << callNode->getOwningMethod() << ", bci " << callNode->getByteCodeIndex() << " for monomorph!\n";
-   if(OMR::Optimizer::isMonomorphicCall(callNode) && callsite->numTargets() == 1) {
-      std::cout << "INLINER:: ..monomorph, removing guard\n";
-      //insert assert on numtargets here !!
-      TR_CallTarget *calltarget = callsite->getTarget(0);
-      TR_VirtualGuardSelection *noguard = new (mem) TR_VirtualGuardSelection(TR_NoGuard);
-      calltarget->_guard = noguard;
-   }
-   //std::cout << "num targets = " << callsite->numTargets() << "\n";
-   //if(callsite->numTargets() == 1) {
-   //   TR_CallTarget *calltarget = callsite->getTarget(0);
-   //   TR_VirtualGuardSelection *noguard = new (mem) TR_VirtualGuardSelection(TR_NoGuard);
-   //   calltarget->_guard = noguard;
-   //}
-
-}
 
 bool
 TR_DumbInliner::analyzeCallSite(
@@ -1332,9 +1351,10 @@ TR_DumbInliner::analyzeCallSite(
                                                comp(), trMemory() , stackAlloc);
 
 //std::cout << "num targets before getSymbolAndFindInlineTargets = " << callsite->numTargets() << "\n";
+   //ORIGINAL
    getSymbolAndFindInlineTargets(callStack,callsite);
    if(feGetEnv("TR_InlineWithMonomorphs"))
-      testMonomorphAndProcessInline(callsite, trStackMemory(), callNode);
+      testMonomorphAndProcessInline(callsite, trStackMemory(), callNode, comp());
 
    if (!callsite->numTargets())
       return false;
@@ -4560,6 +4580,10 @@ TR_CallSite* TR_InlinerBase::findAndUpdateCallSiteInGraph(TR_CallStack *callStac
       }
 
    getSymbolAndFindInlineTargets(callStack,callsite,false);
+   //extra -- USEFUL
+   //std::cout << "Inliner.cpp findandUpdateCallsiteInGraph\n";
+   if(feGetEnv("TR_InlineWithMonomorphs"))
+      testMonomorphAndProcessInline(callsite, trStackMemory(), callNode, comp());
 
    if (!callsite->numTargets())
       {
